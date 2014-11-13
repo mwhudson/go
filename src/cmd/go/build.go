@@ -385,6 +385,7 @@ func init() {
 type builder struct {
 	work        string               // the temporary work directory (ends in filepath.Separator)
 	actionCache map[cacheKey]*action // a cache of already-constructed actions
+	libraryActionCache map[string]*action // XXX
 	mkdirCache  map[string]bool      // a cache of created directories
 	print       func(args ...interface{}) (int, error)
 
@@ -560,6 +561,17 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
+func (b *builder) libaction(mode buildMode, string libraryname, a *action) {
+	var *la = b.libraryActionCache[libraryname]
+	if la == nil {
+		la = &action{}
+		// XXX much more here, obviously
+		b.libraryActionCache[libraryname] = la
+	}
+	la.deps = append(la.deps, a)
+	return la
+}
+
 // action returns the action for applying the given operation (mode) to the package.
 // depMode is the action to use when building dependencies.
 func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action {
@@ -574,7 +586,13 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		a.pkgdir = p.pkgdir
 	}
 
-	b.actionCache[key] = a
+	var aa *action = a
+
+	if p.libraryname != "" {
+		aa = b.libaction(mode, p.libraryname, a)
+	}
+
+	b.actionCache[key] = aa
 
 	for _, p1 := range p.imports {
 		a.deps = append(a.deps, b.action(depMode, depMode, p1))
@@ -654,7 +672,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		}
 	}
 
-	return a
+	return aa
 }
 
 // actionList returns the list of actions in the dag rooted at root
