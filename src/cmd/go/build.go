@@ -563,8 +563,6 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
-<<<<<<< HEAD
-=======
 func (b *builder) libaction(mode buildMode, library string, a *action) *action {
 	la := b.libraryActionCache[library]
 	if la == nil {
@@ -594,11 +592,10 @@ func (b *builder) libaction(mode buildMode, library string, a *action) *action {
 	return la
 }
 
-
 func dumpActionTree(root *action) {
 	action2index := make(map[*action]int)
 	var dumpAction func(*action, string)
-	dumpAction = func (a *action, indent string) {
+	dumpAction = func(a *action, indent string) {
 		if i, ok := action2index[a]; ok {
 			fmt.Printf("   %s =%d\n", indent, i)
 			return
@@ -610,13 +607,12 @@ func dumpActionTree(root *action) {
 			if a1.p != nil && a1.p.Standard {
 				continue
 			}
-			dumpAction(a1, indent + " ")
+			dumpAction(a1, indent+" ")
 		}
 	}
 	dumpAction(root, "")
 }
 
->>>>>>> 28a15bc... dumpActionTree
 // action returns the action for applying the given operation (mode) to the package.
 // depMode is the action to use when building dependencies.
 func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action {
