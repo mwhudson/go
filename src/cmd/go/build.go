@@ -358,7 +358,7 @@ func runInstall(cmd *Command, args []string) {
 				fatalf("multiple roots")
 			}
 		}
-		for _, arg in range args {
+		for _, arg := range args {
 			arg = strings.Replace(arg, ".", "dot", -1)
 			clean := func(r rune) rune {
 				switch {
@@ -377,7 +377,7 @@ func runInstall(cmd *Command, args []string) {
 		}
 		libname = filepath.Join(libdir, "lib" + libname + ".so")
 		// Just seed the cache.
-		libaction(libname, nil)
+		b.libaction(modeInstall, libname, nil)
 		for _, p := range pkgs {
 			if p.ExportData != "" { // i.e. not a main package.
 				p.SharedLib = libname
@@ -489,7 +489,7 @@ func (b *builder) init() {
 		return fmt.Fprint(os.Stderr, a...)
 	}
 	b.actionCache = make(map[cacheKey]*action)
-	b.libraryActionCache = make(map[cacheKey]*action)
+	b.libraryActionCache = make(map[string]*action)
 	b.mkdirCache = make(map[string]bool)
 
 	if _, isgccgo := buildToolchain.(gccgoToolchain); !isgccgo {
@@ -600,8 +600,8 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
-func (b *builder) libaction(mode buildMode, string library, a *action) {
-	var *la = b.libraryActionCache[library]
+func (b *builder) libaction(mode buildMode, library string, a *action) *action {
+	la := b.libraryActionCache[library]
 	if la == nil {
 		la = &action{}
 		if a == nil {
@@ -1202,7 +1202,7 @@ func (b *builder) linkShared(a *action) (err error) {
                         return err
                 }
         }
-        err := b.run(".", "", nil, linkArgs)
+        err = b.run(".", "", nil, linkArgs)
         if err != nil {
                 return err
         }
@@ -1217,7 +1217,6 @@ func (b *builder) linkShared(a *action) (err error) {
                 if err != nil {
                         return err
                 }
-                base := strings.TrimSuffix(a1.p.build.DsoMarker, ".dsoname")
                 objcopyArgs := []string{
                         "objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
                 err = b.run(".", "", nil, objcopyArgs)

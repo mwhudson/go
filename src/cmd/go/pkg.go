@@ -11,6 +11,7 @@ import (
 	"go/build"
 	"go/scanner"
 	"go/token"
+	"io/ioutil"
 	"os"
 	pathpkg "path"
 	"path/filepath"
@@ -505,7 +506,7 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 		p.target = ""
 	} else {
 		p.target = p.build.PkgObj
-		if p.build.ExportData {
+		if p.build.ExportData != "" {
 			p.ExportData = p.build.ExportData
 		}
 		if p.ExportData != "" && (buildBuildmode == "linkshared" || buildBuildmode == "shared") {
