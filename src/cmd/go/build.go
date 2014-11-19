@@ -1245,7 +1245,7 @@ func (b *builder) includeArgs(flag string, all []*action) []string {
 	// This is the $WORK/my/package/_test directory for the
 	// package being built, so there are few of these.
 	for _, a1 := range all {
-		if dir := a1.pkgdir; dir != a1.p.build.PkgRoot && !incMap[dir] {
+		if dir := a1.pkgdir; a1.p != nil && dir != a1.p.build.PkgRoot && !incMap[dir] {
 			incMap[dir] = true
 			inc = append(inc, flag, dir)
 		}
@@ -1257,7 +1257,7 @@ func (b *builder) includeArgs(flag string, all []*action) []string {
 
 	// Finally, look in the installed package directories for each action.
 	for _, a1 := range all {
-		if dir := a1.pkgdir; dir == a1.p.build.PkgRoot && !incMap[dir] {
+		if dir := a1.pkgdir; a1.p != nil && dir == a1.p.build.PkgRoot && !incMap[dir] {
 			incMap[dir] = true
 			if _, ok := buildToolchain.(gccgoToolchain); ok {
 				dir = filepath.Join(dir, "gccgo_"+goos+"_"+goarch)
