@@ -131,6 +131,7 @@ var buildCcflags []string    // -ccflags flag
 var buildLdflags []string    // -ldflags flag
 var buildGccgoflags []string // -gccgoflags flag
 var buildRace bool           // -race flag
+var buildBuildmode string
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -184,6 +185,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var((*stringsFlag)(&buildContext.BuildTags), "tags", "")
 	cmd.Flag.Var(buildCompiler{}, "compiler", "")
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
+	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -449,6 +451,19 @@ func (b *builder) init() {
 	}
 	b.actionCache = make(map[cacheKey]*action)
 	b.mkdirCache = make(map[string]bool)
+
+	if _, isgccgo := buildToolchain.(gccgoToolchain); !isgccgo {
+		if buildBuildmode != "" {
+			fatalf("-buildmode is only supported with gccgo")
+		}
+	}
+	switch buildBuildmode {
+	case "":
+	case "linkshared":
+	case "shared":
+	default:
+		fatalf("unrecognized -buildmode argument: %s", buildBuildmode)
+	}
 
 	if buildN {
 		b.work = "$WORK"
