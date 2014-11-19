@@ -347,7 +347,6 @@ func runInstall(cmd *Command, args []string) {
 	var b builder
 	b.init()
 
-
 	if buildBuildmode == "shared" {
 		var libname string
 		var libdir string
@@ -384,9 +383,14 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 	}
+
 	a := &action{}
 	for _, p := range pkgs {
-		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
+		bm := modeInstall
+		if p.ExportData != "" { // i.e. not a main package.
+			bm = modeBuild
+		}
+		a.deps = append(a.deps, b.action(bm, bm, p))
 	}
 	b.do(a)
 }
@@ -635,7 +639,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 
 	var aa *action = a
 
-	if p.SharedLib != "" {
+	if p.SharedLib != "" && mode == modeBuild {
 		aa = b.libaction(mode, p.SharedLib, a)
 	}
 
@@ -676,7 +680,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		}
 	}
 
-	if !p.Stale && p.target != "" {
+	if p.SharedLib == "" && !p.Stale && p.target != "" {
 		// p.Stale==false implies that p.target is up-to-date.
 		// Record target name for use by actions depending on this one.
 		a.target = p.target
@@ -1995,6 +1999,9 @@ func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, importArgs
 	}
 	if p.localPrefix != "" {
 		gcargs = append(gcargs, "-fgo-relative-import-path="+p.localPrefix)
+	}
+	if buildBuildmode == "shared" && p.SharedLib != "" {
+		gcargs = append(gcargs, "-fPIC")
 	}
 	args := stringList(gccgoName, importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
 	for _, f := range gofiles {
