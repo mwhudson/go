@@ -332,7 +332,7 @@ func runInstall(cmd *Command, args []string) {
 	pkgs := packagesForBuild(args)
 
 	for _, p := range pkgs {
-		if p.Target == "" && (!p.Standard || p.ImportPath != "unsafe") {
+		if buildBuildmode != "shared" && p.Target == "" && (!p.Standard || p.ImportPath != "unsafe") {
 			if p.cmdline {
 				errorf("go install: no install location for .go files listed on command line (GOBIN not set)")
 			} else if p.ConflictDir != "" {
@@ -678,7 +678,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		}
 	}
 
-	if !p.Stale && p.target != "" {
+	if !p.Stale && (p.target != "" || p.SharedLib != "") {
 		// p.Stale==false implies that p.target is up-to-date.
 		// Record target name for use by actions depending on this one.
 		a.target = p.target
@@ -744,6 +744,16 @@ func actionList(root *action) []*action {
 	return all
 }
 
+func actionStr(a *action) string {
+	if a.target != "" {
+		return a.target
+	}
+	if a.p != nil {
+		return a.p.Name
+	}
+	return "??"
+}
+
 // do runs the action graph rooted at root.
 func (b *builder) do(root *action) {
 	// Build list of all actions, assigning depth-first post-order priority.
@@ -766,10 +776,13 @@ func (b *builder) do(root *action) {
 
 	// Initialize per-action execution state.
 	for _, a := range all {
+		fmt.Printf("--\n")
 		for _, a1 := range a.deps {
+			fmt.Printf("adding %s for %s\n", actionStr(a1), actionStr(a))
 			a1.triggers = append(a1.triggers, a)
 		}
 		a.pending = len(a.deps)
+		fmt.Printf("-- %d\n", a.pending)
 		if a.pending == 0 {
 			b.ready.push(a)
 			b.readySema <- true
@@ -802,6 +815,7 @@ func (b *builder) do(root *action) {
 			if a.failed {
 				a0.failed = true
 			}
+			fmt.Printf("a0 pending: %d %s\n", a0.pending-1, a0.target)
 			if a0.pending--; a0.pending == 0 {
 				b.ready.push(a0)
 				b.readySema <- true
