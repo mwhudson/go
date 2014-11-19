@@ -346,7 +346,43 @@ func runInstall(cmd *Command, args []string) {
 
 	var b builder
 	b.init()
-	a := &action{}
+
+
+	var a *action
+	if buildBuildmode == "shared" {
+		var libname string
+		var libdir string
+		for _, p := range pkgs {
+			// We don't care if p is already built into a shared library.
+			p.SharedLib = ""
+			if libdir == "" {
+				libdir = p.build.SharedLibDir
+			} else if (libdir != p.build.SharedLibDir) {
+				fatalf("multiple roots")
+			}
+		}
+		for _, arg in range args {
+			arg = strings.Replace(arg, ".", "dot", -1)
+			clean := func(r rune) rune {
+				switch {
+					case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
+					'0' <= r && r <= '9':
+					return r
+				}
+				return '-'
+			}
+			arg = strings.Map(clean, arg)
+			if libname != "" {
+				libname = libname + "-" + arg
+			} else {
+				libname = arg
+			}
+		}
+		libname = filepath.Join(libdir, "lib" + libname + ".so")
+		a = libaction(libname, nil)
+	} else {
+		a = &action{}
+	}
 	for _, p := range pkgs {
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
@@ -568,7 +604,9 @@ func (b *builder) libaction(mode buildMode, string libraryname, a *action) {
 		// XXX much more here, obviously
 		b.libraryActionCache[libraryname] = la
 	}
-	la.deps = append(la.deps, a)
+	if a != nil {
+		la.deps = append(la.deps, a)
+	}
 	return la
 }
 
@@ -588,8 +626,8 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 
 	var aa *action = a
 
-	if p.libraryname != "" {
-		aa = b.libaction(mode, p.libraryname, a)
+	if p.SharedLib != "" {
+		aa = b.libaction(mode, p.SharedLib, a)
 	}
 
 	b.actionCache[key] = aa

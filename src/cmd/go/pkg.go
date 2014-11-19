@@ -32,6 +32,8 @@ type Package struct {
 	Name          string `json:",omitempty"` // package name
 	Doc           string `json:",omitempty"` // package documentation string
 	Target        string `json:",omitempty"` // install path
+	SharedLib     string `json:",omitempty"` // shared library containing this package
+	ExportData    string `json:",omitempty"` // XXX
 	Goroot        bool   `json:",omitempty"` // is this package found in the Go root?
 	Standard      bool   `json:",omitempty"` // is this package part of the standard Go library?
 	Stale         bool   `json:",omitempty"` // would 'go install' do anything for this package?
@@ -503,6 +505,23 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 		p.target = ""
 	} else {
 		p.target = p.build.PkgObj
+		if p.build.ExportData {
+			p.ExportData = p.build.ExportData
+		}
+		if p.ExportData != "" && (buildBuildmode == "linkshared" || buildBuildmode == "shared") {
+			if _, err = os.Stat(p.ExportData); err == nil {
+				// XXX this should come from the export data directly but for now...
+				dsoname, err := ioutil.ReadFile(p.ExportData + ".dsoname")
+				if err != nil {
+					fatalf("missing dsoname file")
+				}
+				shlib := filepath.Join(p.build.SharedLibDir, string(dsoname))
+				if _, err = os.Stat(shlib); err != nil {
+					fatalf("missing dso")
+				}
+				p.SharedLib = shlib
+			}
+		}
 	}
 
 	importPaths := p.Imports
