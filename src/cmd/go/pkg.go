@@ -11,6 +11,7 @@ import (
 	"go/build"
 	"go/scanner"
 	"go/token"
+	"io/ioutil"
 	"os"
 	pathpkg "path"
 	"path/filepath"

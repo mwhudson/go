@@ -346,6 +346,41 @@ func runInstall(cmd *Command, args []string) {
 
 	var b builder
 	b.init()
+
+	if buildBuildmode == "shared" {
+		var libname string
+		var libdir string
+		for _, p := range pkgs {
+			if libdir == "" {
+				libdir = p.build.SharedLibDir
+			} else if (libdir != p.build.SharedLibDir) {
+				fatalf("multiple roots")
+			}
+		}
+		for _, arg := range args {
+			arg = strings.Replace(arg, ".", "dot", -1)
+			clean := func(r rune) rune {
+				switch {
+					case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
+					'0' <= r && r <= '9':
+					return r
+				}
+				return '-'
+			}
+			arg = strings.Map(clean, arg)
+			if libname != "" {
+				libname = libname + "-" + arg
+			} else {
+				libname = arg
+			}
+		}
+		libname = filepath.Join(libdir, "lib" + libname + ".so")
+		for _, p := range pkgs {
+			if p.ExportData != "" { // i.e. not a main package.
+				p.SharedLib = libname
+			}
+		}
+	}
 	a := &action{}
 	for _, p := range pkgs {
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
@@ -451,6 +486,7 @@ func (b *builder) init() {
 		return fmt.Fprint(os.Stderr, a...)
 	}
 	b.actionCache = make(map[cacheKey]*action)
+	b.libraryActionCache = make(map[cacheKey]*action)
 	b.mkdirCache = make(map[string]bool)
 
 	if _, isgccgo := buildToolchain.(gccgoToolchain); !isgccgo {
@@ -561,37 +597,6 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
-<<<<<<< HEAD
-=======
-func (b *builder) libaction(mode buildMode, library string, a *action) *action {
-	la := b.libraryActionCache[library]
-	if la == nil {
-		la = &action{}
-		if a == nil {
-			// This is a total hack to only build the
-			// "outermost" library before we get around to
-			// doing staleness analysis.
-			la.f = (*builder).linkShared
-		}
-		la.target = library
-		la.isshlib = true
-		b.libraryActionCache[library] = la
-	}
-	if a != nil {
-		found := false
-		for _, a2 := range la.deps {
-			if a == a2 {
-				found = true
-				break
-			}
-		}
-		if !found {
-			la.deps = append(la.deps, a)
-		}
-	}
-	return la
-}
-
 
 func dumpActionTree(root *action) {
 	action2index := make(map[*action]int)
@@ -614,7 +619,6 @@ func dumpActionTree(root *action) {
 	dumpAction(root, "")
 }
 
->>>>>>> 28a15bc... dumpActionTree
 // action returns the action for applying the given operation (mode) to the package.
 // depMode is the action to use when building dependencies.
 func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action {
@@ -1179,6 +1183,52 @@ func (b *builder) install(a *action) (err error) {
 	}
 
 	return b.moveOrCopyFile(a, a.target, a1.target, perm)
+}
+
+// install is the action for installing a single package or executable.
+func (b *builder) linkShared(a *action) (err error) {
+        println(a.target)
+        for _, a1 := range a.deps {
+                fmt.Printf("%#v\n", a1.target)
+        }
+
+        all := actionList(a)
+        linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target}
+        for _, a1 := range all {
+                if strings.HasSuffix(a1.target, ".a") {
+                        linkArgs = append(linkArgs, a1.objdir + "_go_.o")
+                }
+        }
+        linkArgs = append(linkArgs, buildGccgoflags...)
+        dir, _ := filepath.Split(a.target)
+        if dir != "" {
+                if err := b.mkdir(dir); err != nil {
+                        return err
+                }
+        }
+        err = b.run(".", "", nil, linkArgs)
+        if err != nil {
+                return err
+        }
+	_, dsoname := filepath.Split(a.target)
+        for _, a1 := range a.deps {
+                dir, _ = filepath.Split(a1.p.build.ExportData)
+                if err := b.mkdir(dir); err != nil {
+                        return err
+                }
+		dsomarker := a1.p.build.ExportData + ".dsoname"
+                err = ioutil.WriteFile(dsomarker, []byte(dsoname + "\n"), 0644)
+                if err != nil {
+                        return err
+                }
+                objcopyArgs := []string{
+                        "objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
+                err = b.run(".", "", nil, objcopyArgs)
+                if err != nil {
+                        return err
+                }
+        }
+        return nil
 }
 
 // includeArgs returns the -I or -L directory list for access
