@@ -357,6 +357,8 @@ type Package struct {
 	BinDir        string   // command install directory ("" if unknown)
 	Goroot        bool     // package found in Go root
 	PkgObj        string   // installed .a file
+	ExportData    string   // location of export data when compiled into a shared library
+	SharedLibDir  string   // directory shared library containing this package will be installed into
 	AllTags       []string // tags that can influence file selection in this directory
 	ConflictDir   string   // this directory shadows Dir in $GOPATH
 
@@ -463,11 +465,15 @@ func (ctxt *Context) Import(path string, srcDir string, mode ImportMode) (*Packa
 	}
 
 	var pkga string
+	var exportdata string
+	var sharedlibdir string
 	var pkgerr error
 	switch ctxt.Compiler {
 	case "gccgo":
 		dir, elem := pathpkg.Split(p.ImportPath)
 		pkga = "pkg/gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH + "/" + dir + "lib" + elem + ".a"
+		sharedlibdir = "pkg/shared_gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH + "/"
+		exportdata = sharedlibdir + dir + elem + ".gox"
 	case "gc":
 		suffix := ""
 		if ctxt.InstallSuffix != "" {
@@ -591,6 +597,12 @@ Found:
 		p.BinDir = ctxt.joinPath(p.Root, "bin")
 		if pkga != "" {
 			p.PkgObj = ctxt.joinPath(p.Root, pkga)
+		}
+		if sharedlibdir != "" {
+			p.SharedLibDir = ctxt.joinPath(p.Root, sharedlibdir)
+		}
+		if exportdata != "" {
+			p.ExportData = ctxt.joinPath(p.Root, exportdata)
 		}
 	}
 
