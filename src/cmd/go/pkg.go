@@ -518,7 +518,7 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 				}
 				shlib := filepath.Join(p.build.SharedLibDir, strings.TrimSpace(string(dsoname)))
 				if _, err = os.Stat(shlib); err != nil {
-					fatalf("missing dso")
+					fatalf("missing dso %s %s", shlib, err)
 				}
 				p.SharedLib = shlib
 			}

@@ -2054,8 +2054,8 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 	// always see the install before the build.
 	for i := len(allactions) - 1; i >= 0; i-- {
 		a := allactions[i]
-		if !a.p.Standard {
-			if a.p != nil && !apackagesSeen[a.p] {
+		if a.p != nil && !apackagesSeen[a.p] {
+			if !a.p.Standard {
 				apackagesSeen[a.p] = true
 				if a.p.fake {
 					// move _test files to the top of the link order
