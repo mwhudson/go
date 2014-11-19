@@ -348,13 +348,10 @@ func runInstall(cmd *Command, args []string) {
 	b.init()
 
 
-	var a *action
 	if buildBuildmode == "shared" {
 		var libname string
 		var libdir string
 		for _, p := range pkgs {
-			// We don't care if p is already built into a shared library.
-			p.SharedLib = ""
 			if libdir == "" {
 				libdir = p.build.SharedLibDir
 			} else if (libdir != p.build.SharedLibDir) {
@@ -379,10 +376,15 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 		libname = filepath.Join(libdir, "lib" + libname + ".so")
-		a = libaction(libname, nil)
-	} else {
-		a = &action{}
+		// Just seed the cache.
+		libaction(libname, nil)
+		for _, p := range pkgs {
+			if p.ExportData != "" { // i.e. not a main package.
+				p.SharedLib = libname
+			}
+		}
 	}
+	a := &action{}
 	for _, p := range pkgs {
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
@@ -487,6 +489,7 @@ func (b *builder) init() {
 		return fmt.Fprint(os.Stderr, a...)
 	}
 	b.actionCache = make(map[cacheKey]*action)
+	b.libraryActionCache = make(map[cacheKey]*action)
 	b.mkdirCache = make(map[string]bool)
 
 	if _, isgccgo := buildToolchain.(gccgoToolchain); !isgccgo {
@@ -597,12 +600,18 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
-func (b *builder) libaction(mode buildMode, string libraryname, a *action) {
-	var *la = b.libraryActionCache[libraryname]
+func (b *builder) libaction(mode buildMode, string library, a *action) {
+	var *la = b.libraryActionCache[library]
 	if la == nil {
 		la = &action{}
-		// XXX much more here, obviously
-		b.libraryActionCache[libraryname] = la
+		if a == nil {
+			// This is a total hack to only build the
+			// "outermost" library before we get around to
+			// doing staleness analysis.
+			la.f = (*builder).linkShared
+		}
+		la.target = library
+		b.libraryActionCache[library] = la
 	}
 	if a != nil {
 		la.deps = append(la.deps, a)
@@ -1170,6 +1179,53 @@ func (b *builder) install(a *action) (err error) {
 	}
 
 	return b.moveOrCopyFile(a, a.target, a1.target, perm)
+}
+
+// install is the action for installing a single package or executable.
+func (b *builder) linkShared(a *action) (err error) {
+        println(a.target)
+        for _, a1 := range a.deps {
+                fmt.Printf("%#v\n", a1.target)
+        }
+
+        all := actionList(a)
+        linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target}
+        for _, a1 := range all {
+                if strings.HasSuffix(a1.target, ".a") {
+                        linkArgs = append(linkArgs, a1.objdir + "_go_.o")
+                }
+        }
+        linkArgs = append(linkArgs, buildGccgoflags...)
+        dir, _ := filepath.Split(a.target)
+        if dir != "" {
+                if err := b.mkdir(dir); err != nil {
+                        return err
+                }
+        }
+        err := b.run(".", "", nil, linkArgs)
+        if err != nil {
+                return err
+        }
+	_, dsoname := filepath.Split(a.target)
+        for _, a1 := range a.deps {
+                dir, _ = filepath.Split(a1.p.build.ExportData)
+                if err := b.mkdir(dir); err != nil {
+                        return err
+                }
+		dsomarker := a1.p.build.ExportData + ".dsoname"
+                err = ioutil.WriteFile(dsomarker, []byte(dsoname + "\n"), 0644)
+                if err != nil {
+                        return err
+                }
+                base := strings.TrimSuffix(a1.p.build.DsoMarker, ".dsoname")
+                objcopyArgs := []string{
+                        "objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
+                err = b.run(".", "", nil, objcopyArgs)
+                if err != nil {
+                        return err
+                }
+        }
+        return nil
 }
 
 // includeArgs returns the -I or -L directory list for access
