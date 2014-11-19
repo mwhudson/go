@@ -754,7 +754,7 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 		pkgBuildA = false
 	}
 
-	if pkgBuildA || p.target == "" || p.Stale {
+	if pkgBuildA || (p.target == "" && p.SharedLib == "") || p.Stale {
 		return true
 	}
 
