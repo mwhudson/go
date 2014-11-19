@@ -386,11 +386,7 @@ func runInstall(cmd *Command, args []string) {
 
 	a := &action{}
 	for _, p := range pkgs {
-		bm := modeInstall
-		if p.ExportData != "" { // i.e. not a main package.
-			bm = modeBuild
-		}
-		a.deps = append(a.deps, b.action(bm, bm, p))
+		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
 	b.do(a)
 }
@@ -639,8 +635,10 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 
 	var aa *action = a
 
-	if p.SharedLib != "" && mode == modeBuild {
+	if p.SharedLib != "" {
 		aa = b.libaction(mode, p.SharedLib, a)
+		mode = modeBuild
+		depMode = modeBuild
 	}
 
 	b.actionCache[key] = aa
@@ -680,7 +678,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		}
 	}
 
-	if p.SharedLib == "" && !p.Stale && p.target != "" {
+	if !p.Stale && p.target != "" {
 		// p.Stale==false implies that p.target is up-to-date.
 		// Record target name for use by actions depending on this one.
 		a.target = p.target
