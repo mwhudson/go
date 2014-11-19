@@ -381,9 +381,14 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 	}
+
 	a := &action{}
 	for _, p := range pkgs {
-		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
+		bm := modeInstall
+		if p.ExportData != "" { // i.e. not a main package.
+			bm = modeBuild
+		}
+		a.deps = append(a.deps, b.action(bm, bm, p))
 	}
 	dumpActionTree(a)
 	b.do(a)
@@ -597,7 +602,6 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
-
 func dumpActionTree(root *action) {
 	action2index := make(map[*action]int)
 	var dumpAction func(*action, string)
@@ -670,7 +674,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		}
 	}
 
-	if !p.Stale && p.target != "" {
+	if p.SharedLib == "" && !p.Stale && p.target != "" {
 		// p.Stale==false implies that p.target is up-to-date.
 		// Record target name for use by actions depending on this one.
 		a.target = p.target
@@ -1999,6 +2003,9 @@ func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, importArgs
 	}
 	if p.localPrefix != "" {
 		gcargs = append(gcargs, "-fgo-relative-import-path="+p.localPrefix)
+	}
+	if buildBuildmode == "shared" && p.SharedLib != "" {
+		gcargs = append(gcargs, "-fPIC")
 	}
 	args := stringList(gccgoName, importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
 	for _, f := range gofiles {
