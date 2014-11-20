@@ -133,6 +133,7 @@ var buildLdflags []string    // -ldflags flag
 var buildGccgoflags []string // -gccgoflags flag
 var buildRace bool           // -race flag
 var buildBuildmode string
+var buildLibname string
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -188,6 +189,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var(buildCompiler{}, "compiler", "")
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
 	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
+	cmd.Flag.StringVar(&buildLibname, "libname", "", "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -359,22 +361,26 @@ func runInstall(cmd *Command, args []string) {
 				fatalf("multiple roots")
 			}
 		}
-		for _, arg := range args {
-			arg = strings.Replace(arg, ".", "dot", -1)
-			clean := func(r rune) rune {
-				switch {
-				case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
-					'0' <= r && r <= '9':
-					return r
+		if buildLibname == "" {
+			for _, arg := range args {
+				arg = strings.Replace(arg, ".", "dot", -1)
+				clean := func(r rune) rune {
+					switch {
+					case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
+						'0' <= r && r <= '9':
+						return r
+					}
+					return '-'
 				}
-				return '-'
+				arg = strings.Map(clean, arg)
+				if libname != "" {
+					libname = libname + "-" + arg
+				} else {
+					libname = arg
+				}
 			}
-			arg = strings.Map(clean, arg)
-			if libname != "" {
-				libname = libname + "-" + arg
-			} else {
-				libname = arg
-			}
+		} else {
+			libname = buildLibname
 		}
 		libname = filepath.Join(libdir, "lib"+libname+".so")
 		for _, p := range pkgs {
