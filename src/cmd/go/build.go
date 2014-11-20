@@ -2008,7 +2008,7 @@ func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr boo
 		gcargs = append(gcargs, "-fgo-relative-import-path="+p.localPrefix)
 	}
 	if buildBuildmode == "shared" && p.SharedLib != "" {
-		gcargs = append(gcargs, "-fPIC")
+		gcargs = append(gcargs, "-fPIC", "-fno-split-stack")
 	}
 	args := stringList(gccgoName, importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
 	for _, f := range gofiles {
