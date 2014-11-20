@@ -503,6 +503,21 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 		p.target = ""
 	} else {
 		p.target = p.build.PkgObj
+		if p.build.ExportData != "" {
+			p.ExportData = p.build.ExportData
+		}
+		if p.ExportData != "" && (buildBuildmode == "linkshared" || buildBuildmode == "shared") {
+			if _, err = os.Stat(p.ExportData); err == nil {
+				// XXX this should come from the export data directly but for now...
+				dsoname, err := ioutil.ReadFile(p.ExportData + ".dsoname")
+				if err != nil {
+					fatalf("missing dsoname file")
+				}
+				shlib := filepath.Join(p.build.SharedLibDir, strings.TrimSpace(string(dsoname)))
+				p.SharedLib = shlib
+			}
+			p.target = ""
+		}
 	}
 
 	importPaths := p.Imports
@@ -744,7 +759,15 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 
 	// Package is stale if completely unbuilt.
 	var built time.Time
-	if fi, err := os.Stat(p.target); err == nil {
+	var t = p.target
+	if t == "" {
+		t = p.SharedLib
+		if _, err := os.Stat(t); err != nil {
+			// We assume a missing library is in a system location...
+			return false
+		}
+	}
+	if fi, err := os.Stat(t); err == nil {
 		built = fi.ModTime()
 	}
 	if built.IsZero() {
