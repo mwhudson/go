@@ -38,6 +38,8 @@ type Package struct {
 	Stale         bool   `json:",omitempty"` // would 'go install' do anything for this package?
 	Root          string `json:",omitempty"` // Go root or Go path dir containing this package
 	ConflictDir   string `json:",omitempty"` // Dir is hidden by this other directory
+	ExportData    string
+	SharedLib     string
 
 	// Source files
 	GoFiles        []string `json:",omitempty"` // .go source files (excluding CgoFiles, TestGoFiles, XTestGoFiles)
