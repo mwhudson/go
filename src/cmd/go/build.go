@@ -499,7 +499,6 @@ func (b *builder) init() {
 		return fmt.Fprint(os.Stderr, a...)
 	}
 	b.actionCache = make(map[cacheKey]*action)
-	b.libraryActionCache = make(map[cacheKey]*action)
 	b.mkdirCache = make(map[string]bool)
 
 	if _, isgccgo := buildToolchain.(gccgoToolchain); !isgccgo {
@@ -780,13 +779,10 @@ func (b *builder) do(root *action) {
 
 	// Initialize per-action execution state.
 	for _, a := range all {
-		fmt.Printf("--\n")
 		for _, a1 := range a.deps {
-			fmt.Printf("adding %s for %s\n", actionStr(a1), actionStr(a))
 			a1.triggers = append(a1.triggers, a)
 		}
 		a.pending = len(a.deps)
-		fmt.Printf("-- %d\n", a.pending)
 		if a.pending == 0 {
 			b.ready.push(a)
 			b.readySema <- true
@@ -819,7 +815,6 @@ func (b *builder) do(root *action) {
 			if a.failed {
 				a0.failed = true
 			}
-			fmt.Printf("a0 pending: %d %s\n", a0.pending-1, a0.target)
 			if a0.pending--; a0.pending == 0 {
 				b.ready.push(a0)
 				b.readySema <- true
