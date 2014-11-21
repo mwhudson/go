@@ -348,6 +348,7 @@ func runInstall(cmd *Command, args []string) {
 	for _, p := range pkgs {
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
+	dumpActionTree(a)
 	b.do(a)
 }
 
@@ -545,6 +546,60 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
+<<<<<<< HEAD
+=======
+func (b *builder) libaction(mode buildMode, library string, a *action) *action {
+	la := b.libraryActionCache[library]
+	if la == nil {
+		la = &action{}
+		if a == nil {
+			// This is a total hack to only build the
+			// "outermost" library before we get around to
+			// doing staleness analysis.
+			la.f = (*builder).linkShared
+		}
+		la.target = library
+		la.isshlib = true
+		b.libraryActionCache[library] = la
+	}
+	if a != nil {
+		found := false
+		for _, a2 := range la.deps {
+			if a == a2 {
+				found = true
+				break
+			}
+		}
+		if !found {
+			la.deps = append(la.deps, a)
+		}
+	}
+	return la
+}
+
+
+func dumpActionTree(root *action) {
+	action2index := make(map[*action]int)
+	var dumpAction func(*action, string)
+	dumpAction = func (a *action, indent string) {
+		if i, ok := action2index[a]; ok {
+			fmt.Printf("   %s =%d\n", indent, i)
+			return
+		}
+		i := len(action2index)
+		action2index[a] = i
+		fmt.Printf("%2d %s %s\n", i, indent, actionStr(a))
+		for _, a1 := range a.deps {
+			if a1.p != nil && a1.p.Standard {
+				continue
+			}
+			dumpAction(a1, indent + " ")
+		}
+	}
+	dumpAction(root, "")
+}
+
+>>>>>>> 28a15bc... dumpActionTree
 // action returns the action for applying the given operation (mode) to the package.
 // depMode is the action to use when building dependencies.
 func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action {
@@ -660,6 +715,16 @@ func actionList(root *action) []*action {
 	}
 	walk(root)
 	return all
+}
+
+func actionStr(a *action) string {
+	if a.target != "" {
+		return a.target
+	}
+	if a.p != nil {
+		return a.p.ImportPath
+	}
+	return "??"
 }
 
 // do runs the action graph rooted at root.
