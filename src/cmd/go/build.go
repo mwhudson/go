@@ -390,11 +390,10 @@ func runInstall(cmd *Command, args []string) {
 
 	a := &action{}
 	for _, p := range pkgs {
-		bm := modeInstall
-		if p.ExportData != "" { // i.e. not a main package.
-			bm = modeBuild
-		}
-		a.deps = append(a.deps, b.action(bm, bm, p))
+		//if p.ExportData != "" { // i.e. not a main package.
+		//	bm = modeBuild
+		//}
+		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
 	dumpActionTree(a)
 	b.do(a)
