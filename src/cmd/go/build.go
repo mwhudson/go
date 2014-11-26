@@ -1502,14 +1502,34 @@ func (b *builder) linkShared(a *action) (err error) {
 	}
 
 	// This does not include anything to do with linking against shared libraries...
-	all := actionList(a)[1:]
+	all := actionList(a)
+	all = all[0 : len(all)-1]
+	mylib := all[len(all)-1].p.SharedLib
 	linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
+	libs := make(map[string]bool)
+	libdirs := make(map[string]bool)
 	for _, a1 := range all {
 		if strings.HasSuffix(a1.target, ".a") {
 			linkArgs = append(linkArgs, a1.target)
 		}
+		if a1.p == nil {
+			continue
+		}
+		for _, p := range a1.p.imports {
+			if p.SharedLib != "" && p.SharedLib != mylib {
+				libs[p.SharedLib] = true
+				libdirs[p.build.SharedLibDir] = true
+			}
+		}
 	}
 	linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
+	for ld, _ := range libdirs {
+		linkArgs = append(linkArgs, "-L"+ld)
+		linkArgs = append(linkArgs, "-Wl,-rpath="+ld)
+	}
+	for sl, _ := range libs {
+		linkArgs = append(linkArgs, "-l"+sl)
+	}
 	linkArgs = append(linkArgs, buildGccgoflags...)
 	dir, _ := filepath.Split(a.target)
 	if dir != "" {
