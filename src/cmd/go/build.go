@@ -380,7 +380,6 @@ func runInstall(cmd *Command, args []string) {
 		} else {
 			libname = buildLibname
 		}
-		libname = filepath.Join(libdir, "lib" + libname + ".so")
 		for _, p := range pkgs {
 			if p.ExportData != "" { // i.e. not a main package.
 				p.SharedLib = libname
@@ -392,7 +391,7 @@ func runInstall(cmd *Command, args []string) {
 	if (buildBuildmode == "shared") {
 		la := &action{}
 		la.f = (*builder).linkShared
-		la.target = libname
+		la.target = filepath.Join(libdir, "lib" + libname + ".so")
 		for _, p := range pkgs {
 			if p.Name != "main" {
 				la.deps = append(la.deps, b.action(modeInstallForShared, modeBuildForShared, p))
@@ -699,7 +698,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		}
 	}
 
-	if p.SharedLib == "" && !p.Stale && p.target != "" {
+	if !p.Stale && p.target != "" {
 		// p.Stale==false implies that p.target is up-to-date.
 		// Record target name for use by actions depending on this one.
 		a.target = p.target
@@ -774,13 +773,15 @@ func actionList(root *action) []*action {
 }
 
 func actionStr(a *action) string {
+	var r string
 	if a.target != "" {
-		return a.target
+		r = a.target
+	} else if a.p != nil {
+		r = a.p.ImportPath
+	} else {
+		r = "??"
 	}
-	if a.p != nil {
-		return a.p.ImportPath
-	}
-	return "??"
+	return r// + "\n objdir : " + a.objdir
 }
 
 // do runs the action graph rooted at root.
@@ -900,7 +901,253 @@ func hasString(strings []string, s string) bool {
 }
 
 func (b *builder) buildForShared(a *action) (err error) {
-	return
+	// Return an error if the package has CXX files but it's not using
+	// cgo nor SWIG, since the CXX files can only be processed by cgo
+	// and SWIG (it's possible to have packages with C files without
+	// using cgo, they will get compiled with the plan9 C compiler and
+	// linked with the rest of the package).
+	if len(a.p.CXXFiles) > 0 && !a.p.usesCgo() && !a.p.usesSwig() {
+		return fmt.Errorf("can't build package %s because it contains C++ files (%s) but it's not using cgo nor SWIG",
+			a.p.ImportPath, strings.Join(a.p.CXXFiles, ","))
+	}
+	// Same as above for Objective-C files
+	if len(a.p.MFiles) > 0 && !a.p.usesCgo() && !a.p.usesSwig() {
+		return fmt.Errorf("can't build package %s because it contains Objective-C files (%s) but it's not using cgo nor SWIG",
+			a.p.ImportPath, strings.Join(a.p.MFiles, ","))
+	}
+	defer func() {
+		if err != nil && err != errPrintedOutput {
+			err = fmt.Errorf("go build %s: %v", a.p.ImportPath, err)
+		}
+	}()
+	if buildN {
+		// In -n mode, print a banner between packages.
+		// The banner is five lines so that when changes to
+		// different sections of the bootstrap script have to
+		// be merged, the banners give patch something
+		// to use to find its context.
+		fmt.Printf("\n#\n# %s\n#\n\n", a.p.ImportPath)
+	}
+
+	if buildV {
+		fmt.Fprintf(os.Stderr, "%s\n", a.p.ImportPath)
+	}
+
+	if a.p.Standard && a.p.ImportPath == "runtime" && buildContext.Compiler == "gc" &&
+		!hasString(a.p.HFiles, "zasm_"+buildContext.GOOS+"_"+buildContext.GOARCH+".h") {
+		return fmt.Errorf("%s/%s must be bootstrapped using make%v", buildContext.GOOS, buildContext.GOARCH, defaultSuffix())
+	}
+
+	// Make build directory.
+	obj := a.objdir
+	if err := b.mkdir(obj); err != nil {
+		return err
+	}
+
+	// make target directory
+	dir, _ := filepath.Split(a.target)
+	if dir != "" {
+		if err := b.mkdir(dir); err != nil {
+			return err
+		}
+	}
+
+	var gofiles, cfiles, sfiles, objects, cgoObjects, pcCFLAGS, pcLDFLAGS []string
+
+	gofiles = append(gofiles, a.p.GoFiles...)
+	cfiles = append(cfiles, a.p.CFiles...)
+	sfiles = append(sfiles, a.p.SFiles...)
+
+	if a.p.usesCgo() || a.p.usesSwig() {
+		if pcCFLAGS, pcLDFLAGS, err = b.getPkgConfigFlags(a.p); err != nil {
+			return
+		}
+	}
+	// Run cgo.
+	if a.p.usesCgo() {
+		// In a package using cgo, cgo compiles the C, C++ and assembly files with gcc.
+		// There is one exception: runtime/cgo's job is to bridge the
+		// cgo and non-cgo worlds, so it necessarily has files in both.
+		// In that case gcc only gets the gcc_* files.
+		var gccfiles []string
+		if a.p.Standard && a.p.ImportPath == "runtime/cgo" {
+			filter := func(files, nongcc, gcc []string) ([]string, []string) {
+				for _, f := range files {
+					if strings.HasPrefix(f, "gcc_") {
+						gcc = append(gcc, f)
+					} else {
+						nongcc = append(nongcc, f)
+					}
+				}
+				return nongcc, gcc
+			}
+			cfiles, gccfiles = filter(cfiles, cfiles[:0], gccfiles)
+			sfiles, gccfiles = filter(sfiles, sfiles[:0], gccfiles)
+		} else {
+			gccfiles = append(cfiles, sfiles...)
+			cfiles = nil
+			sfiles = nil
+		}
+
+		cgoExe := tool("cgo")
+		if a.cgo != nil && a.cgo.target != "" {
+			cgoExe = a.cgo.target
+		}
+		outGo, outObj, err := b.cgo(a.p, cgoExe, obj, pcCFLAGS, pcLDFLAGS, gccfiles, a.p.CXXFiles, a.p.MFiles)
+		if err != nil {
+			return err
+		}
+		cgoObjects = append(cgoObjects, outObj...)
+		gofiles = append(gofiles, outGo...)
+	}
+
+	// Run SWIG.
+	if a.p.usesSwig() {
+		// In a package using SWIG, any .c or .s files are
+		// compiled with gcc.
+		gccfiles := append(cfiles, sfiles...)
+		cxxfiles, mfiles := a.p.CXXFiles, a.p.MFiles
+		cfiles = nil
+		sfiles = nil
+
+		// Don't build c/c++ files twice if cgo is enabled (mainly for pkg-config).
+		if a.p.usesCgo() {
+			cxxfiles = nil
+			gccfiles = nil
+			mfiles = nil
+		}
+
+		outGo, outObj, err := b.swig(a.p, obj, pcCFLAGS, gccfiles, cxxfiles, mfiles)
+		if err != nil {
+			return err
+		}
+		cgoObjects = append(cgoObjects, outObj...)
+		gofiles = append(gofiles, outGo...)
+	}
+
+	if len(gofiles) == 0 {
+		return &build.NoGoError{Dir: a.p.Dir}
+	}
+
+	// If we're doing coverage, preprocess the .go files and put them in the work directory
+	if a.p.coverMode != "" {
+		for i, file := range gofiles {
+			var sourceFile string
+			var coverFile string
+			var key string
+			if strings.HasSuffix(file, ".cgo1.go") {
+				// cgo files have absolute paths
+				base := filepath.Base(file)
+				sourceFile = file
+				coverFile = filepath.Join(obj, base)
+				key = strings.TrimSuffix(base, ".cgo1.go") + ".go"
+			} else {
+				sourceFile = filepath.Join(a.p.Dir, file)
+				coverFile = filepath.Join(obj, file)
+				key = file
+			}
+			cover := a.p.coverVars[key]
+			if cover == nil || isTestFile(file) {
+				// Not covering this file.
+				continue
+			}
+			if err := b.cover(a, coverFile, sourceFile, 0666, cover.Var); err != nil {
+				return err
+			}
+			gofiles[i] = coverFile
+		}
+	}
+
+	// Prepare Go import path list.
+	inc := b.includeArgs("-I", a.deps)
+
+	// Compile Go.
+	ofile, out, err := buildToolchain.gc(b, a.p, a.objpkg, obj, inc, gofiles, true)
+	if len(out) > 0 {
+		b.showOutput(a.p.Dir, a.p.ImportPath, b.processOutput(out))
+		if err != nil {
+			return errPrintedOutput
+		}
+	}
+	if err != nil {
+		return err
+	}
+	if ofile != a.objpkg {
+		objects = append(objects, ofile)
+	}
+
+	// Copy .h files named for goos or goarch or goos_goarch
+	// to names using GOOS and GOARCH.
+	// For example, defs_linux_amd64.h becomes defs_GOOS_GOARCH.h.
+	_goos_goarch := "_" + goos + "_" + goarch
+	_goos := "_" + goos
+	_goarch := "_" + goarch
+	for _, file := range a.p.HFiles {
+		name, ext := fileExtSplit(file)
+		switch {
+		case strings.HasSuffix(name, _goos_goarch):
+			targ := file[:len(name)-len(_goos_goarch)] + "_GOOS_GOARCH." + ext
+			if err := b.copyFile(a, obj+targ, filepath.Join(a.p.Dir, file), 0644); err != nil {
+				return err
+			}
+		case strings.HasSuffix(name, _goarch):
+			targ := file[:len(name)-len(_goarch)] + "_GOARCH." + ext
+			if err := b.copyFile(a, obj+targ, filepath.Join(a.p.Dir, file), 0644); err != nil {
+				return err
+			}
+		case strings.HasSuffix(name, _goos):
+			targ := file[:len(name)-len(_goos)] + "_GOOS." + ext
+			if err := b.copyFile(a, obj+targ, filepath.Join(a.p.Dir, file), 0644); err != nil {
+				return err
+			}
+		}
+	}
+
+	objExt := archChar
+	if _, ok := buildToolchain.(gccgoToolchain); ok {
+		objExt = "o"
+	}
+
+	for _, file := range cfiles {
+		out := file[:len(file)-len(".c")] + "." + objExt
+		if err := buildToolchain.cc(b, a.p, obj, obj+out, file); err != nil {
+			return err
+		}
+		objects = append(objects, out)
+	}
+
+	// Assemble .s files.
+	for _, file := range sfiles {
+		out := file[:len(file)-len(".s")] + "." + objExt
+		if err := buildToolchain.asm(b, a.p, obj, obj+out, file); err != nil {
+			return err
+		}
+		objects = append(objects, out)
+	}
+
+	// NOTE(rsc): On Windows, it is critically important that the
+	// gcc-compiled objects (cgoObjects) be listed after the ordinary
+	// objects in the archive.  I do not know why this is.
+	// http://golang.org/issue/2601
+	objects = append(objects, cgoObjects...)
+
+	// Add system object files.
+	for _, syso := range a.p.SysoFiles {
+		objects = append(objects, filepath.Join(a.p.Dir, syso))
+	}
+
+	// Pack into archive in obj directory.
+	// If the Go compiler wrote an archive, we only need to add the
+	// object files for non-Go sources to the archive.
+	// If the Go compiler wrote an archive and the package is entirely
+	// Go sources, there is no pack to execute at all.
+	if len(objects) > 0 {
+		if err := buildToolchain.pack(b, a.p, obj, a.objpkg, objects); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // build is the action for building a single package or command.
@@ -1066,7 +1313,7 @@ func (b *builder) build(a *action) (err error) {
 	inc := b.includeArgs("-I", a.deps)
 
 	// Compile Go.
-	ofile, out, err := buildToolchain.gc(b, a.p, a.objpkg, obj, inc, gofiles, a.forShared)
+	ofile, out, err := buildToolchain.gc(b, a.p, a.objpkg, obj, inc, gofiles, false)
 	if len(out) > 0 {
 		b.showOutput(a.p.Dir, a.p.ImportPath, b.processOutput(out))
 		if err != nil {
@@ -1195,7 +1442,31 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 
 // install is the action for installing a single package or executable.
 func (b *builder) installForShared(a *action) (err error) {
-	return
+	defer func() {
+		if err != nil && err != errPrintedOutput {
+			err = fmt.Errorf("go install %s: %v", a.p.ImportPath, err)
+		}
+	}()
+
+	a1 := a.deps[0]
+	dir, _ := filepath.Split(a1.p.build.ExportData)
+	if err := b.mkdir(dir); err != nil {
+		return err
+	}
+	dsomarker := a1.p.build.ExportData + ".dsoname"
+	err = ioutil.WriteFile(dsomarker, []byte(a1.p.SharedLib + "\n"), 0644)
+	if err != nil {
+		return err
+	}
+
+	if !buildWork {
+		defer os.RemoveAll(a1.objdir)
+		defer os.Remove(a1.target)
+	}
+
+	objcopyArgs := []string{
+		"objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
+	return b.run(".", "", nil, objcopyArgs)
 }
 
 // install is the action for installing a single package or executable.
@@ -1238,13 +1509,13 @@ func (b *builder) linkShared(a *action) (err error) {
                 fmt.Printf("%#v\n", a1.target)
         }
 
-        all := actionList(a)
-        linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target}
+	// This does not include anything to do with linking against shared libraries...
+        all := actionList(a)[1:]
+        linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
         for _, a1 := range all {
-                if strings.HasSuffix(a1.target, ".a") {
-                        linkArgs = append(linkArgs, a1.objdir + "_go_.o")
-                }
+		linkArgs = append(linkArgs, a1.target)
         }
+        linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
         linkArgs = append(linkArgs, buildGccgoflags...)
         dir, _ := filepath.Split(a.target)
         if dir != "" {
@@ -1252,29 +1523,7 @@ func (b *builder) linkShared(a *action) (err error) {
                         return err
                 }
         }
-        err = b.run(".", "", nil, linkArgs)
-        if err != nil {
-                return err
-        }
-	_, dsoname := filepath.Split(a.target)
-        for _, a1 := range a.deps {
-                dir, _ = filepath.Split(a1.p.build.ExportData)
-                if err := b.mkdir(dir); err != nil {
-                        return err
-                }
-		dsomarker := a1.p.build.ExportData + ".dsoname"
-                err = ioutil.WriteFile(dsomarker, []byte(dsoname + "\n"), 0644)
-                if err != nil {
-                        return err
-                }
-                objcopyArgs := []string{
-                        "objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
-                err = b.run(".", "", nil, objcopyArgs)
-                if err != nil {
-                        return err
-                }
-        }
-        return nil
+        return b.run(".", "", nil, linkArgs)
 }
 
 // includeArgs returns the -I or -L directory list for access
@@ -2037,12 +2286,8 @@ func (gccgoToolchain) linker() string {
 
 func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, importArgs []string, gofiles []string, forShared bool) (ofile string, output []byte, err error) {
 	var out string
-	if forShared {
-		out = obj
-	} else {
-		out = "_go_.o"
-		ofile = obj + out
-	}
+	out = "_go_.o"
+	ofile = obj + out
 	gcargs := []string{"-g"}
 	gcargs = append(gcargs, b.gccArchArgs()...)
 	if pkgpath := gccgoPkgpath(p); pkgpath != "" {
