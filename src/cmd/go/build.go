@@ -349,8 +349,8 @@ func runInstall(cmd *Command, args []string) {
 	var b builder
 	b.init()
 
-	var libname string
 	if buildBuildmode == "shared" {
+		var libname string
 		var libdir string
 		for _, p := range pkgs {
 			if libdir == "" {
@@ -385,10 +385,6 @@ func runInstall(cmd *Command, args []string) {
 				p.SharedLib = libname
 			}
 		}
-	}
-
-	a := &action{}
-	if (buildBuildmode == "shared") {
 		la := &action{}
 		la.f = (*builder).linkShared
 		la.target = filepath.Join(libdir, "lib" + libname + ".so")
@@ -398,18 +394,16 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 		dumpActionTree(la)
+		b.do(la)
 		return
 	}
+
+	a := &action{}
 	for _, p := range pkgs {
-		//if p.ExportData != "" { // i.e. not a main package.
-		//	bm = modeBuild
-		//}
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
 	dumpActionTree(a)
-	if (buildBuildmode != "shared") {
-		b.do(a)
-	}
+	b.do(a)
 }
 
 // Global build parameters (used during package load)
@@ -1460,11 +1454,6 @@ func (b *builder) installForShared(a *action) (err error) {
 		return err
 	}
 
-	if !buildWork {
-		defer os.RemoveAll(a1.objdir)
-		defer os.Remove(a1.target)
-	}
-
 	objcopyArgs := []string{
 		"objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
 	return b.run(".", "", nil, objcopyArgs)
@@ -1514,7 +1503,9 @@ func (b *builder) linkShared(a *action) (err error) {
         all := actionList(a)[1:]
         linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
         for _, a1 := range all {
-		linkArgs = append(linkArgs, a1.target)
+                if strings.HasSuffix(a1.target, ".a") {
+                        linkArgs = append(linkArgs, a1.target)
+                }
         }
         linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
         linkArgs = append(linkArgs, buildGccgoflags...)
