@@ -517,8 +517,8 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 					fatalf("missing dsoname file")
 				}
 				p.SharedLib = strings.TrimSpace(string(dsoname))
+				p.target = ""
 			}
-			p.target = ""
 		}
 	}
 
