@@ -1494,28 +1494,48 @@ func (b *builder) install(a *action) (err error) {
 
 // install is the action for installing a single package or executable.
 func (b *builder) linkShared(a *action) (err error) {
-        println(a.target)
-        for _, a1 := range a.deps {
-                fmt.Printf("%#v\n", a1.target)
-        }
+	println(a.target)
+	for _, a1 := range a.deps {
+		fmt.Printf("%#v\n", a1.target)
+	}
 
 	// This does not include anything to do with linking against shared libraries...
-        all := actionList(a)[1:]
-        linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
-        for _, a1 := range all {
-                if strings.HasSuffix(a1.target, ".a") {
-                        linkArgs = append(linkArgs, a1.target)
-                }
-        }
-        linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
-        linkArgs = append(linkArgs, buildGccgoflags...)
-        dir, _ := filepath.Split(a.target)
-        if dir != "" {
-                if err := b.mkdir(dir); err != nil {
-                        return err
-                }
-        }
-        return b.run(".", "", nil, linkArgs)
+	all := actionList(a)
+	all = all[0:len(all)-1]
+	mylib := all[len(all)-1].p.SharedLib
+	linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
+	libs := make(map[string]bool)
+	libdirs := make(map[string]bool)
+	for _, a1 := range all {
+		if strings.HasSuffix(a1.target, ".a") {
+			linkArgs = append(linkArgs, a1.target)
+		}
+		if a1.p == nil {
+			continue
+		}
+		for _, p := range a1.p.imports {
+			if p.SharedLib != "" && p.SharedLib != mylib {
+				libs[p.SharedLib] = true
+				libdirs[p.build.SharedLibDir] = true
+			}
+		}
+	}
+	linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
+	for ld, _ := range libdirs {
+		linkArgs = append(linkArgs, "-L" + ld)
+		linkArgs = append(linkArgs, "-Wl,-rpath=" + ld)
+	}
+	for sl, _ := range libs {
+		linkArgs = append(linkArgs, "-l" + sl)
+	}
+	linkArgs = append(linkArgs, buildGccgoflags...)
+	dir, _ := filepath.Split(a.target)
+	if dir != "" {
+		if err := b.mkdir(dir); err != nil {
+			return err
+		}
+	}
+	return b.run(".", "", nil, linkArgs)
 }
 
 // includeArgs returns the -I or -L directory list for access
