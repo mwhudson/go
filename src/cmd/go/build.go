@@ -351,8 +351,8 @@ func runInstall(cmd *Command, args []string) {
 	var b builder
 	b.init()
 
+	var libname string
 	if buildBuildmode == "shared" {
-		var libname string
 		var libdir string
 		for _, p := range pkgs {
 			if libdir == "" {
@@ -391,6 +391,18 @@ func runInstall(cmd *Command, args []string) {
 	}
 
 	a := &action{}
+	if buildBuildmode == "shared" {
+		la := &action{}
+		la.f = (*builder).linkShared
+		la.target = libname
+		for _, p := range pkgs {
+			if p.Name != "main" {
+				la.deps = append(la.deps, b.action(modeInstallForShared, modeBuildForShared, p))
+			}
+		}
+		dumpActionTree(la)
+		return
+	}
 	for _, p := range pkgs {
 		//if p.ExportData != "" { // i.e. not a main package.
 		//	bm = modeBuild
@@ -398,7 +410,9 @@ func runInstall(cmd *Command, args []string) {
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
 	dumpActionTree(a)
-	b.do(a)
+	if buildBuildmode != "shared" {
+		b.do(a)
+	}
 }
 
 // Global build parameters (used during package load)
@@ -457,11 +471,12 @@ type action struct {
 	ignoreFail bool                          // whether to run f even if dependencies fail
 
 	// Generated files, directories.
-	link   bool   // target is executable, not just package
-	pkgdir string // the -I or -L argument to use when importing this package
-	objdir string // directory for intermediate objects
-	objpkg string // the intermediate package .a file created during the action
-	target string // goal of the action: the created package or executable
+	link      bool // target is executable, not just package
+	forShared bool
+	pkgdir    string // the -I or -L argument to use when importing this package
+	objdir    string // directory for intermediate objects
+	objpkg    string // the intermediate package .a file created during the action
+	target    string // goal of the action: the created package or executable
 
 	// Execution state.
 	pending  int  // number of deps yet to complete
@@ -481,6 +496,8 @@ type buildMode int
 
 const (
 	modeBuild buildMode = iota
+	modeBuildForShared
+	modeInstallForShared
 	modeInstall
 )
 
@@ -645,8 +662,12 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 
 	b.actionCache[key] = a
 
-	for _, p1 := range p.imports {
-		a.deps = append(a.deps, b.action(depMode, depMode, p1))
+	if mode != modeInstallForShared {
+		for _, p1 := range p.imports {
+			if p1.SharedLib == "" || p1.SharedLib == p.SharedLib {
+				a.deps = append(a.deps, b.action(depMode, depMode, p1))
+			}
+		}
 	}
 
 	// If we are not doing a cross-build, then record the binary we'll
@@ -704,6 +725,14 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		a.f = (*builder).install
 		a.deps = []*action{b.action(modeBuild, depMode, p)}
 		a.target = a.p.target
+	case modeInstallForShared:
+		a.f = (*builder).installForShared
+		a.deps = []*action{b.action(modeBuildForShared, depMode, p)}
+		a.target = a.p.build.ExportData
+	case modeBuildForShared:
+		a.f = (*builder).buildForShared
+		a.target = a.objpkg
+		a.objpkg = a.target
 	case modeBuild:
 		a.f = (*builder).build
 		a.target = a.objpkg
@@ -872,6 +901,10 @@ func hasString(strings []string, s string) bool {
 	return false
 }
 
+func (b *builder) buildForShared(a *action) (err error) {
+	return
+}
+
 // build is the action for building a single package or command.
 func (b *builder) build(a *action) (err error) {
 	// Return an error if the package has CXX files but it's not using
@@ -1036,7 +1069,7 @@ func (b *builder) build(a *action) (err error) {
 	inc := b.includeArgs("-I", a.deps)
 
 	// Compile Go.
-	ofile, out, err := buildToolchain.gc(b, a.p, a.objpkg, obj, len(sfiles) > 0, inc, gofiles)
+	ofile, out, err := buildToolchain.gc(b, a.p, a.objpkg, obj, len(sfiles) > 0, inc, gofiles, a.forShared)
 	if len(out) > 0 {
 		b.showOutput(a.p.Dir, a.p.ImportPath, b.processOutput(out))
 		if err != nil {
@@ -1160,6 +1193,11 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 			ldflags = strings.Fields(string(out))
 		}
 	}
+	return
+}
+
+// install is the action for installing a single package or executable.
+func (b *builder) installForShared(a *action) (err error) {
 	return
 }
 
@@ -1691,7 +1729,7 @@ type toolchain interface {
 	// gc runs the compiler in a specific directory on a set of files
 	// and returns the name of the generated output file.
 	// The compiler runs in the directory dir.
-	gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string) (ofile string, out []byte, err error)
+	gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string, forShared bool) (ofile string, out []byte, err error)
 	// cc runs the toolchain's C compiler in a directory on a C file
 	// to produce an output file.
 	cc(b *builder, p *Package, objdir, ofile, cfile string) error
@@ -1728,7 +1766,7 @@ func (noToolchain) linker() string {
 	return ""
 }
 
-func (noToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string) (ofile string, out []byte, err error) {
+func (noToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string, forShared bool) (ofile string, out []byte, err error) {
 	return "", nil, noCompiler()
 }
 
@@ -1764,7 +1802,7 @@ func (gcToolchain) linker() string {
 	return tool(archChar + "l")
 }
 
-func (gcToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string) (ofile string, output []byte, err error) {
+func (gcToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string, forShared bool) (ofile string, output []byte, err error) {
 	if archive != "" {
 		ofile = archive
 	} else {
@@ -1994,9 +2032,14 @@ func (gccgoToolchain) linker() string {
 	return gccgoBin
 }
 
-func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string) (ofile string, output []byte, err error) {
-	out := "_go_.o"
-	ofile = obj + out
+func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string, forShared bool) (ofile string, output []byte, err error) {
+	var out string
+	if forShared {
+		out = obj
+	} else {
+		out = "_go_.o"
+		ofile = obj + out
+	}
 	gcargs := []string{"-g"}
 	gcargs = append(gcargs, b.gccArchArgs()...)
 	if pkgpath := gccgoPkgpath(p); pkgpath != "" {
@@ -2005,8 +2048,15 @@ func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr boo
 	if p.localPrefix != "" {
 		gcargs = append(gcargs, "-fgo-relative-import-path="+p.localPrefix)
 	}
-	if buildBuildmode == "shared" && p.SharedLib != "" {
+	if forShared {
 		gcargs = append(gcargs, "-fPIC", "-fno-split-stack")
+	}
+	seenSharedDirs := make(map[string]bool)
+	for _, p1 := range p.imports {
+		if p1.SharedLib != "" && !seenSharedDirs[p1.build.SharedLibDir] {
+			seenSharedDirs[p1.build.SharedLibDir] = true
+			gcargs = append(gcargs, "-I", p1.build.SharedLibDir)
+		}
 	}
 	args := stringList(gccgoName, importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
 	for _, f := range gofiles {
@@ -2663,7 +2713,7 @@ func (b *builder) swigIntSize(obj string) (intsize string, err error) {
 
 	p := goFilesPackage(srcs)
 
-	if _, _, e := buildToolchain.gc(b, p, "", obj, false, nil, srcs); e != nil {
+	if _, _, e := buildToolchain.gc(b, p, "", obj, false, nil, srcs, false); e != nil {
 		return "32", nil
 	}
 	return "64", nil
