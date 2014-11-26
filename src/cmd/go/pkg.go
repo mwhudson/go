@@ -516,8 +516,7 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 				if err != nil {
 					fatalf("missing dsoname file")
 				}
-				shlib := filepath.Join(p.build.SharedLibDir, strings.TrimSpace(string(dsoname)))
-				p.SharedLib = shlib
+				p.SharedLib = strings.TrimSpace(string(dsoname))
 			}
 			p.target = ""
 		}
@@ -756,21 +755,13 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 		pkgBuildA = false
 	}
 
-	if pkgBuildA || (p.target == "" && p.SharedLib == "") || p.Stale {
+	if pkgBuildA || p.target == "" || p.Stale {
 		return true
 	}
 
 	// Package is stale if completely unbuilt.
 	var built time.Time
-	var t = p.target
-	if t == "" {
-		t = p.SharedLib
-		if _, err := os.Stat(t); err != nil {
-			// We assume a missing library is in a system location...
-			return false
-		}
-	}
-	if fi, err := os.Stat(t); err == nil {
+	if fi, err := os.Stat(p.target); err == nil {
 		built = fi.ModTime()
 	}
 	if built.IsZero() {
