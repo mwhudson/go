@@ -1517,8 +1517,7 @@ func (b *builder) linkShared(a *action) (err error) {
 	all = all[0:len(all)-1]
 	mylib := all[len(all)-1].p.SharedLib
 	linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
-	libs := make(map[string]bool)
-	libdirs := make(map[string]bool)
+	otherLibPkgs := []*Package{}
 	for _, a1 := range all {
 		if strings.HasSuffix(a1.target, ".a") {
 			linkArgs = append(linkArgs, a1.target)
@@ -1528,28 +1527,12 @@ func (b *builder) linkShared(a *action) (err error) {
 		}
 		for _, p := range a1.p.imports {
 			if p.SharedLib != "" && p.SharedLib != mylib {
-				libs[p.SharedLib] = true
-				libdirs[p.build.SharedLibDir] = true
+				otherLibPkgs = append(otherLibPkgs, p)
 			}
 		}
 	}
 	linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
-	for ld, _ := range libdirs {
-		linkArgs = append(linkArgs, "-L" + ld)
-		if buildRpath == rpathDefault {
-			linkArgs = append(linkArgs, "-Wl,-rpath=" + ld)
-		}
-	}
-	for sl, _ := range libs {
-		linkArgs = append(linkArgs, "-l" + sl)
-	}
-	if buildRpath != rpathDefault {
-		for _, rpath := range strings.Split(buildRpath, ":") {
-			if rpath != "." {
-				linkArgs = append(linkArgs, "-Wl,-rpath=" + rpath)
-			}
-		}
-	}
+	linkArgs = append(linkArgs, sharedLibLinkArgs(otherLibPkgs)...)
 	linkArgs = append(linkArgs, buildGccgoflags...)
 	dir, _ := filepath.Split(a.target)
 	if dir != "" {
@@ -2374,6 +2357,42 @@ func (gccgoToolchain) pack(b *builder, p *Package, objDir, afile string, ofiles 
 	return b.run(p.Dir, p.ImportPath, nil, "ar", "cru", mkAbs(objDir, afile), absOfiles)
 }
 
+func sharedLibLinkArgs(ps []*Package) []string {
+	libs := make(map[string]bool)
+	libdirs := make(map[string]bool)
+	var visit func(p *Package)
+	visit = func(p *Package) {
+		if p.SharedLib != "" {
+			libs[p.SharedLib] = true
+			libdirs[p.build.SharedLibDir] = true
+		}
+		for _, p1 := range p.imports {
+			visit(p1)
+		}
+	}
+	for _, p := range ps {
+		visit(p)
+	}
+	args := []string{}
+	for ld, _ := range libdirs {
+		args = append(args, "-L" + ld)
+		if buildRpath == rpathDefault {
+			args = append(args, "-Wl,-rpath=" + ld)
+		}
+	}
+	for sl, _ := range libs {
+		args = append(args, "-l" + sl)
+	}
+	if buildRpath != rpathDefault {
+		for _, rpath := range strings.Split(buildRpath, ":") {
+			if rpath != "" {
+				args = append(args, "-Wl,-rpath=" + rpath)
+			}
+		}
+	}
+	return args
+}
+
 func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error {
 	// gccgo needs explicit linking with all package dependencies,
 	// and all LDFLAGS from cgo dependencies.
@@ -2404,41 +2423,7 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 		}
 	}
 
-	libs := make(map[string]bool)
-	libdirs := make(map[string]bool)
-	for _, a1 := range allactions {
-		if a1.p == nil {
-			continue
-		}
-		for _, p1 := range a1.p.imports {
-			if p1.SharedLib != "" {
-				libs[p1.SharedLib] = true
-				libdirs[p1.build.SharedLibDir] = true
-			}
-		}
-	}
-	for _, p1 := range p.imports {
-		if p1.SharedLib != "" {
-			libs[p1.SharedLib] = true
-			libdirs[p1.build.SharedLibDir] = true
-		}
-	}
-	for ld, _ := range libdirs {
-		ldflags = append(ldflags, "-L" + ld)
-		if buildRpath == rpathDefault {
-				ldflags = append(ldflags, "-Wl,-rpath=" + ld)
-		}
-	}
-	for sl, _ := range libs {
-		ldflags = append(ldflags, "-l" + sl)
-	}
-	if buildRpath != rpathDefault {
-		for _, rpath := range strings.Split(buildRpath, ":") {
-			if rpath != "" {
-				ldflags = append(ldflags, "-Wl,-rpath=" + rpath)
-			}
-		}
-	}
+	ldflags = append(ldflags, sharedLibLinkArgs([]*Package{p})...)
 
 	for _, a := range allactions {
 		if a.p != nil {
