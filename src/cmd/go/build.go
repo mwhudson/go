@@ -133,6 +133,8 @@ var buildGccgoflags []string // -gccgoflags flag
 var buildRace bool           // -race flag
 var buildBuildmode string
 var buildLibname string
+var buildRpath string
+const rpathDefault = "<default>"
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -188,6 +190,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
 	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
 	cmd.Flag.StringVar(&buildLibname, "libname", "", "")
+	cmd.Flag.StringVar(&buildRpath, "rpath", rpathDefault, "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -329,6 +332,28 @@ See also: go build, go get, go clean.
 	`,
 }
 
+func defaultLibName(args []string) string {
+	var libname string
+	for _, arg := range args {
+		arg = strings.Replace(arg, ".", "dot", -1)
+		clean := func(r rune) rune {
+			switch {
+				case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
+				'0' <= r && r <= '9':
+				return r
+			}
+			return '-'
+		}
+		arg = strings.Map(clean, arg)
+		if libname != "" {
+			libname = libname + "-" + arg
+		} else {
+			libname = arg
+		}
+	}
+	return libname
+}
+
 func runInstall(cmd *Command, args []string) {
 	raceInit()
 	pkgs := packagesForBuild(args)
@@ -360,28 +385,12 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 		if buildLibname == "" {
-			for _, arg := range args {
-				arg = strings.Replace(arg, ".", "dot", -1)
-				clean := func(r rune) rune {
-					switch {
-						case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
-						'0' <= r && r <= '9':
-						return r
-					}
-					return '-'
-				}
-				arg = strings.Map(clean, arg)
-				if libname != "" {
-					libname = libname + "-" + arg
-				} else {
-					libname = arg
-				}
-			}
+			libname = defaultLibName(args)
 		} else {
 			libname = buildLibname
 		}
 		for _, p := range pkgs {
-			if p.ExportData != "" { // i.e. not a main package.
+			if p.Name != "main" {
 				p.SharedLib = libname
 			}
 		}
@@ -394,7 +403,19 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 		dumpActionTree(la)
-		b.do(la)
+		if len(la.deps) > 0 {
+			b.do(la)
+		}
+		a := &action{}
+		for _, p := range pkgs {
+			if p.Name == "main" {
+				a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
+			}
+		}
+		dumpActionTree(a)
+		if len(a.deps) > 0 {
+			b.do(a)
+		}
 		return
 	}
 
@@ -463,7 +484,6 @@ type action struct {
 
 	// Generated files, directories.
 	link   bool   // target is executable, not just package
-	forShared bool
 	pkgdir string // the -I or -L argument to use when importing this package
 	objdir string // directory for intermediate objects
 	objpkg string // the intermediate package .a file created during the action
@@ -1494,12 +1514,6 @@ func (b *builder) install(a *action) (err error) {
 
 // install is the action for installing a single package or executable.
 func (b *builder) linkShared(a *action) (err error) {
-	println(a.target)
-	for _, a1 := range a.deps {
-		fmt.Printf("%#v\n", a1.target)
-	}
-
-	// This does not include anything to do with linking against shared libraries...
 	all := actionList(a)
 	all = all[0:len(all)-1]
 	mylib := all[len(all)-1].p.SharedLib
@@ -1523,10 +1537,19 @@ func (b *builder) linkShared(a *action) (err error) {
 	linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
 	for ld, _ := range libdirs {
 		linkArgs = append(linkArgs, "-L" + ld)
-		linkArgs = append(linkArgs, "-Wl,-rpath=" + ld)
+		if buildRpath == rpathDefault {
+			linkArgs = append(linkArgs, "-Wl,-rpath=" + ld)
+		}
 	}
 	for sl, _ := range libs {
 		linkArgs = append(linkArgs, "-l" + sl)
+	}
+	if buildRpath != rpathDefault {
+		for _, rpath := range strings.Split(buildRpath, ":") {
+			if rpath != "." {
+				linkArgs = append(linkArgs, "-Wl,-rpath=" + rpath)
+			}
+		}
 	}
 	linkArgs = append(linkArgs, buildGccgoflags...)
 	dir, _ := filepath.Split(a.target)
@@ -2370,6 +2393,42 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 				} else {
 					afiles = append(afiles, a.target)
 				}
+			}
+		}
+	}
+
+	libs := make(map[string]bool)
+	libdirs := make(map[string]bool)
+	for _, a1 := range allactions {
+		if a1.p == nil {
+			continue
+		}
+		for _, p1 := range a1.p.imports {
+			if p1.SharedLib != "" {
+				libs[p1.SharedLib] = true
+				libdirs[p1.build.SharedLibDir] = true
+			}
+		}
+	}
+	for _, p1 := range p.imports {
+		if p1.SharedLib != "" {
+			libs[p1.SharedLib] = true
+			libdirs[p1.build.SharedLibDir] = true
+		}
+	}
+	for ld, _ := range libdirs {
+		ldflags = append(ldflags, "-L" + ld)
+		if buildRpath == rpathDefault {
+				ldflags = append(ldflags, "-Wl,-rpath=" + ld)
+		}
+	}
+	for sl, _ := range libs {
+		ldflags = append(ldflags, "-l" + sl)
+	}
+	if buildRpath != rpathDefault {
+		for _, rpath := range strings.Split(buildRpath, ":") {
+			if rpath != "" {
+				ldflags = append(ldflags, "-Wl,-rpath=" + rpath)
 			}
 		}
 	}
