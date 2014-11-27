@@ -381,9 +381,12 @@ func runInstall(cmd *Command, args []string) {
 		var libname string
 		var libdir string
 		for _, p := range pkgs {
+			if p.SharedLibDir == "" {
+				continue
+			}
 			if libdir == "" {
-				libdir = p.build.SharedLibDir
-			} else if libdir != p.build.SharedLibDir {
+				libdir = p.SharedLibDir
+			} else if libdir != p.SharedLibDir {
 				fatalf("multiple roots")
 			}
 		}
@@ -2316,9 +2319,9 @@ func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr boo
 	}
 	seenSharedDirs := make(map[string]bool)
 	for _, p1 := range p.imports {
-		if p1.SharedLib != "" && !seenSharedDirs[p1.build.SharedLibDir] {
-			seenSharedDirs[p1.build.SharedLibDir] = true
-			gcargs = append(gcargs, "-I", p1.build.SharedLibDir)
+		if p1.SharedLib != "" && !seenSharedDirs[p1.SharedLibDir] {
+			seenSharedDirs[p1.SharedLibDir] = true
+			gcargs = append(gcargs, "-I", p1.SharedLibDir)
 		}
 	}
 	args := stringList(gccgoName, importArgs, "-c", gcargs, "-o", ofile, buildGccgoflags)
@@ -2362,7 +2365,7 @@ func sharedLibLinkArgs(ps []*Package) []string {
 	visit = func(p *Package) {
 		if p.SharedLib != "" {
 			libs[p.SharedLib] = true
-			libdirs[p.build.SharedLibDir] = true
+			libdirs[p.SharedLibDir] = true
 		}
 		for _, p1 := range p.imports {
 			visit(p1)

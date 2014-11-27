@@ -40,6 +40,7 @@ type Package struct {
 	ConflictDir   string `json:",omitempty"` // Dir is hidden by this other directory
 	ExportData    string `json:",omitempty"` // location of export data for this package
 	SharedLib     string `json:",omitempty"` // "linker name" for the library this package is contained in
+	SharedLibDir  string `json:",omitempty"` // XXX
 
 	// Source files
 	GoFiles        []string `json:",omitempty"` // .go source files (excluding CgoFiles, TestGoFiles, XTestGoFiles)
@@ -506,9 +507,8 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 		p.target = ""
 	} else {
 		p.target = p.build.PkgObj
-		if p.build.ExportData != "" {
-			p.ExportData = p.build.ExportData
-		}
+		p.ExportData = p.build.ExportData
+		p.SharedLibDir = p.build.SharedLibDir
 		if p.ExportData != "" && (buildBuildmode == "linkshared" || buildBuildmode == "shared") {
 			if _, err = os.Stat(p.ExportData); err == nil {
 				// XXX this should come from the export data directly but for now...
