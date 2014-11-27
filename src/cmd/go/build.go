@@ -642,6 +642,18 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
+func actionStr(a *action) string {
+	var r string
+	if a.target != "" {
+		r = a.target
+	} else if a.p != nil {
+		r = a.p.ImportPath
+	} else {
+		r = "??"
+	}
+	return r // + "\n objdir : " + a.objdir
+}
+
 func dumpActionTree(root *action) {
 	action2index := make(map[*action]int)
 	var dumpAction func(*action, string)
@@ -790,18 +802,6 @@ func actionList(root *action) []*action {
 	}
 	walk(root)
 	return all
-}
-
-func actionStr(a *action) string {
-	var r string
-	if a.target != "" {
-		r = a.target
-	} else if a.p != nil {
-		r = a.p.ImportPath
-	} else {
-		r = "??"
-	}
-	return r // + "\n objdir : " + a.objdir
 }
 
 // do runs the action graph rooted at root.
@@ -1461,7 +1461,6 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 	return
 }
 
-// install is the action for installing a single package or executable.
 func (b *builder) installForShared(a *action) (err error) {
 	defer func() {
 		if err != nil && err != errPrintedOutput {
@@ -2302,9 +2301,8 @@ func (gccgoToolchain) linker() string {
 	return gccgoBin
 }
 
-func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, importArgs []string, gofiles []string, forShared bool) (ofile string, output []byte, err error) {
-	var out string
-	out = "_go_.o"
+func (gccgoToolchain) gc(b *builder, p *Package, archive, obj string, importArgs []string, gofiles []string, forShared bool) (ofile string, output []byte, err error) {
+	out := "_go_.o"
 	ofile = obj + out
 	gcargs := []string{"-g"}
 	gcargs = append(gcargs, b.gccArchArgs()...)
