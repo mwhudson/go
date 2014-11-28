@@ -405,7 +405,7 @@ func runInstall(cmd *Command, args []string) {
 				la.deps = append(la.deps, b.action(modeInstallForShared, modeBuildForShared, p))
 			}
 		}
-		dumpActionTree(la)
+		//dumpActionTree(la)
 		if len(la.deps) > 0 {
 			b.do(la)
 		}
@@ -415,7 +415,7 @@ func runInstall(cmd *Command, args []string) {
 				a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 			}
 		}
-		dumpActionTree(a)
+		//dumpActionTree(a)
 		if len(a.deps) > 0 {
 			b.do(a)
 		}
@@ -426,7 +426,7 @@ func runInstall(cmd *Command, args []string) {
 	for _, p := range pkgs {
 		a.deps = append(a.deps, b.action(modeInstall, modeInstall, p))
 	}
-	dumpActionTree(a)
+	//dumpActionTree(a)
 	b.do(a)
 }
 
