@@ -569,6 +569,8 @@ enum
 	D_VLANE,		/* Vn lane */
 	D_VSET,		/* set of Vn */
 
+	D_LAST,
+
 	/* offset iff type is D_SPR */
 	D_DAIF	= SYSARG5(3,3,4,2,1),
 	D_NZCV	= SYSARG5(3,3,4,2,0),
