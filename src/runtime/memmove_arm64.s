@@ -84,10 +84,10 @@ _tail63up:
 	MOVP	R(A_l), R(A_h), 32(R(src))
 _tail47up:
 	MOVP	16(src), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [dst, #16]
+	MOVP	R(A_l), R(A_h) 16(dst)
 _tail31up:
 	MOVP	(src), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [dst]
+	MOVP	R(A_l), R(A_h) (dst)
 _tail15up:
 	/* Move up to 15 bytes of data.  Does not assume additional data
 	 * being moved.  */
@@ -147,10 +147,10 @@ _mov_not_short_up_aligned:
 	MOVP	16(R(src)), R(B_l), R(B_h)
 	MOVP	32(R(src)), R(C_l), R(C_h)
 	MOVP	48(R(src)), R(D_l), R(D_h)
-	STP     R(A_l), R(A_h), [R(dst), #-64]!
-	STP     R(B_l), R(B_h), [R(dst), #16]
-	STP     R(C_l), R(C_h), [R(dst), #32]
-	STP     R(D_l), R(D_h), [R(dst), #48]
+	MOVP	R(A_l), R(A_h) -64!(R(dst))
+	MOVP	R(B_l), R(B_h) 16(R(dst))
+	MOVP	R(C_l), R(C_h) 32(R(dst))
+	MOVP	R(D_l), R(D_h) 48(R(dst))
 	TST     R(count), #0x3f
 	BNE	_tail63up
 	RET
@@ -165,20 +165,20 @@ _mov_body_large_up:
 	MOVP	-48(R(src)), R(C_l), R(C_h)
 	MOVP	-64!(R(src)), R(D_l), R(D_h)
 _mov_body_large_up_loop:
-	STP     R(A_l), R(A_h), [R(dst), #-16]
+	MOVP	R(A_l), R(A_h) -16(R(dst))
 	MOVP	-16(R(src)), R(A_l), R(A_h)
-	STP     R(B_l), R(B_h), [R(dst), #-32]
+	MOVP	R(B_l), R(B_h) -32(R(dst))
 	MOVP	-32(R(src)), R(B_l), R(B_h)
-	STP     R(C_l), R(C_h), [R(dst), #-48]
+	MOVP	R(C_l), R(C_h) -48(R(dst))
 	MOVP	-48(R(src)), R(C_l), R(C_h)
-	STP     R(D_l), R(D_h), [R(dst), #-64]!
+	MOVP	R(D_l), R(D_h) -64!(R(dst))
 	MOVP	-64!(R(src)), R(D_l), R(D_h)
 	SUBS	R(count), #64, R(count)
 	BGE	_mov_body_large_up_loop
-	STP     R(A_l), R(A_h), [R(dst), #-16]
-	STP     R(B_l), R(B_h), [R(dst), #-32]
-	STP     R(C_l), R(C_h), [R(dst), #-48]
-	STP     R(D_l), R(D_h), [R(dst), #-64]!
+	MOVP	R(A_l), R(A_h) -16(R(dst))
+	MOVP	R(B_l), R(B_h) -32(R(dst))
+	MOVP	R(C_l), R(C_h) -48(R(dst))
+	MOVP	R(D_l), R(D_h) -64!(R(dst))
 	TST     R(count), #0x3f
 	BNE	_tail63up
 	RET
@@ -207,13 +207,13 @@ _tail63down:
 	BEQ	_tail47down
 	BLT	_tail31down
 	MOVP	-48(R(src)), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [R(dst), #-48]
+	MOVP	R(A_l), R(A_h) -48(R(dst))
 _tail47down:
 	MOVP	-32(R(src)), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [R(dst), #-32]
+	MOVP	R(A_l), R(A_h) -32(R(dst))
 _tail31down:
 	MOVP	-16(R(src)), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [R(dst), #-16]
+	MOVP	R(A_l), R(A_h) -16(R(dst))
 _tail15down:
 	/* Move up to 15 bytes of data.  Does not assume additional data
 	   being moved.  */
@@ -274,10 +274,10 @@ _mov_not_short_down_aligned:
 	MOVP	16(R(src)), R(B_l), R(B_h)
 	MOVP	32(R(src)), R(C_l), R(C_h)
 	MOVP	48(R(src)), R(D_l), R(D_h)
-	STP     R(A_l), R(A_h), [R(dst)]
-	STP     R(B_l), R(B_h), [R(dst), #16]
-	STP     R(C_l), R(C_h), [R(dst), #32]
-	STP     R(D_l), R(D_h), [R(dst), #48]
+	MOVP	R(A_l), R(A_h) (R(dst))
+	MOVP	R(B_l), R(B_h) 16(R(dst))
+	MOVP	R(C_l), R(C_h) 32(R(dst))
+	MOVP	R(D_l), R(D_h) 48(R(dst))
 	TST     R(count), #0x3f
 	ADD     R(src), #64, R(src)
 	ADD     R(dst), #64, R(dst)
@@ -295,20 +295,20 @@ _mov_body_large_down:
 	MOVP	32(R(src)), R(C_l), R(C_h)
 	MOVP	48!(R(src)), R(D_l), R(D_h)
 _mov_body_large_down_loop:
-	STP     R(A_l), R(A_h), [R(dst), #16]
+	MOVP	R(A_l), R(A_h) 16(R(dst))
 	MOVP	16(R(src)), R(A_l), R(A_h)
-	STP     R(B_l), R(B_h), [R(dst), #32]
+	MOVP	R(B_l), R(B_h) 32(R(dst))
 	MOVP	32(R(src)), R(B_l), R(B_h)
-	STP     R(C_l), R(C_h), [R(dst), #48]
+	MOVP	R(C_l), R(C_h) 48(R(dst))
 	MOVP	48(R(src)), R(C_l), R(C_h)
-	STP     R(D_l), R(D_h), [R(dst), #64]!
+	MOVP	R(D_l), R(D_h) 64!(R(dst))
 	MOVP	64!(R(src)), R(D_l), R(D_h)
 	SUBS	R(count), #64, R(count)
 	BGE	_mov_body_large_down_loop
-	STP     R(A_l), R(A_h), [R(dst), #16]
-	STP     R(B_l), R(B_h), [R(dst), #32]
-	STP     R(C_l), R(C_h), [R(dst), #48]
-	STP     R(D_l), R(D_h), [R(dst), #64]
+	MOVP	R(A_l), R(A_h) 16(R(dst))
+	MOVP	R(B_l), R(B_h) 32(R(dst))
+	MOVP	R(C_l), R(C_h) 48(R(dst))
+	MOVP	R(D_l), R(D_h) 64(R(dst))
 	ADD     R(src), #16, R(src)
 	ADD     R(dst), #64 + 16, R(dst)
 	TST     R(count), #0x3f
@@ -335,13 +335,13 @@ _tail63:
 	BEQ	_tail47
 	BLT	_tail31
 	MOVP	-48(R(src)), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [R(dst), #-48]
+	MOVP	R(A_l), R(A_h) -48(R(dst))
 _tail47:
 	MOVP	-32(R(src)), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [R(dst), #-32]
+	MOVP	R(A_l), R(A_h) -32(R(dst))
 _tail31:
 	MOVP	-16(R(src)), R(A_l), R(A_h)
-	STP	R(A_l), R(A_h), [R(dst), #-16]
+	MOVP	R(A_l), R(A_h) -16(R(dst))
 
 _tail15:
 	ANDS	R(count), #15, R(count)
@@ -349,7 +349,7 @@ _tail15:
 	ADD	R(src), R(count), R(src)
 	MOVP	-16(R(src)), R(A_l), R(A_h)
 	ADD	R(dst), R(count), R(dst)
-	STP	R(A_l), R(A_h), [R(dst), #-16]
+	MOVP	R(A_l), R(A_h) -16(R(dst))
 _tail0:
 	RET
 
@@ -387,7 +387,7 @@ _cpy_not_short:
 	 * it can't overrun.  */
 	MOVP	(R(src)), R(A_l), R(A_h)
 	ADD	R(src), R(tmp2), R(src)
-	STP	R(A_l), R(A_h), [R(dst)]
+	MOVP	R(A_l), R(A_h) (R(dst))
 	ADD	R(dst), R(tmp2), R(dst)
 	/* There may be less than 63 bytes to go now.  */
 	CMP     R(count), #63
@@ -401,10 +401,10 @@ _cpy_not_short_aligned:
 	MOVP	16(R(src)), R(B_l), R(B_h)
 	MOVP	32(R(src)), R(C_l), R(C_h)
 	MOVP	48(R(src)), R(D_l), R(D_h)
-	STP	R(A_l), R(A_h), [R(dst)]
-	STP	R(B_l), R(B_h), [R(dst), #16]
-	STP	R(C_l), R(C_h), [R(dst), #32]
-	STP	R(D_l), R(D_h), [R(dst), #48]
+	MOVP	R(A_l), R(A_h) (R(dst))
+	MOVP	R(B_l), R(B_h) 16(R(dst))
+	MOVP	R(C_l), R(C_h) 32(R(dst))
+	MOVP	R(D_l), R(D_h) 48(R(dst))
 	TST	R(count), #0x3f
 	ADD	R(src), #64, R(src)
 	ADD	R(dst), #64, R(dst)
@@ -422,20 +422,20 @@ _cpy_body_large:
 	MOVP	32(R(src)), R(C_l), R(C_h)
 	MOVP	48!(R(src)), R(D_l), R(D_h)
 _cpy_body_large_loop:
-	STP     R(A_l), R(A_h), [R(dst), #16]
+	MOVP	R(A_l), R(A_h) 16(R(dst))
 	MOVP	16(R(src)), R(A_l), R(A_h)
-	STP     R(B_l), R(B_h), [R(dst), #32]
+	MOVP	R(B_l), R(B_h) 32(R(dst))
 	MOVP	32(R(src)), R(B_l), R(B_h)
-	STP     R(C_l), R(C_h), [R(dst), #48]
+	MOVP	R(C_l), R(C_h) 48(R(dst))
 	MOVP	48(R(src)), R(C_l), R(C_h)
-	STP     R(D_l), R(D_h), [R(dst), #64]!
+	MOVP	R(D_l), R(D_h) 64!(R(dst))
 	MOVP	64!(R(src)), R(D_l), R(D_h)
 	SUBS	R(count), #64, R(count)
 	BGE	_cpy_body_large_loop
-	STP     R(A_l, R(A_h), [R(dst), #16]
-	STP     R(B_l, R(B_h), [R(dst), #32]
-	STP     R(C_l, R(C_h), [R(dst), #48]
-	STP     R(D_l, R(D_h), [R(dst), #64]
+	MOVP	R(A_l, R(A_h) 16(R(dst))
+	MOVP	R(B_l, R(B_h) 32(R(dst))
+	MOVP	R(C_l, R(C_h) 48(R(dst))
+	MOVP	R(D_l, R(D_h) 64(R(dst))
 	ADD     R(src), #16, R(src)
 	ADD     R(dst), #64 + 16, R(src)
 	TST     R(count), #0x3f
