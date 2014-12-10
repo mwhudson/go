@@ -94,17 +94,17 @@ _tail15up:
 	MOV	-8!(R(src)), R(tmp1)
 	MOV	R(tmp1), -8!(R(dst))
 _tail7up:
-	TBZ	R(count), #2, _tail3up
-	LDR	W(tmp1), [R(src), #-4]!
-	STR	W(tmp1), [R(dst), #-4]!
+	TBZ	$2, R(count), _tail3up
+        MOVW    -4!(R(src)), R(tmp1)
+        MOVW    R(tmp1), -4!(R(src))
 _tail3up:
-	TBZ	R(count), #1, _tail1up
-	LDRH	W(tmp1), [R(src), #-2]!
-	STRH	W(tmp1), [R(dst), #-2]!
+	TBZ	$1, R(count), _tail1up
+        MOVH    -2!(R(src)), R(tmp1)
+        MOVH    R(tmp1), -2!(R(src))
 _tail1up:
-	TBZ	R(count), #0, _tail0up
-	LDRB	W(tmp1), [R(src), #-1]
-	STRB	W(tmp1), [R(dst), #-1]
+	TBZ	$0, R(count), _tail0up
+        MOVB    -1!(R(src)), R(tmp1)
+        MOVB    R(tmp1), -1!(R(src))
 _tail0up:
 	RET
 
@@ -112,33 +112,32 @@ _mov_not_short_up:
 	/* We don't much care about the alignment of DST, but we want SRC
 	 * to be 128-bit (16 byte) aligned so that we don't cross cache line
 	 * boundaries on both loads and stores.  */
-	ANDS	R(src), #15, R(tmp2)		/* Bytes to reach alignment.  */
+	ANDS	$15, R(src), R(tmp2)		/* Bytes to reach alignment.  */
 	BEQ	_mov_not_short_up_aligned
 	SUB	R(count), R(tmp2), R(count)
 	/* Move enough data to reach alignment; unlike memcpy, we have to
 	 * be aware of the overlap, which means we can't move data twice.  */
-	TBZ	R(tmp2), #3, _mov_not_short_up_aligned7
-	LDR	R(tmp1), [R(src), #-8]!
-	STR	R(tmp1), [R(dst), #-8]!
+	TBZ	$3, R(tmp2), _mov_not_short_up_aligned7
+	MOV	-8!R(src), R(tmp1)
+	MOV	R(tmp1), -8!(R(dst))
 _mov_not_short_up_aligned7:
-	TBZ	R(tmp2), #2, _mov_not_short_up_aligned3
-	LDR	W(tmp1), [R(src), #-4]!
-	STR	W(tmp1), [R(dst), #-4]!
+	TBZ	$2, R(tmp2), _mov_not_short_up_aligned3
+	MOVW	-4!R(src), R(tmp1)
+	MOVW	R(tmp1), -4!(R(dst))
 _mov_not_short_up_aligned3:
-	TBZ	R(tmp2), #1, _mov_not_short_up_aligned1
-	LDRH	W(tmp1), [R(src), #-2]!
-	STRH	W(tmp1), [R(dst), #-2]!
+	TBZ	$1, R(tmp2), _mov_not_short_up_aligned1
+	MOVH	-2!R(src), R(tmp1)
+	MOVH	R(tmp1), -2!(R(dst))
 _mov_not_short_up_aligned1:
-	TBZ	R(tmp2), #0, _mov_not_short_up_aligned0
-	LDRB	W(tmp1), [R(src), #-1]!
-	STRB	W(tmp1), [R(dst), #-1]!
+	TBZ	$0, R(tmp2), _mov_not_short_up_aligned0
+	MOVB	-1!R(src), R(tmp1)
+	MOVB	R(tmp1), -1!(R(dst))
 _mov_not_short_up_aligned0:
-
 	/* There may be less than 63 bytes to go now.  */
-	CMP     R(count), #63
+	CMP     $63, R(count)
 	BLE	_tail63up
 _mov_not_short_up_aligned:
-	SUBS	R(count), #128, R(count)
+	SUBS	R(count), $128, R(count)
 	BGE	_mov_body_large_up
 	/* Less than 128 bytes to move, so handle 64 here and then jump
 	 * to the tail.  */
@@ -150,7 +149,7 @@ _mov_not_short_up_aligned:
 	MOVP	R(B_l), R(B_h) 16(R(dst))
 	MOVP	R(C_l), R(C_h) 32(R(dst))
 	MOVP	R(D_l), R(D_h) 48(R(dst))
-	TST     R(count), #0x3f
+	TST     R(count), $0x3f
 	BNE	_tail63up
 	RET
 
@@ -172,25 +171,25 @@ _mov_body_large_up_loop:
 	MOVP	-48(R(src)), R(C_l), R(C_h)
 	MOVP	R(D_l), R(D_h) -64!(R(dst))
 	MOVP	-64!(R(src)), R(D_l), R(D_h)
-	SUBS	R(count), #64, R(count)
+	SUBS	R(count), $64, R(count)
 	BGE	_mov_body_large_up_loop
 	MOVP	R(A_l), R(A_h) -16(R(dst))
 	MOVP	R(B_l), R(B_h) -32(R(dst))
 	MOVP	R(C_l), R(C_h) -48(R(dst))
 	MOVP	R(D_l), R(D_h) -64!(R(dst))
-	TST     R(count), #0x3f
+	TST     R(count), $0x3f
 	BNE	_tail63up
 	RET
 
 _downwards:
 	/* For a downwards move we can safely use memcpy provided that
 	 * R(DST) is more than 16 bytes away from R(SRC).  */
-	SUB     R(src), #16, R(tmp1)
+	SUB     R(src), $16, R(tmp1)
 	CMP     R(dstin), R(tmp1)
 	BLS	_memcpy		/* May overlap, but not critically.  */
 
 	MOV     R(dstin), R(dst)	/* Preserve R(DSTIN) for return value.  */
-	CMP     R(count), #64
+	CMP     $64, R(count)
 	BGE	_mov_not_short_down
 
 	/* Deal with small moves quickly by dropping straight into the
@@ -217,20 +216,23 @@ _tail15down:
 	/* Move up to 15 bytes of data.  Does not assume additional data
 	   being moved.  */
 	TBZ     R(count), #3, _tail7down
-	LDR     tmp1, [R(src)], #8
-	STR     tmp1, [R(dst)], #8
+        // offset
+	MOV     8(R(tmp1)), R(src)
+	MOV     R(tmp1), 8(R(dst))
 _tail7down:
 	TBZ     R(count), #2, _tail3down
-	LDR     W(tmp1), [R(src)], #4
-	STR     W(tmp1), [R(dst)], #4
+        // offset
+	MOVW     4(R(tmp1)), R(src)
+	MOVW     R(tmp1), 4(R(dst))
 _tail3down:
 	TBZ     R(count), #1, _tail1down
-	LDRH	W(tmp1), [R(src)], #2
-	STRH	W(tmp1), [R(dst)], #2
+        // offset
+	MOVH     2(R(tmp1)), R(src)
+	MOVH     R(tmp1), 2(R(dst))
 _tail1down:
 	TBZ     R(count), #0, _tail0down
-	LDRB	W(tmp1), [R(src)]
-	STRB	W(tmp1), [R(dst)]
+	MOVH    (R(tmp1)), R(src)
+	MOVH    R(tmp1), (R(dst))
 _tail0down:
 	RET
 
@@ -244,21 +246,25 @@ _mov_not_short_down:
 	SUB	R(count), R(tmp2), R(count)
 	/* Move enough data to reach alignment; unlike memcpy, we have to
 	 * be aware of the overlap, which means we can't move data twice.  */
-	TBZ	R(tmp2), #3, _mov_not_short_down_align7
-	LDR	R(tmp1), [R(src)], #8
-	STR	R(tmp1), [R(dst)], #8
+	TBZ	$3, R(tmp2), _mov_not_short_down_align7
+        // offset
+	MOV	8(R(src)), R(tmp1)
+	MOV	R(tmp1), 8(R(dst))
 _mov_not_short_down_align7:
-	TBZ	R(tmp2), #2, _mov_not_short_down_align3
-	LDR	W(tmp1), [R(src)], #4
-	STR	W(tmp1), [R(dst)], #4
+	TBZ	$2, R(tmp2), _mov_not_short_down_align3
+        // offset
+	MOVW	4(R(src)), R(tmp1)
+	MOVW	R(tmp1), 4(R(dst))
 _mov_not_short_down_align3:
-	TBZ	R(tmp2), #1, _mov_not_short_down_align1
-	LDRH	W(tmp1), [R(src)], #2
-	STRH	W(tmp1), [R(dst)], #2
+	TBZ	$1, R(tmp2), _mov_not_short_down_align1
+        // offset
+	MOVH	2(R(src)), R(tmp1)
+	MOVH	R(tmp1), 2(R(dst))
 _mov_not_short_down_align1:
-	TBZ	R(tmp2), #0, _mov_not_short_down_align0
-	LDRB	W(tmp1), [R(src)], #1
-	STRB	W(tmp1), [R(dst)], #1
+	TBZ	$0, R(tmp2), #0, _mov_not_short_down_align0
+        // offset
+	MOVB	1(R(src)), R(tmp1)
+	MOVB	R(tmp1), 1(R(dst))
 _mov_not_short_down_align0:
 
 	/* There may be less than 63 bytes to go now.  */
@@ -277,9 +283,9 @@ _mov_not_short_down_aligned:
 	MOVP	R(B_l), R(B_h) 16(R(dst))
 	MOVP	R(C_l), R(C_h) 32(R(dst))
 	MOVP	R(D_l), R(D_h) 48(R(dst))
-	TST     R(count), #0x3f
-	ADD     R(src), #64, R(src)
-	ADD     R(dst), #64, R(dst)
+	TST     R(count), $0x3f
+	ADD     $64, R(src), R(src)
+	ADD     $64, R(dst), R(dst)
 	BNE	_tail63down
 	RET
 
@@ -302,23 +308,23 @@ _mov_body_large_down_loop:
 	MOVP	48(R(src)), R(C_l), R(C_h)
 	MOVP	R(D_l), R(D_h) 64!(R(dst))
 	MOVP	64!(R(src)), R(D_l), R(D_h)
-	SUBS	R(count), #64, R(count)
+	SUBS	R(count), $64, R(count)
 	BGE	_mov_body_large_down_loop
 	MOVP	R(A_l), R(A_h) 16(R(dst))
 	MOVP	R(B_l), R(B_h) 32(R(dst))
 	MOVP	R(C_l), R(C_h) 48(R(dst))
 	MOVP	R(D_l), R(D_h) 64(R(dst))
-	ADD     R(src), #16, R(src)
-	ADD     R(dst), #64 + 16, R(dst)
+	ADD     R(src), $16, R(src)
+	ADD     R(dst), $64 + 16, R(dst)
 	TST     R(count), #0x3f
 	BNE	_tail63down
 	RET
 
 _memcpy:
         MOV     R(dstin), R(dst)
-	CMP     R(count), #64
+	CMP     R(count), $64
 	BGE	_cpy_not_short
-	CMP     R(count), #15
+	CMP     R(count), $15
 	BLE	_tail15tiny
 
 	/* Deal with small copies quickly by dropping straight into the
@@ -326,11 +332,11 @@ _memcpy:
 _tail63:
 	/* Copy up to 48 bytes of data.  At this point we only need the
 	 * bottom 6 bits of count to be accurate.  */
-	ANDS	R(count), #0x30, tmp1
+	ANDS	R(count), $0x30, tmp1
 	BEQ	_tail15
 	ADD	R(dst), R(tmp1), R(dst)
 	ADD	R(src), R(tmp1), R(src)
-	CMP	W(tmp1), #0x20
+	CMP	W(tmp1), $0x20
 	BEQ	_tail47
 	BLT	_tail31
 	MOVP	-48(R(src)), R(A_l), R(A_h)
