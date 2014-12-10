@@ -83,27 +83,26 @@ _tail63up:
 	MOVP	32(R(src)), R(A_l), R(A_h)
 	MOVP	R(A_l), R(A_h), 32(R(src))
 _tail47up:
-	MOVP	16(src), R(A_l), R(A_h)
-	MOVP	R(A_l), R(A_h) 16(dst)
+	MOVP	16(R(src)), R(A_l), R(A_h)
+	MOVP	R(A_l), R(A_h), 16(R(dst))
 _tail31up:
-	MOVP	(src), R(A_l), R(A_h)
-	MOVP	R(A_l), R(A_h) (dst)
+	MOVP	(R(src)), R(A_l), R(A_h)
+	MOVP	R(A_l), R(A_h), (R(dst))
 _tail15up:
-	/* Move up to 15 bytes of data.  Does not assume additional data
-	 * being moved.  */
-	TBZ	count, #3, _tail7up
-	LDR	R(tmp1), [R(src), #-8]!
-	STR	R(tmp1), [R(dst), #-8]!
+	/* Move up to 15 bytes of data.  Does not assume additional data * being moved.  */
+	TBZ	$3, R(count),  _tail7up
+	MOV	-8!(R(src)), R(tmp1)
+	MOV	R(tmp1), -8!(R(dst))
 _tail7up:
-	TBZ	count, #2, _tail3up
+	TBZ	R(count), #2, _tail3up
 	LDR	W(tmp1), [R(src), #-4]!
 	STR	W(tmp1), [R(dst), #-4]!
 _tail3up:
-	TBZ	count, #1, _tail1up
+	TBZ	R(count), #1, _tail1up
 	LDRH	W(tmp1), [R(src), #-2]!
 	STRH	W(tmp1), [R(dst), #-2]!
 _tail1up:
-	TBZ	count, #0, _tail0up
+	TBZ	R(count), #0, _tail0up
 	LDRB	W(tmp1), [R(src), #-1]
 	STRB	W(tmp1), [R(dst), #-1]
 _tail0up:
