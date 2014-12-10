@@ -83,10 +83,10 @@ _tail63up:
 	MOVP	32(R(src)), R(A_l), R(A_h)
 	MOVP	R(A_l), R(A_h), 32(R(src))
 _tail47up:
-	LDP	R(A_l), R(A_h), [src, #16]
+	MOVP	16(src), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [dst, #16]
 _tail31up:
-	LDP	R(A_l), R(A_h), [src]
+	MOVP	(src), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [dst]
 _tail15up:
 	/* Move up to 15 bytes of data.  Does not assume additional data
@@ -143,10 +143,10 @@ _mov_not_short_up_aligned:
 	BGE	_mov_body_large_up
 	/* Less than 128 bytes to move, so handle 64 here and then jump
 	 * to the tail.  */
-	LDP     R(A_l), R(A_h), [R(src), #-64]!
-	LDP     R(B_l), R(B_h), [R(src), #16]
-	LDP     R(C_l), R(C_h), [R(src), #32]
-	LDP     R(D_l), R(D_h), [R(src), #48]
+	MOVP	-64!(R(src)), R(A_l), R(A_h)
+	MOVP	16(R(src)), R(B_l), R(B_h)
+	MOVP	32(R(src)), R(C_l), R(C_h)
+	MOVP	48(R(src)), R(D_l), R(D_h)
 	STP     R(A_l), R(A_h), [R(dst), #-64]!
 	STP     R(B_l), R(B_h), [R(dst), #16]
 	STP     R(C_l), R(C_h), [R(dst), #32]
@@ -160,19 +160,19 @@ _mov_not_short_up_aligned:
 //	.p2align 6 // don't think go assemblers support this?
 _mov_body_large_up:
 	/* There are at least 128 bytes to move.  */
-	LDP     R(A_l), R(A_h), [R(src), #-16]
-	LDP     R(B_l), R(B_h), [R(src), #-32]
-	LDP     R(C_l), R(C_h), [R(src), #-48]
-	LDP     R(D_l), R(D_h), [R(src), #-64]!
+	MOVP	-16(R(src)), R(A_l), R(A_h)
+	MOVP	-32(R(src)), R(B_l), R(B_h)
+	MOVP	-48(R(src)), R(C_l), R(C_h)
+	MOVP	-64!(R(src)), R(D_l), R(D_h)
 _mov_body_large_up_loop:
 	STP     R(A_l), R(A_h), [R(dst), #-16]
-	LDP     R(A_l), R(A_h), [R(src), #-16]
+	MOVP	-16(R(src)), R(A_l), R(A_h)
 	STP     R(B_l), R(B_h), [R(dst), #-32]
-	LDP     R(B_l), R(B_h), [R(src), #-32]
+	MOVP	-32(R(src)), R(B_l), R(B_h)
 	STP     R(C_l), R(C_h), [R(dst), #-48]
-	LDP     R(C_l), R(C_h), [R(src), #-48]
+	MOVP	-48(R(src)), R(C_l), R(C_h)
 	STP     R(D_l), R(D_h), [R(dst), #-64]!
-	LDP     R(D_l), R(D_h), [R(src), #-64]!
+	MOVP	-64!(R(src)), R(D_l), R(D_h)
 	SUBS	R(count), #64, R(count)
 	BGE	_mov_body_large_up_loop
 	STP     R(A_l), R(A_h), [R(dst), #-16]
@@ -206,13 +206,13 @@ _tail63down:
 	CMP	W(tmp1), #0x20
 	BEQ	_tail47down
 	BLT	_tail31down
-	LDP	R(A_l), R(A_h), [R(src), #-48]
+	MOVP	-48(R(src)), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [R(dst), #-48]
 _tail47down:
-	LDP	R(A_l), R(A_h), [R(src), #-32]
+	MOVP	-32(R(src)), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [R(dst), #-32]
 _tail31down:
-	LDP	R(A_l), R(A_h), [R(src), #-16]
+	MOVP	-16(R(src)), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [R(dst), #-16]
 _tail15down:
 	/* Move up to 15 bytes of data.  Does not assume additional data
@@ -270,10 +270,10 @@ _mov_not_short_down_aligned:
 	BGE	_mov_body_large_down
 	/* Less than 128 bytes to move, so handle 64 here and then jump
 	 * to the tail.  */
-	LDP     R(A_l), R(A_h), [R(src)]
-	LDP     R(B_l), R(B_h), [R(src), #16]
-	LDP     R(C_l), R(C_h), [R(src), #32]
-	LDP     R(D_l), R(D_h), [R(src), #48]
+	MOVP	(R(src)), R(A_l), R(A_h)
+	MOVP	16(R(src)), R(B_l), R(B_h)
+	MOVP	32(R(src)), R(C_l), R(C_h)
+	MOVP	48(R(src)), R(D_l), R(D_h)
 	STP     R(A_l), R(A_h), [R(dst)]
 	STP     R(B_l), R(B_h), [R(dst), #16]
 	STP     R(C_l), R(C_h), [R(dst), #32]
@@ -289,20 +289,20 @@ _mov_not_short_down_aligned:
 //	.p2align 6 // don't think go assemblers support this?
 _mov_body_large_down:
 	/* There are at least 128 bytes to move.  */
-	LDP     R(A_l), R(A_h), [R(src), #0]
+	MOVP	0(R(src)), R(A_l), R(A_h)
 	SUB     R(dst), #16, R(dst)		/* Pre-bias.  */
-	LDP     R(B_l), R(B_h), [R(src), #16]
-	LDP     R(C_l), R(C_h), [R(src), #32]
-	LDP     R(D_l), R(D_h), [R(src), #48]!	/* R(src) += 64 - Pre-bias.  */
+	MOVP	16(R(src)), R(B_l), R(B_h)
+	MOVP	32(R(src)), R(C_l), R(C_h)
+	MOVP	48!(R(src)), R(D_l), R(D_h)
 _mov_body_large_down_loop:
 	STP     R(A_l), R(A_h), [R(dst), #16]
-	LDP     R(A_l), R(A_h), [R(src), #16]
+	MOVP	16(R(src)), R(A_l), R(A_h)
 	STP     R(B_l), R(B_h), [R(dst), #32]
-	LDP     R(B_l), R(B_h), [R(src), #32]
+	MOVP	32(R(src)), R(B_l), R(B_h)
 	STP     R(C_l), R(C_h), [R(dst), #48]
-	LDP     R(C_l), R(C_h), [R(src), #48]
+	MOVP	48(R(src)), R(C_l), R(C_h)
 	STP     R(D_l), R(D_h), [R(dst), #64]!
-	LDP     R(D_l), R(D_h), [R(src), #64]!
+	MOVP	64!(R(src)), R(D_l), R(D_h)
 	SUBS	R(count), #64, R(count)
 	BGE	_mov_body_large_down_loop
 	STP     R(A_l), R(A_h), [R(dst), #16]
@@ -334,20 +334,20 @@ _tail63:
 	CMP	W(tmp1), #0x20
 	BEQ	_tail47
 	BLT	_tail31
-	LDP	R(A_l), R(A_h), [R(src), #-48]
+	MOVP	-48(R(src)), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [R(dst), #-48]
 _tail47:
-	LDP	R(A_l), R(A_h), [R(src), #-32]
+	MOVP	-32(R(src)), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [R(dst), #-32]
 _tail31:
-	LDP	R(A_l), R(A_h), [R(src), #-16]
+	MOVP	-16(R(src)), R(A_l), R(A_h)
 	STP	R(A_l), R(A_h), [R(dst), #-16]
 
 _tail15:
 	ANDS	R(count), #15, R(count)
 	BEQ	_tail0
 	ADD	R(src), R(count), R(src)
-	LDP	R(A_l), R(A_h), [R(src), #-16]
+	MOVP	-16(R(src)), R(A_l), R(A_h)
 	ADD	R(dst), R(count), R(dst)
 	STP	R(A_l), R(A_h), [R(dst), #-16]
 _tail0:
@@ -385,7 +385,7 @@ _cpy_not_short:
 	/* Copy more data than needed; it's faster than jumping
 	 * around copying sub-Quadword quantities.  We know that
 	 * it can't overrun.  */
-	LDP	R(A_l), R(A_h), [R(src)]
+	MOVP	(R(src)), R(A_l), R(A_h)
 	ADD	R(src), R(tmp2), R(src)
 	STP	R(A_l), R(A_h), [R(dst)]
 	ADD	R(dst), R(tmp2), R(dst)
@@ -397,10 +397,10 @@ _cpy_not_short_aligned:
 	BGE	_cpy_body_large
 	/* Less than 128 bytes to copy, so handle 64 here and then jump
 	 * to the tail.  */
-	LDP	R(A_l), R(A_h), [R(src)]
-	LDP	R(B_l), R(B_h), [R(src), #16]
-	LDP	R(C_l), R(C_h), [R(src), #32]
-	LDP	R(D_l), R(D_h), [R(src), #48]
+	MOVP	(R(src)), R(A_l), R(A_h)
+	MOVP	16(R(src)), R(B_l), R(B_h)
+	MOVP	32(R(src)), R(C_l), R(C_h)
+	MOVP	48(R(src)), R(D_l), R(D_h)
 	STP	R(A_l), R(A_h), [R(dst)]
 	STP	R(B_l), R(B_h), [R(dst), #16]
 	STP	R(C_l), R(C_h), [R(dst), #32]
@@ -416,20 +416,20 @@ _cpy_not_short_aligned:
 //	.p2align 6
 _cpy_body_large:
 	/* There are at least 128 bytes to copy.  */
-	LDP	R(A_l), A_h, [R(src), #0]
+	MOVP	0(R(src)), R(A_l), A_h
 	SUB	R(dst), #16, R(dst)		/* Pre-bias.  */
-	LDP	R(B_l), R(B_h), [R(src), #16]
-	LDP	R(C_l), R(C_h), [R(src), #32]
-	LDP	R(D_l), R(D_h), [R(src), #48]!	/* src += 64 - Pre-bias.  */
+	MOVP	16(R(src)), R(B_l), R(B_h)
+	MOVP	32(R(src)), R(C_l), R(C_h)
+	MOVP	48!(R(src)), R(D_l), R(D_h)
 _cpy_body_large_loop:
 	STP     R(A_l), R(A_h), [R(dst), #16]
-	LDP     R(A_l), R(A_h), [R(src), #16]
+	MOVP	16(R(src)), R(A_l), R(A_h)
 	STP     R(B_l), R(B_h), [R(dst), #32]
-	LDP     R(B_l), R(B_h), [R(src), #32]
+	MOVP	32(R(src)), R(B_l), R(B_h)
 	STP     R(C_l), R(C_h), [R(dst), #48]
-	LDP     R(C_l), R(C_h), [R(src), #48]
+	MOVP	48(R(src)), R(C_l), R(C_h)
 	STP     R(D_l), R(D_h), [R(dst), #64]!
-	LDP     R(D_l), R(D_h), [R(src), #64]!
+	MOVP	64!(R(src)), R(D_l), R(D_h)
 	SUBS	R(count), #64, R(count)
 	BGE	_cpy_body_large_loop
 	STP     R(A_l, R(A_h), [R(dst), #16]
