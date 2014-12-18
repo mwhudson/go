@@ -214,7 +214,10 @@ ginscall(Node *f, int proc)
 		break;
 	
 	case 3:	// normal call of c function pointer
-		gins(ABL, N, f);
+		nodreg(&reg, types[tptr], D_R0+REGENV);
+		gmove(f, &reg);
+		reg.op = OINDREG;
+		gins(ABL, N, &reg);
 		break;
 
 	case 1:	// call in new proc (go)
