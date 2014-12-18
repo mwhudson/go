@@ -882,7 +882,7 @@ void
 clearfat(Node *nl)
 {
 	uint64 w, c, q, t, boff;
-	Node dst, end, r0, *f;
+	Node dst, end, r0;
 	Prog *p, *pl;
 
 	/* clear a fat object */
@@ -906,7 +906,6 @@ clearfat(Node *nl)
 	reg[REGRT1]++;
 	agen(nl, &dst);
 
-	if(q > 128) {
 		p = gins(ASUB, N, &dst);
 		p->from.type = D_CONST;
 		p->from.offset = 8;
@@ -927,26 +926,6 @@ clearfat(Node *nl)
 		regfree(&end);
 		// The loop leaves R3 on the last zeroed dword
 		boff = 8;
-	} else if(q >= 4) {
-		p = gins(ASUB, N, &dst);
-		p->from.type = D_CONST;
-		p->from.offset = 8;
-		f = sysfunc("duffzero");
-		p = gins(ADUFFZERO, N, f);
-		afunclit(&p->to, f);
-		// 4 and 128 = magic constants: see ../../runtime/asm_ppc64x.s
-		p->to.offset = 4*(128-q);
-		// duffzero leaves R3 on the last zeroed dword
-		boff = 8;
-	} else {
-		for(t = 0; t < q; t++) {
-			p = gins(AMOV, &r0, &dst);
-			p->to.type = D_OREG;
-			p->to.offset = 8*t;
-		}
-		boff = 8*q;
-	}
-
 	for(t = 0; t < c; t++) {
 		p = gins(AMOVB, &r0, &dst);
 		p->to.type = D_OREG;
