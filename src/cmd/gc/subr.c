@@ -202,7 +202,7 @@ yyerror(char *fmt, ...)
 
 	hcrash();
 	nerrors++;
-	if(nsavederrors+nerrors >= 10 && !debug['e']) {
+	if(nsavederrors+nerrors >= 100 && !debug['e']) {
 		flusherrors();
 		print("%L: too many errors\n", parserline());
 		errorexit();
