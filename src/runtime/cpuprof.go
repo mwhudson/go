@@ -53,8 +53,8 @@ package runtime
 import "unsafe"
 
 const (
-	numBuckets      = 1 << 10
-	logSize         = 1 << 17
+	numBuckets      = 1 << 4
+	logSize         = 1 << 4
 	assoc           = 4
 	maxCPUProfStack = 64
 )
@@ -73,7 +73,7 @@ type cpuProfile struct {
 	lost   uintptr // lost ticks that need to be logged
 
 	// Active recent stack traces.
-	hash [numBuckets]struct {
+	hash *[numBuckets]struct {
 		entry [assoc]cpuprofEntry
 	}
 

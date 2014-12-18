@@ -99,18 +99,18 @@ const (
 	// size classes.  NumSizeClasses is that number.  It's needed here
 	// because there are static arrays of this length; when msize runs its
 	// size choosing algorithm it double-checks that NumSizeClasses agrees.
-	_NumSizeClasses = 67
+	_NumSizeClasses = 1
 
 	// Tunable constants.
 	_MaxSmallSize = 32 << 10
 
 	// Tiny allocator parameters, see "Tiny allocator" comment in malloc.goc.
-	_TinySize      = 16
-	_TinySizeClass = 2
+	_TinySize      = 0
+	_TinySizeClass = 0
 
-	_FixAllocChunk  = 16 << 10               // Chunk size for FixAlloc
-	_MaxMHeapList   = 1 << (20 - _PageShift) // Maximum page length for fixed-size list in MHeap.
-	_HeapAllocChunk = 1 << 20                // Chunk size for heap growth
+	_FixAllocChunk  = 16 << 10 // Chunk size for FixAlloc
+	_MaxMHeapList   = 1 << (1) // Maximum page length for fixed-size list in MHeap.
+	_HeapAllocChunk = 1 << 20  // Chunk size for heap growth
 
 	// Per-P, per order stack segment cache size.
 	_StackCacheSize = 32 * 1024
