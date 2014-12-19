@@ -64,35 +64,35 @@ static Prog*
 zerorange(Prog *p, vlong frame, vlong lo, vlong hi)
 {
 	vlong cnt, i;
-	Prog *p1;
-	Node *f;
+	/* Prog *p1; */
+	/* Node *f; */
 
 	cnt = hi - lo;
 	if(cnt == 0)
 		return p;
-	if(cnt < 4*widthptr) {
+	/* if(cnt < 4*widthptr) { */
 		for(i = 0; i < cnt; i += widthptr)
 			p = appendpp(p, AMOV, D_REG, REGZERO, 0, D_OREG, REGSP, 8+frame+lo+i);
-	} else if(cnt <= 128*widthptr) {
-		p = appendpp(p, AADD, D_CONST, NREG, 8+frame+lo-8, D_REG, REGRT1, 0);
-		p->reg = REGSP;
-		p = appendpp(p, ADUFFZERO, D_NONE, NREG, 0, D_OREG, NREG, 0);
-		f = sysfunc("duffzero");
-		naddr(f, &p->to, 1);
-		afunclit(&p->to, f);
-		p->to.offset = 4*(128-cnt/widthptr);
-	} else {
-		p = appendpp(p, AMOV, D_CONST, NREG, 8+frame+lo-8, D_REG, REGTMP, 0);
-		p = appendpp(p, AADD, D_REG, REGTMP, 0, D_REG, REGRT1, 0);
-		p->reg = REGSP;
-		p = appendpp(p, AMOV, D_CONST, NREG, cnt, D_REG, REGTMP, 0);
-		p = appendpp(p, AADD, D_REG, REGTMP, 0, D_REG, REGRT2, 0);
-		p->reg = REGRT1;
-		p1 = p = appendpp(p, AMOV, D_REG, REGZERO, 0, D_OREG, REGRT1, widthptr);
-		p = appendpp(p, ACMP, D_REG, REGRT1, 0, D_REG, REGRT2, 0);
-		p = appendpp(p, ABNE, D_NONE, NREG, 0, D_BRANCH, NREG, 0);
-		patch(p, p1);
-	}
+	/* } else if(cnt <= 128*widthptr) { */
+	/* 	p = appendpp(p, AADD, D_CONST, NREG, 8+frame+lo-8, D_REG, REGRT1, 0); */
+	/* 	p->reg = REGSP; */
+	/* 	p = appendpp(p, ADUFFZERO, D_NONE, NREG, 0, D_OREG, NREG, 0); */
+	/* 	f = sysfunc("duffzero"); */
+	/* 	naddr(f, &p->to, 1); */
+	/* 	afunclit(&p->to, f); */
+	/* 	p->to.offset = 4*(128-cnt/widthptr); */
+	/* } else { */
+	/* 	p = appendpp(p, AMOV, D_CONST, NREG, 8+frame+lo-8, D_REG, REGTMP, 0); */
+	/* 	p = appendpp(p, AADD, D_REG, REGTMP, 0, D_REG, REGRT1, 0); */
+	/* 	p->reg = REGSP; */
+	/* 	p = appendpp(p, AMOV, D_CONST, NREG, cnt, D_REG, REGTMP, 0); */
+	/* 	p = appendpp(p, AADD, D_REG, REGTMP, 0, D_REG, REGRT2, 0); */
+	/* 	p->reg = REGRT1; */
+	/* 	p1 = p = appendpp(p, AMOV, D_REG, REGZERO, 0, D_OREG, REGRT1, widthptr); */
+	/* 	p = appendpp(p, ACMP, D_REG, REGRT1, 0, D_REG, REGRT2, 0); */
+	/* 	p = appendpp(p, ABNE, D_NONE, NREG, 0, D_BRANCH, NREG, 0); */
+	/* 	patch(p, p1); */
+	/* } */
 	return p;
 }
 
