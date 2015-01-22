@@ -106,6 +106,8 @@ canuselocaltls(Link *ctxt)
 	case Hplan9:
 	case Hwindows:
 		return 0;
+	case Hlinux:
+		return !ctxt->flag_shared;
 	}
 	return 1;
 }
