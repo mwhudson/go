@@ -1928,6 +1928,10 @@ prefixof(Link *ctxt, Addr *a)
 		return 0x64;
 	case D_GS:
 		return 0x65;
+	case D_TLS:
+		if (ctxt->headtype == Hlinux && ctxt->flag_shared) {
+			return 0x64;
+		}
 	}
 	return 0;
 }
@@ -3379,6 +3383,28 @@ mfound:
 		switch(ctxt->headtype) {
 		default:
 			sysfatal("unknown TLS base location for %s", headstr(ctxt->headtype));
+
+		case Hlinux:
+			if(!ctxt->flag_shared)
+				sysfatal("XXX");
+			// Note that this is not generating the same insn as the other cases.
+			// MOV TLS, R_to becomes
+			// movq g@gottpoff(%rip), R_to
+			// which is encoded as movq 0(%rip), R_to and a R_TLS_IE reloc.
+			// This all assumes the only tls variable we access is g...
+			*ctxt->andptr++ = 0x48;
+			*ctxt->andptr++ = 0x8B;
+			*ctxt->andptr++ = 0x05 | ((p->to.type & 0x7)<<3);
+			*ctxt->andptr++ = 0x00;
+			*ctxt->andptr++ = 0x00;
+			*ctxt->andptr++ = 0x00;
+			*ctxt->andptr++ = 0x00;
+			
+			// prefix for size?  prefix if R_to > 
+			// 8B -- MOV
+			// 05 | (R_to&7)<<3 -- off(%rip) -> R_to
+			// 00 00 00 00 + reloc
+			break;
 
 		case Hplan9:
 			if(ctxt->plan9privates == nil)
