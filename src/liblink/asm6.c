@@ -2446,7 +2446,7 @@ asmandsz(Link *ctxt, Prog *p, Addr *a, int r, int rex, int m64)
 		goto putrelv;
 	}
 	if(t >= D_AX && t <= D_R15) {
-		if(a->index == D_TLS) {
+		if(a->index == D_TLS && !ctxt->flag_shared) {
 			memset(&rel, 0, sizeof rel);
 			rel.type = R_TLS_IE;
 			rel.siz = 4;
@@ -3395,11 +3395,17 @@ mfound:
 			*ctxt->andptr++ = 0x48;
 			*ctxt->andptr++ = 0x8B;
 			*ctxt->andptr++ = 0x05 | ((p->to.type & 0x7)<<3);
+			{
+				Reloc *r;
+				r = addrel(ctxt->cursym);
+				r->off = p->pc + ctxt->andptr - ctxt->and;
+				r->type = R_TLS_IE;
+				r->siz = 4;
+			}
 			*ctxt->andptr++ = 0x00;
 			*ctxt->andptr++ = 0x00;
 			*ctxt->andptr++ = 0x00;
 			*ctxt->andptr++ = 0x00;
-			
 			// prefix for size?  prefix if R_to > 
 			// 8B -- MOV
 			// 05 | (R_to&7)<<3 -- off(%rip) -> R_to
