@@ -127,6 +127,7 @@ var buildI bool               // -i flag
 var buildO = cmdBuild.Flag.String("o", "", "output file")
 var buildWork bool           // -work flag
 var buildGcflags []string    // -gcflags flag
+var buildAsmflags []string   // -asmflags flag
 var buildCcflags []string    // -ccflags flag
 var buildLdflags []string    // -ldflags flag
 var buildGccgoflags []string // -gccgoflags flag
@@ -178,6 +179,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.BoolVar(&buildX, "x", false, "")
 	cmd.Flag.BoolVar(&buildWork, "work", false, "")
 	cmd.Flag.Var((*stringsFlag)(&buildGcflags), "gcflags", "")
+	cmd.Flag.Var((*stringsFlag)(&buildAsmflags), "asmflags", "")
 	cmd.Flag.Var((*stringsFlag)(&buildCcflags), "ccflags", "")
 	cmd.Flag.Var((*stringsFlag)(&buildLdflags), "ldflags", "")
 	cmd.Flag.Var((*stringsFlag)(&buildGccgoflags), "gccgoflags", "")
@@ -1676,7 +1678,10 @@ func (gcToolchain) asm(b *builder, p *Package, obj, ofile, sfile string) error {
 	// Add -I pkg/GOOS_GOARCH so #include "textflag.h" works in .s files.
 	inc := filepath.Join(goroot, "pkg", fmt.Sprintf("%s_%s", goos, goarch))
 	sfile = mkAbs(p.Dir, sfile)
-	return b.run(p.Dir, p.ImportPath, nil, tool(archChar+"a"), "-trimpath", b.work, "-I", obj, "-I", inc, "-o", ofile, "-D", "GOOS_"+goos, "-D", "GOARCH_"+goarch, sfile)
+	args := []string{"-trimpath", b.work, "-I", obj, "-I", inc, "-o", ofile, "-D", "GOOS_" + goos, "-D", "GOARCH_" + goarch}
+	args = append(args, buildAsmflags...)
+	args = append(args, sfile)
+	return b.run(p.Dir, p.ImportPath, nil, tool(archChar+"a"), args)
 }
 
 func (gcToolchain) pkgpath(basedir string, p *Package) string {
