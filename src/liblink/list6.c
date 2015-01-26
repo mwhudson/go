@@ -167,6 +167,10 @@ Dconv(Fmt *fp)
 			sprint(str, "%lld(PC)", a->offset);
 		break;
 
+	case D_GOTREF:
+		sprint(str, "%s+%lld@GOT(SB)", a->sym->name, a->offset);
+		break;
+
 	case D_EXTERN:
 		sprint(str, "%s+%lld(SB)", a->sym->name, a->offset);
 		break;
