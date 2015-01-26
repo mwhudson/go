@@ -265,6 +265,7 @@ relocsym(LSym *s)
 			break;
 		case R_CALL:
 		case R_PCREL:
+		case R_GOTPCREL:
 			// r->sym can be null when CALL $(constant) is transformed from absolute PC to relative PC call.
 			if(linkmode == LinkExternal && r->sym && r->sym->type != SCONST && r->sym->sect != ctxt->cursym->sect) {
 				r->done = 0;
