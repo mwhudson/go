@@ -1906,9 +1906,12 @@ prefixof(Link *ctxt, Addr *a)
 		switch(ctxt->headtype) {
 		default:
 			sysfatal("unknown TLS base register for %s", headstr(ctxt->headtype));
+		case Hlinux:
+			if (ctxt->flag_shared) {
+				sysfatal("wrong TLS type for shared linux");
+			}
 		case Hdragonfly:
 		case Hfreebsd:
-		case Hlinux:
 		case Hnetbsd:
 		case Hopenbsd:
 		case Hsolaris:
