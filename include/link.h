@@ -258,6 +258,7 @@ enum
 	R_PLT2,
 	R_USEFIELD,
 	R_POWER_TOC,		// ELF R_PPC64_TOC16*
+	R_GOTPCREL,
 };
 
 // Reloc.variant
