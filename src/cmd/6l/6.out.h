@@ -862,6 +862,7 @@ enum
 	D_FCONST	= 119,
 	D_SCONST	= 120,
 	D_ADDR		= 121,
+	D_GOTREF        = 122,
 
 	D_INDIR,	/* additive */
 

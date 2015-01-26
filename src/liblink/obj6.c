@@ -206,6 +206,50 @@ progedit(Link *ctxt, Prog *p)
 			p->to.scale = 2;
 	}
 
+	if(ctxt->flag_shared) {
+		if(p->as == AMOVQ) {
+			if(p->from.type == D_EXTERN)  {
+				// MOVQ $name, Rx
+				//  -->
+				// MOVQ $gotref(name), REGTMP
+				// MOVQ (REGTMP), Rx
+				q = appendp(ctxt, p);
+				q->as = AMOVQ;
+				q->from.type = D_INDIR + REGTMP;
+				q->to = p->to;
+
+				// This assumes it's a simple move to a
+				// register, which is probably not a valid
+				// assumption!
+				p->from.type = D_GOTREF;
+				p->to.type = REGTMP;
+			} else if(p->to.type == D_EXTERN) {
+				// MOVQ Rx, $name
+				//  -->
+				// MOVQ $gotref(name), REGTMP
+				// MOVQ Rx, (REGTMP)
+				q = appendp(ctxt, p);
+				q->as = AMOVQ;
+				q->to.type = D_INDIR + REGTMP;
+				q->from = p->from;
+
+				p->from = p->to;
+				p->from.type = D_GOTREF;
+				memset(&p->to, 0, sizeof p->to);
+				p->to.type = REGTMP;
+			}
+		}
+		if(p->as == ALEAQ) {
+			if(p->from.type == D_EXTERN) {
+				// LEAQ $name, target
+				//  -->
+				// MOVQ $gotref(name), target
+				p->as = AMOVQ;
+				p->from.type = D_GOTREF;
+			}
+		}
+	}
+
 	if(ctxt->headtype == Hnacl) {
 		nacladdr(ctxt, p, &p->from);
 		nacladdr(ctxt, p, &p->to);
