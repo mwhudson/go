@@ -1949,6 +1949,7 @@ oclass(Link *ctxt, Addr *a)
 		if(a->index != D_NONE && a->scale == 0) {
 			if(a->type == D_ADDR) {
 				switch(a->index) {
+				case D_GOTREF:
 				case D_EXTERN:
 				case D_STATIC:
 					if(a->sym != nil && isextern(a->sym))
@@ -2108,6 +2109,7 @@ oclass(Link *ctxt, Addr *a)
 	case D_TR+7:	return	Ytr7;
 
 	case D_EXTERN:
+	case D_GOTREF:
 	case D_STATIC:
 	case D_AUTO:
 	case D_PARAM:
@@ -2300,6 +2302,7 @@ vaddr(Link *ctxt, Prog *p, Addr *a, Reloc *r)
 	switch(t) {
 	case D_STATIC:
 	case D_EXTERN:
+	case D_GOTREF:
 		s = a->sym;
 		if(r == nil) {
 			ctxt->diag("need reloc for %D", a);
@@ -2308,6 +2311,9 @@ vaddr(Link *ctxt, Prog *p, Addr *a, Reloc *r)
 		if(isextern(s)) {
 			r->siz = 4;
 			r->type = R_ADDR;
+		} else if (t == D_GOTREF) {
+			r->siz = 4;
+			r->type = R_GOTPCREL;
 		} else {
 			r->siz = 4;
 			r->type = R_PCREL;
@@ -2358,6 +2364,7 @@ asmandsz(Link *ctxt, Prog *p, Addr *a, int r, int rex, int m64)
 			default:
 				goto bad;
 			case D_EXTERN:
+			case D_GOTREF:
 			case D_STATIC:
 				if(!isextern(a->sym))
 					goto bad;
@@ -2407,6 +2414,7 @@ asmandsz(Link *ctxt, Prog *p, Addr *a, int r, int rex, int m64)
 			goto bad;
 		case D_STATIC:
 		case D_EXTERN:
+		case D_GOTREF:
 			t = D_NONE;
 			v = vaddr(ctxt, p, a, &rel);
 			break;
@@ -2423,7 +2431,7 @@ asmandsz(Link *ctxt, Prog *p, Addr *a, int r, int rex, int m64)
 
 	ctxt->rexflag |= (regrex[t] & Rxb) | rex;
 	if(t == D_NONE || (D_CS <= t && t <= D_GS) || t == D_TLS) {
-		if((a->sym == nil || !isextern(a->sym)) && t == D_NONE && (a->type == D_STATIC || a->type == D_EXTERN) || ctxt->asmode != 64) {
+		if((a->sym == nil || !isextern(a->sym)) && t == D_NONE && (a->type == D_STATIC || a->type == D_EXTERN || a->type == D_GOTREF) || ctxt->asmode != 64) {
 			*ctxt->andptr++ = (0 << 6) | (5 << 0) | (r << 3);
 			goto putrelv;
 		}
