@@ -335,45 +335,63 @@ progedit(Link *ctxt, Prog *p)
 	}
 
 	if(ctxt->flag_shared) {
-		if(p->as == AMOVQ) {
-			if(p->from.type == D_EXTERN)  {
-				// MOVQ $name, Rx
+		if(p->from.type == D_EXTERN) {
+			switch (p->as) {
+			case AMOVL:
+			case AMOVQ:
+				// MOVx $name+O, Rx
 				//  -->
 				// MOVQ $gotref(name), REGTMP
-				// MOVQ (REGTMP), Rx
+				// MOVx O(REGTMP), Rx
 				q = appendp(ctxt, p);
-				q->as = AMOVQ;
+				q->as = p->as;
 				q->from.type = D_INDIR + REGTMP;
 				q->to = p->to;
 
 				// This assumes it's a simple move to a
 				// register, which is probably not a valid
 				// assumption!
+				p->as = AMOVQ;
 				p->from.type = D_GOTREF;
 				p->to.type = REGTMP;
-			} else if(p->to.type == D_EXTERN) {
-				// MOVQ Rx, $name
-				//  -->
-				// MOVQ $gotref(name), REGTMP
-				// MOVQ Rx, (REGTMP)
-				q = appendp(ctxt, p);
-				q->as = AMOVQ;
-				q->to.type = D_INDIR + REGTMP;
-				q->from = p->from;
-
-				p->from = p->to;
-				p->from.type = D_GOTREF;
-				p->to = q->from;
-				p->to.type = REGTMP;
-			}
-		}
-		if(p->as == ALEAQ) {
-			if(p->from.type == D_EXTERN) {
+				break;
+			case ALEAQ:
 				// LEAQ $name, target
 				//  -->
 				// MOVQ $gotref(name), target
 				p->as = AMOVQ;
 				p->from.type = D_GOTREF;
+				break;
+			case ATEXT:
+				break;
+			default:
+				print("from %P\n", p);
+				break;
+			}
+		}
+		if(p->to.type == D_EXTERN) {
+			switch (p->as) {
+			case AMOVL:
+			case AMOVQ:
+				// MOVx Rx, $name
+				//  -->
+				// MOVQ $gotref(name), REGTMP
+				// MOVx Rx, (REGTMP)
+				q = appendp(ctxt, p);
+				q->as = p->as;
+				q->to.type = D_INDIR + REGTMP;
+				q->from = p->from;
+
+				p->as = AMOVQ;
+				p->from = p->to;
+				p->from.type = D_GOTREF;
+				p->to = q->from;
+				p->to.type = REGTMP;
+			case AFUNCDATA:
+				break;
+			default:
+				print("to %P\n", p);
+				break;
 			}
 		}
 	}
