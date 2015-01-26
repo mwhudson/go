@@ -363,7 +363,7 @@ progedit(Link *ctxt, Prog *p)
 
 				p->from = p->to;
 				p->from.type = D_GOTREF;
-				memset(&p->to, 0, sizeof p->to);
+				p->to = q->from;
 				p->to.type = REGTMP;
 			}
 		}
