@@ -1522,31 +1522,22 @@ func (b *builder) linkShared(a *action) (err error) {
 	all := actionList(a)
 	all = all[0 : len(all)-1]
 	mylib := all[len(all)-1].p.SharedLib
-	linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
-	otherLibPkgs := []*Package{}
+	packageToArchive := make(map[*Package]string)
+	packageToDSO := make(map[*Package]string)
 	for _, a1 := range all {
-		if strings.HasSuffix(a1.target, ".a") {
-			linkArgs = append(linkArgs, a1.target)
-		}
 		if a1.p == nil {
 			continue
 		}
+		if strings.HasSuffix(a1.target, ".a") {
+			packageToArchive[a1.p] = a1.target
+		}
 		for _, p := range a1.p.imports {
 			if p.SharedLib != "" && p.SharedLib != mylib {
-				otherLibPkgs = append(otherLibPkgs, p)
+				packageToDSO[p] = p.SharedLib
 			}
 		}
 	}
-	linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
-	linkArgs = append(linkArgs, sharedLibLinkArgs(otherLibPkgs)...)
-	linkArgs = append(linkArgs, buildGccgoflags...)
-	dir, _ := filepath.Split(a.target)
-	if dir != "" {
-		if err := b.mkdir(dir); err != nil {
-			return err
-		}
-	}
-	return b.run(".", "", nil, linkArgs)
+	return buildToolchain.ldshared(b, a, packageToArchive, packageToDSO)
 }
 
 // includeArgs returns the -I or -L directory list for access
@@ -2013,6 +2004,8 @@ type toolchain interface {
 	pack(b *builder, p *Package, objDir, afile string, ofiles []string) error
 	// ld runs the linker to create a package starting at mainpkg.
 	ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error
+	// ldshared runs the linker to create a shared library containing the packages in packageToArchive
+	ldshared(b *builder, a *action, packageToArchive map[*Package]string, packageToDSO map[*Package]string) error
 
 	compiler() string
 	linker() string
@@ -2053,6 +2046,10 @@ func (noToolchain) pack(b *builder, p *Package, objDir, afile string, ofiles []s
 }
 
 func (noToolchain) ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error {
+	return noCompiler()
+}
+
+func (noToolchain) ldshared(b *builder, a *action, packageToArchive map[*Package]string, packageToDSO map[*Package]string) error {
 	return noCompiler()
 }
 
@@ -2276,6 +2273,10 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 	return b.run(".", p.ImportPath, nil, tool(archChar+"l"), "-o", out, importArgs, ldflags, mainpkg)
 }
 
+func (gcToolchain) ldshared(b *builder, a *action, packageToArchive map[*Package]string, packageToDSO map[*Package]string) error {
+	return nil //b.run(".", p.ImportPath, nil, tool(archChar+"l"), "-o", out, importArgs, ldflags, mainpkg)
+}
+
 func (gcToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {
 	return fmt.Errorf("%s: C source files not supported without cgo", mkAbs(p.Dir, cfile))
 }
@@ -2456,6 +2457,27 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 		ldflags = append(ldflags, "-lobjc")
 	}
 	return b.run(".", p.ImportPath, nil, gccgoName, "-o", out, ofiles, "-Wl,-(", ldflags, "-Wl,-)", buildGccgoflags)
+}
+
+func (gccgoToolchain) ldshared(b *builder, a *action, packageToArchive map[*Package]string, packageToDSO map[*Package]string) error {
+	linkArgs := []string{gccgoName, "-shared", "-g", "-o", a.target, "-Wl,--whole-archive"}
+	otherLibPkgs := []*Package{}
+	for _, archive := range packageToArchive {
+		linkArgs = append(linkArgs, archive)
+	}
+	for p, _ := range packageToDSO {
+		otherLibPkgs = append(otherLibPkgs, p)
+	}
+	linkArgs = append(linkArgs, "-Wl,--no-whole-archive")
+	linkArgs = append(linkArgs, sharedLibLinkArgs(otherLibPkgs)...)
+	linkArgs = append(linkArgs, buildGccgoflags...)
+	dir, _ := filepath.Split(a.target)
+	if dir != "" {
+		if err := b.mkdir(dir); err != nil {
+			return err
+		}
+	}
+	return b.run(".", "", nil, linkArgs)
 }
 
 func (gccgoToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {
