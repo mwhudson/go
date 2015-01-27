@@ -408,7 +408,7 @@ func runInstall(cmd *Command, args []string) {
 				la.deps = append(la.deps, b.action(modeInstallForShared, modeBuildForShared, p))
 			}
 		}
-		//dumpActionTree(la)
+		dumpActionTree(la)
 		if len(la.deps) > 0 {
 			b.do(la)
 		}
@@ -534,11 +534,6 @@ func (b *builder) init() {
 	b.actionCache = make(map[cacheKey]*action)
 	b.mkdirCache = make(map[string]bool)
 
-	if _, isgccgo := buildToolchain.(gccgoToolchain); !isgccgo {
-		if buildBuildmode != "" {
-			fatalf("-buildmode is only supported with gccgo")
-		}
-	}
 	switch buildBuildmode {
 	case "":
 	case "linkshared":
@@ -1478,6 +1473,9 @@ func (b *builder) installForShared(a *action) (err error) {
 	if err != nil {
 		return err
 	}
+	if _, ok := buildToolchain.(gcToolchain); ok {
+		return
+	}
 
 	objcopyArgs := []string{
 		"objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
@@ -2274,7 +2272,17 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 }
 
 func (gcToolchain) ldshared(b *builder, a *action, packageToArchive map[*Package]string, packageToDSO map[*Package]string) error {
-	return nil //b.run(".", p.ImportPath, nil, tool(archChar+"l"), "-o", out, importArgs, ldflags, mainpkg)
+	ldflags := []string{"-dso"}
+	if buildContext.InstallSuffix != "" {
+		ldflags = append(ldflags, "-installsuffix", buildContext.InstallSuffix)
+	}
+	for p, a := range packageToArchive {
+		ldflags = append(ldflags, []string{"ar", p.ImportPath, a}...)
+	}
+	for p, dso := range packageToDSO {
+		ldflags = append(ldflags, []string{"dso", p.ImportPath, dso}...)
+	}
+	return b.run(".", a.target, nil, tool(archChar+"l"), "-o", a.target, ldflags)
 }
 
 func (gcToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {

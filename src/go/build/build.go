@@ -476,10 +476,13 @@ func (ctxt *Context) Import(path string, srcDir string, mode ImportMode) (*Packa
 		sharedlibdir = "pkg/shared_gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH + "/"
 		exportdata = sharedlibdir + dir + elem + ".gox"
 	case "gc":
+		dir, elem := pathpkg.Split(p.ImportPath)
 		suffix := ""
 		if ctxt.InstallSuffix != "" {
 			suffix = "_" + ctxt.InstallSuffix
 		}
+		sharedlibdir = "pkg/shared_" + ctxt.GOOS + "_" + ctxt.GOARCH + "/"
+		exportdata = sharedlibdir + dir + elem + ".gox"
 		pkga = "pkg/" + ctxt.GOOS + "_" + ctxt.GOARCH + suffix + "/" + p.ImportPath + ".a"
 	default:
 		// Save error for end of function.
