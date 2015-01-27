@@ -85,6 +85,7 @@ EXTERN	int	elfglobalsymndx;
 EXTERN	char*	flag_installsuffix;
 EXTERN	int	flag_race;
 EXTERN	int flag_shared;
+EXTERN	int flag_dso;
 EXTERN	char*	tracksym;
 EXTERN	char*	interpreter;
 EXTERN	char*	tmpdir;
