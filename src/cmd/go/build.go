@@ -949,7 +949,8 @@ func (b *builder) buildForShared(a *action) (err error) {
 	}
 
 	if a.p.Standard && a.p.ImportPath == "runtime" && buildContext.Compiler == "gc" &&
-		!hasString(a.p.HFiles, "zasm_"+buildContext.GOOS+"_"+buildContext.GOARCH+".h") {
+		(!hasString(a.p.GoFiles, "zgoos_"+buildContext.GOOS+".go") ||
+			!hasString(a.p.GoFiles, "zgoarch_"+buildContext.GOARCH+".go")) {
 		return fmt.Errorf("%s/%s must be bootstrapped using make%v", buildContext.GOOS, buildContext.GOARCH, defaultSuffix())
 	}
 
