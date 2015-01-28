@@ -600,7 +600,7 @@ deadcode(void)
 
 	if(flag_dso) {
 		// We keep all symbols for a DSO link.
-		for(c = ctxt->allsym; s != S; s->allsym) {
+		for(s = ctxt->allsym; s != S; s = s->allsym) {
 			mark(s);
 		}
 		return;
