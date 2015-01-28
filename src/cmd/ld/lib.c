@@ -1068,6 +1068,9 @@ dostkcheck(void)
 	Chain ch;
 	LSym *s;
 
+	if(flag_dso)
+		return;
+
 	morestack = linklookup(ctxt, "runtime.morestack", 0);
 	newstack = linklookup(ctxt, "runtime.newstack", 0);
 
