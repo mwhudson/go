@@ -171,7 +171,7 @@ main(int argc, char *argv[])
 
 	if(flag_dso) {
 		int i;
-		for(i 0; i < argc; i++) {
+		for(i = 0; i < argc; i++) {
 			addlibpath(ctxt, "command line", "command line", argv[i], "main");
 		}
 	} else {
