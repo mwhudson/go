@@ -2107,6 +2107,9 @@ func (gcToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, 
 	if asmhdr {
 		args = append(args, "-asmhdr", obj+"go_asm.h")
 	}
+	if forShared {
+		args = append(args, "-shared")
+	}
 	for _, f := range gofiles {
 		args = append(args, mkAbs(p.Dir, f))
 	}
