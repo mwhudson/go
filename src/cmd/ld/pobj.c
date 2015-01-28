@@ -143,6 +143,8 @@ main(int argc, char *argv[])
 
 	if(!flag_dso && argc != 1)
 		usage();
+	if(flag_dso && argc % 3 != 0)
+		usage();
 
 	if(outfile == nil) {
 		if(HEADTYPE == Hwindows)
@@ -170,15 +172,18 @@ main(int argc, char *argv[])
 	cbc = sizeof(buf.cbuf);
 
 	if(flag_dso) {
-		int i;
-		for(i = 0; i < argc; i++) {
-			addlibpath(ctxt, "command line", "command line", argv[i], "main");
+		int i = 0;
+		while (i < argc) {
+			if (strcmp(argv[i], "ar") == 0) {
+				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1]);
+			}
+			i += 3;
 		}
 	} else {
 		addlibpath(ctxt, "command line", "command line", argv[0], "main");
 	}
+
 	loadlib();
-	
 	if(thechar == '5') {
 		// mark some functions that are only referenced after linker code editing
 		if(debug['F'])
