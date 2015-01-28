@@ -598,6 +598,14 @@ deadcode(void)
 	if(debug['v'])
 		Bprint(&bso, "%5.2f deadcode\n", cputime());
 
+	if(flag_dso) {
+		// We keep all symbols for a DSO link.
+		for(c = ctxt->allsym; s != S; s->allsym) {
+			mark(s);
+		}
+		return;
+	}
+
 	mark(linklookup(ctxt, INITENTRY, 0));
 	for(i=0; i<nelem(markextra); i++)
 		mark(linklookup(ctxt, markextra[i], 0));

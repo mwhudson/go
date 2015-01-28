@@ -192,9 +192,7 @@ main(int argc, char *argv[])
 	}
 
 	checkgo();
-	if(!flag_dso) {
-		deadcode();
-	}
+	deadcode();
 	callgraph();
 	paramspace = "SP";	/* (FP) now (SP) on output */
 
