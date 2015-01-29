@@ -2277,6 +2277,7 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 
 func (gcToolchain) ldshared(b *builder, a *action, packageToArchive map[*Package]string, packageToDSO map[*Package]string) error {
 	ldflags := []string{"-dso"}
+	ldflags = append(ldflags, buildLdflags...)
 	if buildContext.InstallSuffix != "" {
 		ldflags = append(ldflags, "-installsuffix", buildContext.InstallSuffix)
 	}
