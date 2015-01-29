@@ -303,7 +303,8 @@ elfreloc1(Reloc *r, vlong sectoff)
 		
 	case R_CALL:
 		if(r->siz == 4) {
-			if(r->xsym->type == SDYNIMPORT)
+			if(r->xsym->type == SDYNIMPORT || (r->sym->type == 0 && flag_dso))
+				// Er, not sure this is right.
 				VPUT(R_X86_64_GOTPCREL | (uint64)elfsym<<32);
 			else
 				VPUT(R_X86_64_PC32 | (uint64)elfsym<<32);
@@ -313,7 +314,10 @@ elfreloc1(Reloc *r, vlong sectoff)
 
 	case R_PCREL:
 		if(r->siz == 4) {
-			VPUT(R_X86_64_PC32 | (uint64)elfsym<<32);
+			if(r->sym->type == 0 && flag_dso)
+				VPUT(R_X86_64_GOTPCREL | (uint64)elfsym<<32);
+			else
+				VPUT(R_X86_64_PC32 | (uint64)elfsym<<32);
 		} else
 			return -1;
 		break;
