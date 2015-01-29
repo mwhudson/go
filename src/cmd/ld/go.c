@@ -601,7 +601,13 @@ deadcode(void)
 	if(flag_dso) {
 		// We keep all symbols for a DSO link.
 		for(s = ctxt->allsym; s != S; s = s->allsym) {
-			mark(s);
+			if(strncmp(s->name, "go.weak.", 8) == 0) {
+				s->special = 1;  // do not lay out in data segment
+				s->reachable = 1;
+				s->hide = 1;
+			} else {
+				mark(s);
+			}
 		}
 		return;
 	}
