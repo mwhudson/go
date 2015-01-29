@@ -1503,7 +1503,7 @@ undefsym(LSym *s)
 		r = &s->r[i];
 		if(r->sym == nil) // happens for some external ARM relocs
 			continue;
-		if(r->sym->type == Sxxx || r->sym->type == SXREF)
+		if((r->sym->type == Sxxx || r->sym->type == SXREF) && !flag_dso)
 			diag("undefined: %s", r->sym->name);
 		if(!r->sym->reachable)
 			diag("use of unreachable symbol: %s", r->sym->name);
