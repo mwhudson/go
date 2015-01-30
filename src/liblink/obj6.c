@@ -365,7 +365,7 @@ progedit(Link *ctxt, Prog *p)
 			case ATEXT:
 				break;
 			default:
-				print("from %P\n", p);
+				//print("from %P\n", p);
 				break;
 			}
 		}
@@ -390,7 +390,7 @@ progedit(Link *ctxt, Prog *p)
 			case AFUNCDATA:
 				break;
 			default:
-				print("to %P\n", p);
+				//print("to %P\n", p);
 				break;
 			}
 		}
