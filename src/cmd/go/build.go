@@ -1475,12 +1475,12 @@ func (b *builder) installForShared(a *action) (err error) {
 		return err
 	}
 	if _, ok := buildToolchain.(gcToolchain); ok {
-		return
+		return b.install(a)
+	} else {
+		objcopyArgs := []string{
+			"objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
+		return b.run(".", "", nil, objcopyArgs)
 	}
-
-	objcopyArgs := []string{
-		"objcopy", "-j", ".go_export", a1.objdir + "_go_.o", a1.p.build.ExportData}
-	return b.run(".", "", nil, objcopyArgs)
 }
 
 // install is the action for installing a single package or executable.
