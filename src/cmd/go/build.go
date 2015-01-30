@@ -2110,6 +2110,14 @@ func (gcToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, 
 	if forShared {
 		args = append(args, "-shared")
 	}
+	if buildBuildmode == "shared" || buildBuildmode == "linkshared" {
+		for _, p1 := range p.imports {
+			if p1.SharedLib != "" {
+				dir, _ := path.Split(p1.ExportData)
+				args = append(args, "-I", dir)
+			}
+		}
+	}
 	for _, f := range gofiles {
 		args = append(args, mkAbs(p.Dir, f))
 	}
