@@ -125,13 +125,14 @@ progedit(Link *ctxt, Prog *p)
 			p->to.index = REG_NONE;
 		}
 	} else {
-		// As a courtesy to the C compilers, rewrite TLS local exec load as TLS initial exec load.
+		// On systems where it is needed, rewrite TLS local exec load as TLS initial exec load.
 		// The instruction
 		//	MOVQ off(TLS), BX
 		// becomes the sequence
 		//	MOVQ TLS, BX
 		//	MOVQ off(BX)(TLS*1), BX
-		// This allows the C compilers to emit references to m and g using the direct off(TLS) form.
+		// This allows the stackcheck code to emit references to g using the direct off(TLS) form
+		// (see load_g_cx below).
 		if((p->as == AMOVQ || p->as == AMOVL) && p->from.type == TYPE_MEM && p->from.reg == REG_TLS && p->to.type == TYPE_REG && REG_AX <= p->to.reg && p->to.reg <= REG_R15) {
 			q = appendp(ctxt, p);
 			q->as = p->as;
