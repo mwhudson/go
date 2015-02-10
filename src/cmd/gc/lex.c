@@ -268,9 +268,10 @@ gcmain(int argc, char *argv[])
 	flagcount("wb", "enable write barrier", &use_writebarrier);
 	flagcount("x", "debug lexer", &debug['x']);
 	flagcount("y", "debug declarations in canned imports (with -d)", &debug['y']);
-	if(thearch.thechar == '6')
+	if(thearch.thechar == '6') {
 		flagcount("largemodel", "generate code that assumes a large memory model", &flag_largemodel);
-
+		flagcount("shared", "generate code that can be linked into a shared library", &ctxt->flag_shared);
+	}
 	flagparse(&argc, &argv, usage);
 	ctxt->debugasm = debug['S'];
 	ctxt->debugvlog = debug['v'];

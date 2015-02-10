@@ -284,6 +284,13 @@ elfreloc1(Reloc *r, vlong sectoff)
 		else
 			return -1;
 		break;
+
+	case R_TLS_IE:
+		if(r->siz == 4)
+			thearch.vput(R_X86_64_GOTTPOFF | (uint64)elfsym<<32);
+		else
+			return -1;
+		break;
 		
 	case R_CALL:
 		if(r->siz == 4) {
