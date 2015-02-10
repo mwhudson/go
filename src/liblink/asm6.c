@@ -1902,9 +1902,13 @@ prefixof(Link *ctxt, Addr *a)
 			switch(ctxt->headtype) {
 			default:
 				sysfatal("unknown TLS base register for %s", headstr(ctxt->headtype));
+			case Hlinux:
+				if(ctxt->flag_shared)
+					sysfatal("unknown TLS base register for linux with -shared");
+				else
+					return 0x64; // FS
 			case Hdragonfly:
 			case Hfreebsd:
-			case Hlinux:
 			case Hnetbsd:
 			case Hopenbsd:
 			case Hsolaris:
@@ -1921,6 +1925,21 @@ prefixof(Link *ctxt, Addr *a)
 		return 0x3e;
 	case REG_ES:
 		return 0x26;
+	case REG_TLS:
+		if(ctxt->flag_shared) {
+			// When building for inclusion into a shared library, an instrucion of the form
+			//     MOV 0(CX)(TLS*1), AX
+			// becomes
+			//     mov %fs:(%rcx), %rax
+			// which assumes that the correct TLS offset has been loaded into %rcx (today
+			// there is only one TLS variable -- g -- so this is OK). When not building for
+			// a shared library the instruction does not require a prefix.
+			if(a->offset != 0) {
+				sysfatal("cannot handle handle non-0 offsets to TLS");
+			}
+			return 0x64;
+		}
+		break;
 	case REG_FS:
 		return 0x64;
 	case REG_GS:
@@ -2459,7 +2478,7 @@ asmandsz(Link *ctxt, Prog *p, Addr *a, int r, int rex, int m64)
 	}
 
 	if(REG_AX <= base && base <= REG_R15) {
-		if(a->index == REG_TLS) {
+		if(a->index == REG_TLS && !ctxt->flag_shared) {
 			memset(&rel, 0, sizeof rel);
 			rel.type = R_TLS_IE;
 			rel.siz = 4;
@@ -3389,13 +3408,39 @@ mfound:
 			}
 		}
 		break;
-	
+
 	case 7:	/* mov tls, r */
 		// NOTE: The systems listed here are the ones that use the "TLS initial exec" model,
 		// where you load the TLS base register into a register and then index off that
 		// register to access the actual TLS variables. Systems that allow direct TLS access
 		// are handled in prefixof above and should not be listed here.
 		switch(ctxt->headtype) {
+		case Hlinux:
+			if(!ctxt->flag_shared)
+				sysfatal("unknown TLS base location for linux without -shared");
+			// Note that this is not generating the same insn as the other cases.
+			//     MOV TLS, R_to
+			// becomes
+			//     movq g@gottpoff(%rip), R_to
+			// which is encoded as
+			//     movq 0(%rip), R_to
+			// and a R_TLS_IE reloc. This all assumes the only tls variable we access
+			// is g, which we can't check here, but will when we assemble the second
+			// instruction.
+			ctxt->rexflag = Pw | (regrex[p->to.reg] & Rxr);
+
+			*ctxt->andptr++ = 0x8B;
+			*ctxt->andptr++ = 0x05 | (reg[p->to.reg]<<3);
+			r = addrel(ctxt->cursym);
+			r->off = p->pc + ctxt->andptr - ctxt->and;
+			r->type = R_TLS_IE;
+			r->siz = 4;
+			*ctxt->andptr++ = 0x00;
+			*ctxt->andptr++ = 0x00;
+			*ctxt->andptr++ = 0x00;
+			*ctxt->andptr++ = 0x00;
+			break;
+
 		default:
 			sysfatal("unknown TLS base location for %s", headstr(ctxt->headtype));
 

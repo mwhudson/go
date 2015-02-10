@@ -118,6 +118,7 @@ main(int argc, char *argv[])
 	flagcount("m", "debug preprocessor macros", &debug['m']);
 	flagstr("o", "file: set output file", &outfile);
 	flagstr("trimpath", "prefix: remove prefix from recorded source file paths", &ctxt->trimpath);
+	flagcount("shared", "generate code that can be linked into a shared library", &ctxt->flag_shared);
 
 	flagparse(&argc, &argv, usage);
 	ctxt->debugasm = debug['S'];
