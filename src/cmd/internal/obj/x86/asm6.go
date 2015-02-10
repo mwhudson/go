@@ -1842,7 +1842,7 @@ func prefixof(ctxt *obj.Link, a *obj.Addr) int {
 		case REG_GS:
 			return 0x65
 
-			// NOTE: Systems listed here should be only systems that
+		// NOTE: Systems listed here should be only systems that
 		// support direct TLS references like 8(TLS) implemented as
 		// direct references from FS or GS. Systems that require
 		// the initial-exec model, where you load the TLS base into
@@ -1853,9 +1853,15 @@ func prefixof(ctxt *obj.Link, a *obj.Addr) int {
 			default:
 				log.Fatalf("unknown TLS base register for %s", obj.Headstr(ctxt.Headtype))
 
+			case obj.Hlinux:
+				if ctxt.Flag_shared != 0 {
+					log.Fatalf("unknown TLS base register for linux with -shared")
+				} else {
+					return 0x64 // FS
+				}
+
 			case obj.Hdragonfly,
 				obj.Hfreebsd,
-				obj.Hlinux,
 				obj.Hnetbsd,
 				obj.Hopenbsd,
 				obj.Hsolaris:
@@ -1876,6 +1882,21 @@ func prefixof(ctxt *obj.Link, a *obj.Addr) int {
 
 	case REG_ES:
 		return 0x26
+
+	case REG_TLS:
+		if ctxt.Flag_shared == 0 {
+			// When building for inclusion into a shared library, an instrucion of the form
+			//     MOV 0(CX)(TLS*1), AX
+			// becomes
+			//     mov %fs:(%rcx), %rax
+			// which assumes that the correct TLS offset has been loaded into %rcx (today
+			// there is only one TLS variable -- g -- so this is OK). When not building for
+			// a shared library the instruction does not require a prefix.
+			if a.Offset != 0 {
+				log.Fatalf("cannot handle handle non-0 offsets to TLS")
+			}
+			return 0x64
+		}
 
 	case REG_FS:
 		return 0x64
@@ -2498,7 +2519,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 	}
 
 	if REG_AX <= base && base <= REG_R15 {
-		if a.Index == REG_TLS {
+		if a.Index == REG_TLS && ctxt.Flag_shared == 0 {
 			rel = obj.Reloc{}
 			rel.Type = obj.R_TLS_IE
 			rel.Siz = 4
@@ -3594,6 +3615,38 @@ mfound:
 		switch ctxt.Headtype {
 		default:
 			log.Fatalf("unknown TLS base location for %s", obj.Headstr(ctxt.Headtype))
+
+		case obj.Hlinux:
+			if ctxt.Flag_shared == 0 {
+				log.Fatalf("unknown TLS base location for linux without -shared")
+			}
+			// Note that this is not generating the same insn as the other cases.
+			//     MOV TLS, R_to
+			// becomes
+			//     movq g@gottpoff(%rip), R_to
+			// which is encoded as
+			//     movq 0(%rip), R_to
+			// and a R_TLS_IE reloc. This all assumes the only tls variable we access
+			// is g, which we can't check here, but will when we assemble the second
+			// instruction.
+			ctxt.Rexflag = Pw | (regrex[p.To.Reg] & Rxr)
+
+			ctxt.Andptr[0] = 0x8B
+			ctxt.Andptr = ctxt.Andptr[1:]
+			ctxt.Andptr[0] = byte(0x05 | (reg[p.To.Reg] << 3))
+			ctxt.Andptr = ctxt.Andptr[1:]
+			r = obj.Addrel(ctxt.Cursym)
+			r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+			r.Type = obj.R_TLS_IE
+			r.Siz = 4
+			ctxt.Andptr[0] = 0x00
+			ctxt.Andptr = ctxt.Andptr[1:]
+			ctxt.Andptr[0] = 0x00
+			ctxt.Andptr = ctxt.Andptr[1:]
+			ctxt.Andptr[0] = 0x00
+			ctxt.Andptr = ctxt.Andptr[1:]
+			ctxt.Andptr[0] = 0x00
+			ctxt.Andptr = ctxt.Andptr[1:]
 
 		case obj.Hplan9:
 			if ctxt.Plan9privates == nil {
