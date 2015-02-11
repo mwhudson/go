@@ -117,14 +117,21 @@ main(int argc, char *argv[])
 	flagstr("r", "dir1:dir2:...: set ELF dynamic linker search path", &rpath);
 	flagcount("race", "enable race detector", &flag_race);
 	flagcount("s", "disable symbol table", &debug['s']);
-	if(thechar == '5' || thechar == '6')
+	if(thechar == '5' || thechar == '6') {
 		flagcount("shared", "generate shared object (implies -linkmode external)", &flag_shared);
+		flagcount("dso", "generate shared library", &flag_dso);
+	}
 	flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir);
 	flagcount("u", "reject unsafe packages", &debug['u']);
 	flagcount("v", "print link trace", &debug['v']);
 	flagcount("w", "disable DWARF generation", &debug['w']);
 	
 	flagparse(&argc, &argv, usage);
+
+	if(flag_dso) {
+		flag_shared = 1;
+	}
+
 	ctxt->bso = &bso;
 	ctxt->debugdivmod = debug['M'];
 	ctxt->debugfloat = debug['F'];
@@ -134,7 +141,9 @@ main(int argc, char *argv[])
 	ctxt->debugstack = debug['K'];
 	ctxt->debugvlog = debug['v'];
 
-	if(argc != 1)
+	if(!flag_dso && argc != 1)
+		usage();
+	if(flag_dso && argc % 3 != 0)
 		usage();
 
 	if(outfile == nil) {
@@ -162,9 +171,19 @@ main(int argc, char *argv[])
 	cbp = buf.cbuf;
 	cbc = sizeof(buf.cbuf);
 
-	addlibpath(ctxt, "command line", "command line", argv[0], "main");
+	if(flag_dso) {
+		int i = 0;
+		while (i < argc) {
+			if (strcmp(argv[i], "ar") == 0) {
+				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1]);
+			}
+			i += 3;
+		}
+	} else {
+		addlibpath(ctxt, "command line", "command line", argv[0], "main");
+	}
+
 	loadlib();
-	
 	if(thechar == '5') {
 		// mark some functions that are only referenced after linker code editing
 		if(debug['F'])
