@@ -598,6 +598,20 @@ deadcode(void)
 	if(debug['v'])
 		Bprint(&bso, "%5.2f deadcode\n", cputime());
 
+	if(flag_dso) {
+		// We keep all symbols for a DSO link.
+		for(s = ctxt->allsym; s != S; s = s->allsym) {
+			if(strncmp(s->name, "go.weak.", 8) == 0) {
+				s->special = 1;  // do not lay out in data segment
+				s->reachable = 1;
+				s->hide = 1;
+			} else {
+				mark(s);
+			}
+		}
+		return;
+	}
+
 	mark(linklookup(ctxt, INITENTRY, 0));
 	for(i=0; i<nelem(markextra); i++)
 		mark(linklookup(ctxt, markextra[i], 0));
