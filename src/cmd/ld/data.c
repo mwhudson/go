@@ -150,7 +150,7 @@ relocsym(LSym *s)
 			diag("%s: invalid relocation %d+%d not in [%d,%d)", s->name, off, siz, 0, s->np);
 			continue;
 		}
-		if(r->sym != S && ((r->sym->type & (SMASK | SHIDDEN)) == 0 || (r->sym->type & SMASK) == SXREF)) {
+		if(r->sym != S && ((r->sym->type & (SMASK | SHIDDEN)) == 0 || (r->sym->type & SMASK) == SXREF) && !flag_dso) {
 			diag("%s: not defined", r->sym->name);
 			continue;
 		}
@@ -235,7 +235,7 @@ relocsym(LSym *s)
 					r->xadd += symaddr(rs) - symaddr(rs->outer);
 					rs = rs->outer;
 				}
-				if(rs->type != SHOSTOBJ && rs->type != SDYNIMPORT && rs->sect == nil)
+				if(rs->type != SHOSTOBJ && rs->type != SDYNIMPORT && rs->sect == nil && !flag_dso)
 					diag("missing section for %s", rs->name);
 				r->xsym = rs;
 
@@ -277,7 +277,7 @@ relocsym(LSym *s)
 					rs = rs->outer;
 				}
 				r->xadd -= r->siz; // relative to address after the relocated chunk
-				if(rs->type != SHOSTOBJ && rs->type != SDYNIMPORT && rs->sect == nil)
+				if(rs->type != SHOSTOBJ && rs->type != SDYNIMPORT && rs->sect == nil && !flag_dso)
 					diag("missing section for %s", rs->name);
 				r->xsym = rs;
 
