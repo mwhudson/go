@@ -471,6 +471,7 @@ struct	Library
 	char *srcref;	// src file where we found the reference
 	char *file;	// object file
 	char *pkg;	// import path
+	char *dso;
 };
 
 struct Pcdata
@@ -545,6 +546,8 @@ struct	Link
 	int32	debugfloat;	// -F flag in 5l
 	int32	debugpcln;	// -O flag in linker
 	int32	flag_shared;	// -shared flag in linker
+	int32	flag_dso;	// -dso flag in linker
+	int32	addlibpath_ok;	// shush
 	int32	iself;
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
@@ -717,7 +720,7 @@ extern	int	framepointer_enabled;
 // ld.c
 void	addhist(Link *ctxt, int32 line, int type);
 void	addlib(Link *ctxt, char *src, char *obj, char *path);
-void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg);
+void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg, char* dso);
 void	collapsefrog(Link *ctxt, LSym *s);
 void	copyhistfrog(Link *ctxt, char *buf, int nbuf);
 int	find1(int32 l, int c);

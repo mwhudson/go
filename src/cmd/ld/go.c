@@ -598,7 +598,7 @@ deadcode(void)
 	if(debug['v'])
 		Bprint(&bso, "%5.2f deadcode\n", cputime());
 
-	if(flag_dso) {
+	if(ctxt->flag_dso) {
 		// We keep all symbols for a DSO link.
 		for(s = ctxt->allsym; s != S; s = s->allsym) {
 			if(strncmp(s->name, "go.weak.", 8) == 0) {

@@ -190,6 +190,8 @@ linknew(LinkArch *arch)
 			ctxt->goarm = 6;
 	}
 
+	ctxt->addlibpath_ok = 1;
+
 	return ctxt;
 }
 

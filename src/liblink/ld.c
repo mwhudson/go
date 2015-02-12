@@ -80,7 +80,7 @@ addlib(Link *ctxt, char *src, char *obj, char *pathname)
 	if(ctxt->debugvlog > 1 && ctxt->bso)
 		Bprint(ctxt->bso, "%5.2f addlib: %s %s pulls in %s\n", cputime(), obj, src, pname);
 
-	addlibpath(ctxt, src, obj, pname, name);
+	addlibpath(ctxt, src, obj, pname, name, NULL);
 }
 
 /*
@@ -91,7 +91,7 @@ addlib(Link *ctxt, char *src, char *obj, char *pathname)
  *	pkg: package import path, e.g. container/vector
  */
 void
-addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg)
+addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg, char *dso)
 {
 	int i;
 	Library *l;
@@ -99,6 +99,9 @@ addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg)
 	for(i=0; i<ctxt->libraryp; i++)
 		if(strcmp(file, ctxt->library[i].file) == 0)
 			return;
+
+	if(ctxt->flag_dso && !ctxt->addlibpath_ok)
+		sysfatal("dep %s not specified on cmd line", pkg);
 
 	if(ctxt->debugvlog > 1 && ctxt->bso)
 		Bprint(ctxt->bso, "%5.2f addlibpath: srcref: %s objref: %s file: %s pkg: %s\n",
@@ -114,6 +117,9 @@ addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg)
 	l->srcref = estrdup(srcref);
 	l->file = estrdup(file);
 	l->pkg = estrdup(pkg);
+	if(dso != NULL) {
+
+	}
 }
 
 int

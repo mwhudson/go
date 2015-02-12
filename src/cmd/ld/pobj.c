@@ -119,7 +119,7 @@ main(int argc, char *argv[])
 	flagcount("s", "disable symbol table", &debug['s']);
 	if(thechar == '5' || thechar == '6') {
 		flagcount("shared", "generate shared object (implies -linkmode external)", &flag_shared);
-		flagcount("dso", "generate shared library", &flag_dso);
+		flagcount("dso", "generate shared library", &ctxt->flag_dso);
 	}
 	flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir);
 	flagcount("u", "reject unsafe packages", &debug['u']);
@@ -128,7 +128,7 @@ main(int argc, char *argv[])
 	
 	flagparse(&argc, &argv, usage);
 
-	if(flag_dso) {
+	if(ctxt->flag_dso) {
 		flag_shared = 1;
 	}
 
@@ -141,9 +141,9 @@ main(int argc, char *argv[])
 	ctxt->debugstack = debug['K'];
 	ctxt->debugvlog = debug['v'];
 
-	if(!flag_dso && argc != 1)
+	if(!ctxt->flag_dso && argc != 1)
 		usage();
-	if(flag_dso && argc % 3 != 0)
+	if(ctxt->flag_dso && argc % 3 != 0)
 		usage();
 
 	if(outfile == nil) {
@@ -171,16 +171,19 @@ main(int argc, char *argv[])
 	cbp = buf.cbuf;
 	cbc = sizeof(buf.cbuf);
 
-	if(flag_dso) {
+	if(ctxt->flag_dso) {
 		int i = 0;
 		while (i < argc) {
 			if (strcmp(argv[i], "ar") == 0) {
-				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1]);
+				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1], NULL);
+			} else if (strcmp(argv[i], "dso") == 0) {
+				// TBD
 			}
 			i += 3;
 		}
+		ctxt->addlibpath_ok = 0;
 	} else {
-		addlibpath(ctxt, "command line", "command line", argv[0], "main");
+		addlibpath(ctxt, "command line", "command line", argv[0], "main", NULL);
 	}
 
 	loadlib();

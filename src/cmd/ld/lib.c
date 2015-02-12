@@ -168,7 +168,7 @@ loadinternal(char *name)
 		if(debug['v'])
 			Bprint(&bso, "searching for %s.a in %s\n", name, pname);
 		if(access(pname, AEXIST) >= 0) {
-			addlibpath(ctxt, "internal", "internal", pname, name);
+			addlibpath(ctxt, "internal", "internal", pname, name, NULL);
 			found = 1;
 			break;
 		}
@@ -1068,7 +1068,7 @@ dostkcheck(void)
 	Chain ch;
 	LSym *s;
 
-	if(flag_dso)
+	if(ctxt->flag_dso)
 		return;
 
 	morestack = linklookup(ctxt, "runtime.morestack", 0);
@@ -1517,7 +1517,7 @@ undefsym(LSym *s)
 		r = &s->r[i];
 		if(r->sym == nil) // happens for some external ARM relocs
 			continue;
-		if((r->sym->type == Sxxx || r->sym->type == SXREF) && !flag_dso)
+		if((r->sym->type == Sxxx || r->sym->type == SXREF) && !ctxt->flag_dso)
 			diag("undefined: %s", r->sym->name);
 		if(!r->sym->reachable)
 			diag("use of unreachable symbol: %s", r->sym->name);
