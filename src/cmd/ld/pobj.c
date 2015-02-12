@@ -143,8 +143,6 @@ main(int argc, char *argv[])
 
 	if(!ctxt->flag_dso && argc != 1)
 		usage();
-	if(ctxt->flag_dso && argc % 3 != 0)
-		usage();
 
 	if(outfile == nil) {
 		if(HEADTYPE == Hwindows)
@@ -175,11 +173,20 @@ main(int argc, char *argv[])
 		int i = 0;
 		while (i < argc) {
 			if (strcmp(argv[i], "ar") == 0) {
+				if (i + 2 >= argc) {
+					usage();
+				}
 				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1], NULL);
+				i += 3;
 			} else if (strcmp(argv[i], "dso") == 0) {
-				// TBD
+				if (i + 3 >= argc) {
+					usage();
+				}
+				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1], argv[i+3]);
+				i += 4;
+			} else {
+				usage();
 			}
-			i += 3;
 		}
 		ctxt->addlibpath_ok = 0;
 	} else {
