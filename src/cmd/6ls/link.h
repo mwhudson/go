@@ -553,7 +553,6 @@ struct	Link
 
 	// code generation
 	LSym*	tlsg;
-	uchar	and[100];
 	int64	instoffset;
 	int32	autosize;
 	int32	armsize;
