@@ -262,7 +262,7 @@ loadlib(void)
 	// binaries, so leave it enabled on OS X (Mach-O) binaries.
 	// Also leave it enabled on Solaris which doesn't support
 	// statically linked binaries.
-	if(!flag_shared && !havedynamic && HEADTYPE != Hdarwin && HEADTYPE != Hsolaris)
+	if(!flag_shared && !havedynamic)
 		debug['d'] = 1;
 	
 	importcycles();
@@ -447,16 +447,6 @@ ldhostobj(void (*ld)(Biobuf*, char*, int64, char*), Biobuf *f, char *pkg, int64 
 		}
 	}
 
-	// DragonFly declares errno with __thread, which results in a symbol
-	// type of R_386_TLS_GD or R_X86_64_TLSGD. The Go linker does not
-	// currently know how to handle TLS relocations, hence we have to
-	// force external linking for any libraries that link in code that
-	// uses errno. This can be removed if the Go linker ever supports
-	// these relocation types.
-	if(HEADTYPE == Hdragonfly)
-	if(strcmp(pkg, "net") == 0 || strcmp(pkg, "os/user") == 0)
-		isinternal = 0;
-
 	if(!isinternal)
 		externalobj = 1;
 
@@ -543,10 +533,6 @@ hostlink(void)
 	} else {
 		argv[argc++] = "-s";
 	}
-	if(HEADTYPE == Hdarwin)
-		argv[argc++] = "-Wl,-no_pie,-pagezero_size,4000000";
-	if(HEADTYPE == Hopenbsd)
-		argv[argc++] = "-Wl,-nopie";
 	
 	if(iself && AssumeGoldLinker)
 		argv[argc++] = "-Wl,--rosegment";

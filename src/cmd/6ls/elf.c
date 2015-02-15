@@ -883,10 +883,6 @@ doelf(void)
 	// binutils could correctly calculate PT_TLS size.
 	// see http://golang.org/issue/5200.
 	addstring(shstrtab, ".tbss");
-	if(HEADTYPE == Hnetbsd)
-		addstring(shstrtab, ".note.netbsd.ident");
-	if(HEADTYPE == Hopenbsd)
-		addstring(shstrtab, ".note.openbsd.ident");
 	if(buildinfolen > 0)
 		addstring(shstrtab, ".note.gnu.build-id");
 	addstring(shstrtab, ".elfdata");
@@ -1124,14 +1120,6 @@ asmbelf(vlong symo)
 	eh->ident[EI_MAG1] = 'E';
 	eh->ident[EI_MAG2] = 'L';
 	eh->ident[EI_MAG3] = 'F';
-	if(HEADTYPE == Hfreebsd)
-		eh->ident[EI_OSABI] = ELFOSABI_FREEBSD;
-	else if(HEADTYPE == Hnetbsd)
-		eh->ident[EI_OSABI] = ELFOSABI_NETBSD;
-	else if(HEADTYPE == Hopenbsd)
-		eh->ident[EI_OSABI] = ELFOSABI_OPENBSD;
-	else if(HEADTYPE == Hdragonfly)
-		eh->ident[EI_OSABI] = ELFOSABI_NONE;
 	if(elf64)
 		eh->ident[EI_CLASS] = ELFCLASS64;
 	else

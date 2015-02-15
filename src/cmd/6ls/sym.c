@@ -38,19 +38,8 @@ static struct {
 	char *name;
 	int val;
 } headers[] = {
-	{"darwin",	Hdarwin},
-	{"dragonfly",	Hdragonfly},
-	{"elf",		Helf},
-	{"freebsd",	Hfreebsd},
 	{"linux",	Hlinux},
 	{"android",	Hlinux}, // must be after "linux" entry or else headstr(Hlinux) == "android"
-	{"nacl",		Hnacl},
-	{"netbsd",	Hnetbsd},
-	{"openbsd",	Hopenbsd},
-	{"plan9",	Hplan9},
-	{"solaris",	Hsolaris},
-	{"windows",	Hwindows},
-	{"windowsgui",	Hwindows},
 };
 
 int

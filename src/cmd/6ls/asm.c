@@ -448,8 +448,7 @@ adddynlib(char *lib)
 void
 asmb(void)
 {
-	int32 magic;
-	vlong vl, symo;
+	vlong symo;
 	Section *sect;
 
 	if(debug['v'])
@@ -534,28 +533,7 @@ asmb(void)
 	Bflush(&bso);
 	cseek(0L);
 	switch(HEADTYPE) {
-	default:
-	case Hplan9:	/* plan9 */
-		magic = 4*26*26+7;
-		magic |= 0x00008000;		/* fat header */
-		lputb(magic);			/* magic */
-		lputb(segtext.filelen);			/* sizes */
-		lputb(segdata.filelen);
-		lputb(segdata.len - segdata.filelen);
-		lputb(symsize);			/* nsyms */
-		vl = entryvalue();
-		lputb(PADDR(vl));		/* va of entry */
-		lputb(spsize);			/* sp offsets */
-		lputb(lcsize);			/* line offsets */
-		vputb(vl);			/* va of entry */
-		break;
 	case Hlinux:
-	case Hfreebsd:
-	case Hnetbsd:
-	case Hopenbsd:
-	case Hdragonfly:
-	case Hsolaris:
-	case Hnacl:
 		asmbelf(symo);
 		break;
 	}

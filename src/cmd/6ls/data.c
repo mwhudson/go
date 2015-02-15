@@ -158,7 +158,7 @@ relocsym(LSym *s)
 			continue;
 
 		// Solaris needs the ability to reference dynimport symbols.
-		if(HEADTYPE != Hsolaris && r->sym != S && r->sym->type == SDYNIMPORT)
+		if(r->sym != S && r->sym->type == SDYNIMPORT)
 			diag("unhandled relocation for %s (type %d rtype %d)", r->sym->name, r->sym->type, r->type);
 		if(r->sym != S && r->sym->type != STLSBSS && !r->sym->reachable)
 			diag("unreachable sym in relocation: %s %s", s->name, r->sym->name);
@@ -1243,8 +1243,6 @@ address(void)
 	}
 	segtext.len = va - INITTEXT;
 	segtext.filelen = segtext.len;
-	if(HEADTYPE == Hnacl)
-		va += 32; // room for the "halt sled"
 
 	if(segrodata.sect != nil) {
 		// align to page boundary so as not to mix
@@ -1269,8 +1267,6 @@ address(void)
 	segdata.vaddr = va;
 	segdata.fileoff = va - segtext.vaddr + segtext.fileoff;
 	segdata.filelen = 0;
-	if(HEADTYPE == Hplan9)
-		segdata.fileoff = segtext.fileoff + segtext.filelen;
 	data = nil;
 	noptr = nil;
 	bss = nil;

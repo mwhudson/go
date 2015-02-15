@@ -588,24 +588,7 @@ struct LinkArch
 /* executable header types */
 enum {
 	Hunknown = 0,
-	Hdarwin,
-	Hdragonfly,
-	Helf,
-	Hfreebsd,
 	Hlinux,
-	Hnacl,
-	Hnetbsd,
-	Hopenbsd,
-	Hplan9,
-	Hsolaris,
-	Hwindows,
-};
-
-enum
-{
-	LinkAuto = 0,
-	LinkInternal,
-	LinkExternal,
 };
 
 extern	uchar	fnuxi8[8];
