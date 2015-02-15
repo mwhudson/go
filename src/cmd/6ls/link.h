@@ -647,9 +647,6 @@ void	linkprfile(Link *ctxt, int32 l);
 // objfile.c
 void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
 
-// pcln.c
-void	linkpcln(Link*, LSym*);
-
 // sym.c
 LSym*	linklookup(Link *ctxt, char *name, int v);
 Link*	linknew(LinkArch*);
