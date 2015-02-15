@@ -627,11 +627,6 @@ struct LinkArch
 	int	thechar;	// '5', '6', and so on
 	int32	endian; // LittleEndian or BigEndian
 
-	void	(*preprocess)(Link*, LSym*);
-	void	(*assemble)(Link*, LSym*);
-	void	(*follow)(Link*, LSym*);
-	void	(*progedit)(Link*, Prog*);
-
 	int	minlc;
 	int	ptrsize;
 	int	regsize;
@@ -747,7 +742,6 @@ void	linkprfile(Link *ctxt, int32 l);
 
 // objfile.c
 void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
-void	writeobj(Link *ctxt, Biobuf *b);
 
 // pass.c
 Prog*	brchain(Link *ctxt, Prog *p);

@@ -209,3 +209,24 @@ main(int argc, char *argv[])
 
 	errorexit();
 }
+
+
+LinkArch linkamd64 = {
+	.name = "amd64",
+	.thechar = '6',
+	.endian = LittleEndian,
+
+	.minlc = 1,
+	.ptrsize = 8,
+	.regsize = 8,
+};
+
+LinkArch linkamd64p32 = {
+	.name = "amd64p32",
+	.thechar = '6',
+	.endian = LittleEndian,
+
+	.minlc = 1,
+	.ptrsize = 4,
+	.regsize = 8,
+};
