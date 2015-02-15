@@ -39,7 +39,6 @@ linknew(LinkArch *arch)
 {
 	Link *ctxt;
 	char *p;
-	char buf[1024];
 
 	nuxiinit(arch);
 	
@@ -50,11 +49,7 @@ linknew(LinkArch *arch)
 	p = getgoarch();
 	if(strcmp(p, arch->name) != 0)
 		sysfatal("invalid goarch %s (want %s)", p, arch->name);
-	
-	if(getwd(buf, sizeof buf) == 0)
-		strcpy(buf, "/???");
-	ctxt->pathname = strdup(buf);
-	
+
 	ctxt->addlibpath_ok = 1;
 
 	return ctxt;

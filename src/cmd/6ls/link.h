@@ -536,8 +536,6 @@ struct	Link
 	int32	flag_dso;	// -dso flag in linker
 	int32	addlibpath_ok;	// shush
 	Biobuf*	bso;	// for -v flag
-	char*	pathname;
-	char*	trimpath;
 
 	// hash table of all symbols
 	LSym*	hash[LINKHASH];
