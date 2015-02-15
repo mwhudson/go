@@ -176,7 +176,7 @@ main(int argc, char *argv[])
 				if (i + 2 >= argc) {
 					usage();
 				}
-				ctxt->isexe |= (strcmp(argv[i+1], "main") == 0);
+//				ctxt->isexe |= (strcmp(argv[i+1], "main") == 0);
 				addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1], NULL);
 				i += 3;
 			} else if (strcmp(argv[i], "dso") == 0) {
