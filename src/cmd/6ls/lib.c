@@ -478,27 +478,6 @@ ldhostobj(void (*ld)(Biobuf*, char*, int64, char*), Biobuf *f, char *pkg, int64 
 	h->len = len;
 }
 
-void
-hostobjs(void)
-{
-	int i;
-	Biobuf *f;
-	Hostobj *h;
-	
-	for(i=0; i<nhostobj; i++) {
-		h = &hostobj[i];
-		f = Bopen(h->file, OREAD);
-		if(f == nil) {
-			ctxt->cursym = S;
-			diag("cannot reopen %s: %r", h->pn);
-			errorexit();
-		}
-		Bseek(f, h->off, 0);
-		h->ld(f, h->pkg, h->len, h->pn);
-		Bterm(f);
-	}
-}
-
 // provided by lib9
 int runcmd(char**);
 char* mktempdir(void);
@@ -706,7 +685,7 @@ ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence)
 
 	magic = c1<<24 | c2<<16 | c3<<8 | c4;
 	if(magic == 0x7f454c46) {	// \x7F E L F
-		ldhostobj(ldelf, f, pkg, len, pn, file);
+		ldhostobj(NULL, f, pkg, len, pn, file);
 		return;
 	}
 
