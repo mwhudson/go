@@ -68,9 +68,3 @@ erealloc(void *p, long n)
 		sysfatal("out of memory");
 	return p;
 }
-
-void
-double2ieee(uint64 *ieee, float64 f)
-{
-	memmove(ieee, &f, 8);
-}

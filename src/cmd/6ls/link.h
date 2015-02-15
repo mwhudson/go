@@ -615,20 +615,6 @@ extern	uchar	inuxi2[2];
 extern	uchar	inuxi4[4];
 extern	uchar	inuxi8[8];
 
-// asm5.c
-void	span5(Link *ctxt, LSym *s);
-int	chipfloat5(Link *ctxt, float64 e);
-int	chipzero5(Link *ctxt, float64 e);
-
-// asm6.c
-void	span6(Link *ctxt, LSym *s);
-
-// asm8.c
-void	span8(Link *ctxt, LSym *s);
-
-// asm9.c
-void	span9(Link *ctxt, LSym *s);
-
 // data.c
 vlong	addaddr(Link *ctxt, LSym *s, LSym *t);
 vlong	addaddrplus(Link *ctxt, LSym *s, LSym *t, vlong add);
@@ -654,26 +640,17 @@ vlong	setuintxx(Link *ctxt, LSym *s, vlong off, uint64 v, vlong wid);
 void	symgrow(Link *ctxt, LSym *s, vlong siz);
 
 // go.c
-void	double2ieee(uint64 *ieee, double native);
 void*	emallocz(long n);
 void*	erealloc(void *p, long n);
 char*	estrdup(char *p);
 char*	expandpkg(char *t0, char *pkg);
 
 // ld.c
-void	addhist(Link *ctxt, int32 line, int type);
 void	addlib(Link *ctxt, char *src, char *obj, char *path);
 void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg, char* dso);
-void	collapsefrog(Link *ctxt, LSym *s);
-void	copyhistfrog(Link *ctxt, char *buf, int nbuf);
 int	find1(int32 l, int c);
 void	linkgetline(Link *ctxt, int32 line, LSym **f, int32 *l);
-void	histtoauto(Link *ctxt);
-void	mkfwd(LSym*);
 void	nuxiinit(LinkArch*);
-void	savehist(Link *ctxt, int32 line, int32 off);
-Prog*	copyp(Link*, Prog*);
-Prog*	appendp(Link*, Prog*);
 vlong	atolwhex(char*);
 
 // list[5689].c
