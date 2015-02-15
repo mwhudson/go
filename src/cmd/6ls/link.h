@@ -546,9 +546,6 @@ struct	Link
 	LSym*	allsym;
 	int32	nsymbol;
 
-	// file-line history
-	Hist*	hist;
-
 	// code generation
 	LSym*	tlsg;
 
@@ -631,7 +628,6 @@ char*	expandpkg(char *t0, char *pkg);
 void	addlib(Link *ctxt, char *src, char *obj, char *path);
 void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg, char* dso);
 int	find1(int32 l, int c);
-void	linkgetline(Link *ctxt, int32 line, LSym **f, int32 *l);
 void	nuxiinit(LinkArch*);
 vlong	atolwhex(char*);
 
