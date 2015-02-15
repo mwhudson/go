@@ -47,7 +47,6 @@ main(int argc, char *argv[])
 
 	linkarchinit();
 	ctxt = linknew(thelinkarch);
-	ctxt->thechar = '6';
 	ctxt->thestring = thestring;
 	ctxt->diag = diag;
 	ctxt->bso = &bso;
@@ -213,7 +212,6 @@ main(int argc, char *argv[])
 
 LinkArch linkamd64 = {
 	.name = "amd64",
-	.thechar = '6',
 	.endian = LittleEndian,
 
 	.minlc = 1,
@@ -223,7 +221,6 @@ LinkArch linkamd64 = {
 
 LinkArch linkamd64p32 = {
 	.name = "amd64p32",
-	.thechar = '6',
 	.endian = LittleEndian,
 
 	.minlc = 1,

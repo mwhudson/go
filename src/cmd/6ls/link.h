@@ -528,7 +528,6 @@ enum
 // to be linker input or for reading that input into the linker.
 struct	Link
 {
-	int32	thechar; // '5' (arm), '6' (amd64), etc.
 	char*	thestring; // full name of architecture ("arm", "amd64", ..)
 	int32	goarm; // for arm only, GOARM setting
 	int	headtype;
@@ -624,7 +623,6 @@ enum {
 struct LinkArch
 {
 	char*	name; // "arm", "amd64", and so on
-	int	thechar;	// '5', '6', and so on
 	int32	endian; // LittleEndian or BigEndian
 
 	int	minlc;
