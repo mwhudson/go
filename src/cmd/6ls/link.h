@@ -528,7 +528,6 @@ enum
 // to be linker input or for reading that input into the linker.
 struct	Link
 {
-	int	headtype;
 
 	LinkArch*	arch;
 	int32	debugvlog;	// -v flag in linker
@@ -657,8 +656,6 @@ Link*	linknew(LinkArch*);
 LSym*	linknewsym(Link *ctxt, char *symb, int v);
 LSym*	linkrlookup(Link *ctxt, char *name, int v);
 int	linksymfmt(Fmt *f);
-int	headtype(char*);
-char*	headstr(int);
 
 extern	char*	anames6[];
 extern	char*	dnames6[];

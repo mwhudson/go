@@ -34,37 +34,6 @@
 #include <bio.h>
 #include <link.h>
 
-static struct {
-	char *name;
-	int val;
-} headers[] = {
-	{"linux",	Hlinux},
-};
-
-int
-headtype(char *name)
-{
-	int i;
-
-	for(i=0; i < nelem(headers); i++)
-		if(strcmp(name, headers[i].name) == 0)
-			return headers[i].val;
-	return -1;
-}
-
-char*
-headstr(int v)
-{
-	static char buf[20];
-	int i;
-
-	for(i=0; i < nelem(headers); i++)
-		if(v == headers[i].val)
-			return headers[i].name;
-	snprint(buf, sizeof buf, "%d", v);
-	return buf;
-}
-
 Link*
 linknew(LinkArch *arch)
 {
@@ -89,9 +58,6 @@ linknew(LinkArch *arch)
 	if(getwd(buf, sizeof buf) == 0)
 		strcpy(buf, "/???");
 	ctxt->pathname = strdup(buf);
-	
-	ctxt->headtype = Hlinux;
-	
 	
 	ctxt->addlibpath_ok = 1;
 

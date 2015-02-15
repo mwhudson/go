@@ -1231,20 +1231,6 @@ usage(void)
 }
 
 void
-setheadtype(char *s)
-{
-	int h;
-	
-	h = headtype(s);
-	if(h < 0) {
-		fprint(2, "unknown header type -H %s\n", s);
-		errorexit();
-	}
-	headstring = s;
-	HEADTYPE = headtype(s);
-}
-
-void
 setinterp(char *s)
 {
 	debug['I'] = 1; // denote cmdline interpreter override

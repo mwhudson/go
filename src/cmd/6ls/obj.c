@@ -52,21 +52,14 @@ linkarchinit(void)
 void
 archinit(void)
 {
-	switch(HEADTYPE) {
-	default:
-		diag("unknown -H option");
-		errorexit();
-	case Hlinux:		/* elf64 executable */
-		elfinit();
-		HEADR = ELFRESERVE;
-		if(INITTEXT == -1)
-			INITTEXT = (1<<22)+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = 4096;
-		break;
-	}
+	elfinit();
+	HEADR = ELFRESERVE;
+	if(INITTEXT == -1)
+		INITTEXT = (1<<22)+HEADR;
+	if(INITDAT == -1)
+		INITDAT = 0;
+	if(INITRND == -1)
+		INITRND = 4096;
 
 	if(INITDAT != 0 && INITRND != 0)
 		print("warning: -D0x%llux is ignored because of -R0x%ux\n",

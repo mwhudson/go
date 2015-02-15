@@ -93,7 +93,6 @@ EXTERN	char*	extldflags;
 EXTERN	int	debug_s; // backup old value of debug['s']
 EXTERN	Link*	ctxt;
 EXTERN	int32	HEADR;
-EXTERN	int32	HEADTYPE;
 EXTERN	int32	INITRND;
 EXTERN	int64	INITTEXT;
 EXTERN	int64	INITDAT;
@@ -144,7 +143,6 @@ struct Header {
 	int val;
 };
 
-EXTERN	char*	headstring;
 extern	Header	headers[];
 
 #pragma	varargck	type	"Y"	LSym*
@@ -229,8 +227,6 @@ void	follow(void);
 void	genasmsym(void (*put)(LSym*, char*, int, vlong, vlong, int, LSym*));
 void	gentext(void);
 void	growdatsize(vlong *datsizep, LSym *s);
-char*	headstr(int v);
-int	headtype(char *name);
 void	hostlink(void);
 int	iconv(Fmt *fp);
 void	importcycles(void);
@@ -264,7 +260,6 @@ void	putsymb(LSym *s, char *name, int t, vlong v, vlong size, int ver, LSym *typ
 int	rbyoff(const void *va, const void *vb);
 void	reloc(void);
 void	relocsym(LSym *s);
-void	setheadtype(char *s);
 void	setinterp(char *s);
 void	span(void);
 void	strnput(char *s, int n);

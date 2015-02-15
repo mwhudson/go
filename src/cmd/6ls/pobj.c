@@ -55,7 +55,6 @@ main(int argc, char *argv[])
 	memset(debug, 0, sizeof(debug));
 	nerrors = 0;
 	outfile = nil;
-	HEADTYPE = -1;
 	INITTEXT = -1;
 	INITDAT = -1;
 	INITRND = -1;
@@ -77,7 +76,6 @@ main(int argc, char *argv[])
 	flagstr("E", "sym: entry symbol", &INITENTRY);
 	flagfn1("I", "interp: set ELF interp", setinterp);
 	flagfn1("L", "dir: add dir to library path", Lflag);
-	flagfn1("H", "head: header type", setheadtype);
 	flagcount("K", "add stack underflow checks", &debug['K']);
 	flagcount("O", "print pc-line tables", &debug['O']);
 	flagcount("Q", "debug byte-register code gen", &debug['Q']);
@@ -127,17 +125,11 @@ main(int argc, char *argv[])
 	}
 	libinit(); // creates outfile
 
-	if(HEADTYPE == -1)
-		HEADTYPE = headtype(goos);
-	ctxt->headtype = HEADTYPE;
-	if(headstring == nil)
-		headstring = headstr(HEADTYPE);
-
 	archinit();
 
 	if(debug['v'])
-		Bprint(&bso, "HEADER = -H%d -T0x%llux -D0x%llux -R0x%ux\n",
-			HEADTYPE, INITTEXT, INITDAT, INITRND);
+		Bprint(&bso, "HEADER = -T0x%llux -D0x%llux -R0x%ux\n",
+			INITTEXT, INITDAT, INITRND);
 	Bflush(&bso);
 
 	cbp = buf.cbuf;

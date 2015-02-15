@@ -486,13 +486,7 @@ asmb(void)
 	cseek(segdata.fileoff);
 	datblk(segdata.vaddr, segdata.filelen);
 
-	switch(HEADTYPE) {
-	default:
-		diag("unknown header type %d", HEADTYPE);
-	case Hlinux:
-		debug['8'] = 1;	/* 64-bit addresses */
-		break;
-	}
+	debug['8'] = 1;	/* 64-bit addresses */
 
 	symsize = 0;
 	spsize = 0;
@@ -502,41 +496,29 @@ asmb(void)
 		if(debug['v'])
 			Bprint(&bso, "%5.2f sym\n", cputime());
 		Bflush(&bso);
-		switch(HEADTYPE) {
-		default:
- 		case Hlinux:
-			symo = segdata.fileoff+segdata.filelen;
-			symo = rnd(symo, INITRND);
-			break;
-		}
+		symo = segdata.fileoff+segdata.filelen;
+		symo = rnd(symo, INITRND);
 		cseek(symo);
-		switch(HEADTYPE) {
-		default:
-			if(iself) {
-				cseek(symo);
-				asmelfsym();
-				cflush();
-				cwrite(elfstrdat, elfstrsize);
+		if(iself) {
+			cseek(symo);
+			asmelfsym();
+			cflush();
+			cwrite(elfstrdat, elfstrsize);
 
-				if(debug['v'])
-				       Bprint(&bso, "%5.2f dwarf\n", cputime());
+			if(debug['v'])
+				Bprint(&bso, "%5.2f dwarf\n", cputime());
 
-				dwarfemitdebugsections();
-				elfemitreloc();
-			}
-			break;
+			dwarfemitdebugsections();
+			elfemitreloc();
 		}
+	}
 	}
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f headr\n", cputime());
 	Bflush(&bso);
 	cseek(0L);
-	switch(HEADTYPE) {
-	case Hlinux:
-		asmbelf(symo);
-		break;
-	}
+	asmbelf(symo);
 	cflush();
 }
 
