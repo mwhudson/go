@@ -792,8 +792,6 @@ elfshbits(Section *sect)
 			sh->flags |= SHF_TLS; // no TLS on android
 		sh->type = SHT_NOBITS;
 	}
-	if(linkmode != LinkExternal)
-		sh->addr = sect->vaddr;
 	sh->addralign = sect->align;
 	sh->size = sect->len;
 	sh->off = sect->seg->fileoff + sect->vaddr - sect->seg->vaddr;
@@ -923,9 +921,7 @@ doelf(void)
 	// for dynamic internal linker or external linking, so that various
 	// binutils could correctly calculate PT_TLS size.
 	// see http://golang.org/issue/5200.
-	if(HEADTYPE != Hopenbsd)
-	if(!debug['d'] || linkmode == LinkExternal)
-		addstring(shstrtab, ".tbss");
+	addstring(shstrtab, ".tbss");
 	if(HEADTYPE == Hnetbsd)
 		addstring(shstrtab, ".note.netbsd.ident");
 	if(HEADTYPE == Hopenbsd)
@@ -938,31 +934,19 @@ doelf(void)
 	addstring(shstrtab, ".gosymtab");
 	addstring(shstrtab, ".gopclntab");
 	
-	if(linkmode == LinkExternal) {
-		debug_s = debug['s'];
-		debug['s'] = 0;
-		debug['d'] = 1;
+	debug_s = debug['s'];
+	debug['s'] = 0;
+	debug['d'] = 1;
 
-		if(thechar == '6' || thechar == '9') {
-			addstring(shstrtab, ".rela.text");
-			addstring(shstrtab, ".rela.rodata");
-			addstring(shstrtab, ".rela.typelink");
-			addstring(shstrtab, ".rela.gosymtab");
-			addstring(shstrtab, ".rela.gopclntab");
-			addstring(shstrtab, ".rela.noptrdata");
-			addstring(shstrtab, ".rela.data");
-		} else {
-			addstring(shstrtab, ".rel.text");
-			addstring(shstrtab, ".rel.rodata");
-			addstring(shstrtab, ".rel.typelink");
-			addstring(shstrtab, ".rel.gosymtab");
-			addstring(shstrtab, ".rel.gopclntab");
-			addstring(shstrtab, ".rel.noptrdata");
-			addstring(shstrtab, ".rel.data");
-		}
-		// add a .note.GNU-stack section to mark the stack as non-executable
-		addstring(shstrtab, ".note.GNU-stack");
-	}
+	addstring(shstrtab, ".rela.text");
+	addstring(shstrtab, ".rela.rodata");
+	addstring(shstrtab, ".rela.typelink");
+	addstring(shstrtab, ".rela.gosymtab");
+	addstring(shstrtab, ".rela.gopclntab");
+	addstring(shstrtab, ".rela.noptrdata");
+	addstring(shstrtab, ".rela.data");
+	// add a .note.GNU-stack section to mark the stack as non-executable
+	addstring(shstrtab, ".note.GNU-stack");
 
 	if(flag_shared) {
 		addstring(shstrtab, ".init_array");
@@ -1159,10 +1143,8 @@ asmbelfsetup(void)
 void
 asmbelf(vlong symo)
 {
-	vlong a, o;
-	vlong startva, resoff;
+	vlong a;
 	ElfEhdr *eh;
-	ElfPhdr *ph, *pph, *pnote;
 	ElfShdr *sh;
 	Section *sect;
 
@@ -1185,284 +1167,9 @@ asmbelf(vlong symo)
 		break;
 	}
 
-	startva = INITTEXT - HEADR;
-	resoff = ELFRESERVE;
-	
-	pph = nil;
-	if(linkmode == LinkExternal) {
-		/* skip program headers */
-		eh->phoff = 0;
-		eh->phentsize = 0;
-		goto elfobj;
-	}
+	eh->phoff = 0;
+	eh->phentsize = 0;
 
-	/* program header info */
-	pph = newElfPhdr();
-	pph->type = PT_PHDR;
-	pph->flags = PF_R;
-	pph->off = eh->ehsize;
-	pph->vaddr = INITTEXT - HEADR + pph->off;
-	pph->paddr = INITTEXT - HEADR + pph->off;
-	pph->align = INITRND;
-
-	/*
-	 * PHDR must be in a loaded segment. Adjust the text
-	 * segment boundaries downwards to include it.
-	 * Except on NaCl where it must not be loaded.
-	 */
-	if(HEADTYPE != Hnacl) {
-		o = segtext.vaddr - pph->vaddr;
-		segtext.vaddr -= o;
-		segtext.len += o;
-		o = segtext.fileoff - pph->off;
-		segtext.fileoff -= o;
-		segtext.filelen += o;
-	}
-
-	if(!debug['d']) {
-		/* interpreter */
-		sh = elfshname(".interp");
-		sh->type = SHT_PROGBITS;
-		sh->flags = SHF_ALLOC;
-		sh->addralign = 1;
-		if(interpreter == nil) {
-			switch(HEADTYPE) {
-			case Hlinux:
-				interpreter = linuxdynld;
-				break;
-			case Hfreebsd:
-				interpreter = freebsddynld;
-				break;
-			case Hnetbsd:
-				interpreter = netbsddynld;
-				break;
-			case Hopenbsd:
-				interpreter = openbsddynld;
-				break;
-			case Hdragonfly:
-				interpreter = dragonflydynld;
-				break;
-			case Hsolaris:
-				interpreter = solarisdynld;
-				break;
-			}
-		}
-		resoff -= elfinterp(sh, startva, resoff, interpreter);
-
-		ph = newElfPhdr();
-		ph->type = PT_INTERP;
-		ph->flags = PF_R;
-		phsh(ph, sh);
-	}
-
-	pnote = nil;
-	if(HEADTYPE == Hnetbsd || HEADTYPE == Hopenbsd) {
-		sh = nil;
-		switch(HEADTYPE) {
-		case Hnetbsd:
-			sh = elfshname(".note.netbsd.ident");
-			resoff -= elfnetbsdsig(sh, startva, resoff);
-			break;
-		case Hopenbsd:
-			sh = elfshname(".note.openbsd.ident");
-			resoff -= elfopenbsdsig(sh, startva, resoff);
-			break;
-		}
-
-		pnote = newElfPhdr();
-		pnote->type = PT_NOTE;
-		pnote->flags = PF_R;
-		phsh(pnote, sh);
-	}
-
-	if(buildinfolen > 0) {
-		sh = elfshname(".note.gnu.build-id");
-		resoff -= elfbuildinfo(sh, startva, resoff);
-
-		if(pnote == nil) {
-			pnote = newElfPhdr();
-			pnote->type = PT_NOTE;
-			pnote->flags = PF_R;
-		}
-		phsh(pnote, sh);
-	}
-
-	// Additions to the reserved area must be above this line.
-	USED(resoff);
-
-	elfphload(&segtext);
-	if(segrodata.sect != nil)
-		elfphload(&segrodata);
-	elfphload(&segdata);
-
-	/* Dynamic linking sections */
-	if(!debug['d']) {	/* -d suppresses dynamic loader format */
-		sh = elfshname(".dynsym");
-		sh->type = SHT_DYNSYM;
-		sh->flags = SHF_ALLOC;
-		if(elf64)
-			sh->entsize = ELF64SYMSIZE;
-		else
-			sh->entsize = ELF32SYMSIZE;
-		sh->addralign = RegSize;
-		sh->link = elfshname(".dynstr")->shnum;
-		// sh->info = index of first non-local symbol (number of local symbols)
-		shsym(sh, linklookup(ctxt, ".dynsym", 0));
-
-		sh = elfshname(".dynstr");
-		sh->type = SHT_STRTAB;
-		sh->flags = SHF_ALLOC;
-		sh->addralign = 1;
-		shsym(sh, linklookup(ctxt, ".dynstr", 0));
-
-		if(elfverneed) {
-			sh = elfshname(".gnu.version");
-			sh->type = SHT_GNU_VERSYM;
-			sh->flags = SHF_ALLOC;
-			sh->addralign = 2;
-			sh->link = elfshname(".dynsym")->shnum;
-			sh->entsize = 2;
-			shsym(sh, linklookup(ctxt, ".gnu.version", 0));
-			
-			sh = elfshname(".gnu.version_r");
-			sh->type = SHT_GNU_VERNEED;
-			sh->flags = SHF_ALLOC;
-			sh->addralign = RegSize;
-			sh->info = elfverneed;
-			sh->link = elfshname(".dynstr")->shnum;
-			shsym(sh, linklookup(ctxt, ".gnu.version_r", 0));
-		}
-
-		switch(eh->machine) {
-		case EM_X86_64:
-		case EM_PPC64:
-			sh = elfshname(".rela.plt");
-			sh->type = SHT_RELA;
-			sh->flags = SHF_ALLOC;
-			sh->entsize = ELF64RELASIZE;
-			sh->addralign = RegSize;
-			sh->link = elfshname(".dynsym")->shnum;
-			sh->info = elfshname(".plt")->shnum;
-			shsym(sh, linklookup(ctxt, ".rela.plt", 0));
-
-			sh = elfshname(".rela");
-			sh->type = SHT_RELA;
-			sh->flags = SHF_ALLOC;
-			sh->entsize = ELF64RELASIZE;
-			sh->addralign = 8;
-			sh->link = elfshname(".dynsym")->shnum;
-			shsym(sh, linklookup(ctxt, ".rela", 0));
-			break;
-		
-		default:
-			sh = elfshname(".rel.plt");
-			sh->type = SHT_REL;
-			sh->flags = SHF_ALLOC;
-			sh->entsize = ELF32RELSIZE;
-			sh->link = elfshname(".dynsym")->shnum;
-			shsym(sh, linklookup(ctxt, ".rel.plt", 0));
-
-			sh = elfshname(".rel");
-			sh->type = SHT_REL;
-			sh->flags = SHF_ALLOC;
-			sh->entsize = ELF32RELSIZE;
-			sh->addralign = 4;
-			sh->link = elfshname(".dynsym")->shnum;
-			shsym(sh, linklookup(ctxt, ".rel", 0));
-			break;
-		}
-
-		if(eh->machine == EM_PPC64) {
-			sh = elfshname(".glink");
-			sh->type = SHT_PROGBITS;
-			sh->flags = SHF_ALLOC+SHF_EXECINSTR;
-			sh->addralign = 4;
-			shsym(sh, linklookup(ctxt, ".glink", 0));
-		}
-
-		sh = elfshname(".plt");
-		sh->type = SHT_PROGBITS;
-		sh->flags = SHF_ALLOC+SHF_EXECINSTR;
-		if(eh->machine == EM_X86_64)
-			sh->entsize = 16;
-		else if(eh->machine == EM_PPC64) {
-			// On ppc64, this is just a table of addresses
-			// filled by the dynamic linker
-			sh->type = SHT_NOBITS;
-			sh->flags = SHF_ALLOC+SHF_WRITE;
-			sh->entsize = 8;
-		} else
-			sh->entsize = 4;
-		sh->addralign = sh->entsize;
-		shsym(sh, linklookup(ctxt, ".plt", 0));
-
-		// On ppc64, .got comes from the input files, so don't
-		// create it here, and .got.plt is not used.
-		if(eh->machine != EM_PPC64) {
-			sh = elfshname(".got");
-			sh->type = SHT_PROGBITS;
-			sh->flags = SHF_ALLOC+SHF_WRITE;
-			sh->entsize = RegSize;
-			sh->addralign = RegSize;
-			shsym(sh, linklookup(ctxt, ".got", 0));
-
-			sh = elfshname(".got.plt");
-			sh->type = SHT_PROGBITS;
-			sh->flags = SHF_ALLOC+SHF_WRITE;
-			sh->entsize = RegSize;
-			sh->addralign = RegSize;
-			shsym(sh, linklookup(ctxt, ".got.plt", 0));
-		}
-		
-		sh = elfshname(".hash");
-		sh->type = SHT_HASH;
-		sh->flags = SHF_ALLOC;
-		sh->entsize = 4;
-		sh->addralign = RegSize;
-		sh->link = elfshname(".dynsym")->shnum;
-		shsym(sh, linklookup(ctxt, ".hash", 0));
-
-		/* sh and PT_DYNAMIC for .dynamic section */
-		sh = elfshname(".dynamic");
-		sh->type = SHT_DYNAMIC;
-		sh->flags = SHF_ALLOC+SHF_WRITE;
-		sh->entsize = 2*RegSize;
-		sh->addralign = RegSize;
-		sh->link = elfshname(".dynstr")->shnum;
-		shsym(sh, linklookup(ctxt, ".dynamic", 0));
-		ph = newElfPhdr();
-		ph->type = PT_DYNAMIC;
-		ph->flags = PF_R + PF_W;
-		phsh(ph, sh);
-		
-		/*
-		 * Thread-local storage segment (really just size).
-		 */
-		// Do not emit PT_TLS for OpenBSD since ld.so(1) does
-		// not currently support it. This is handled
-		// appropriately in runtime/cgo.
-		if(ctxt->tlsoffset != 0 && HEADTYPE != Hopenbsd) {
-			ph = newElfPhdr();
-			ph->type = PT_TLS;
-			ph->flags = PF_R;
-			ph->memsz = -ctxt->tlsoffset;
-			ph->align = RegSize;
-		}
-	}
-
-	if(HEADTYPE == Hlinux) {
-		ph = newElfPhdr();
-		ph->type = PT_GNU_STACK;
-		ph->flags = PF_W+PF_R;
-		ph->align = RegSize;
-		
-		ph = newElfPhdr();
-		ph->type = PT_PAX_FLAGS;
-		ph->flags = 0x2a00; // mprotect, randexec, emutramp disabled
-		ph->align = RegSize;
-	}
-
-elfobj:
 	sh = elfshname(".shstrtab");
 	sh->type = SHT_STRTAB;
 	sh->addralign = 1;
@@ -1482,29 +1189,17 @@ elfobj:
 	for(sect=segdata.sect; sect!=nil; sect=sect->next)
 		elfshbits(sect);
 
-	if(linkmode == LinkExternal) {
-		for(sect=segtext.sect; sect!=nil; sect=sect->next)
-			elfshreloc(sect);
-		for(sect=segrodata.sect; sect!=nil; sect=sect->next)
-			elfshreloc(sect);
-		for(sect=segdata.sect; sect!=nil; sect=sect->next)
-			elfshreloc(sect);
-		// add a .note.GNU-stack section to mark the stack as non-executable
-		sh = elfshname(".note.GNU-stack");
-		sh->type = SHT_PROGBITS;
-		sh->addralign = 1;
-		sh->flags = 0;
-	}
-
-	// generate .tbss section for dynamic internal linking (except for OpenBSD)
-	// external linking generates .tbss in data.c
-	if(linkmode == LinkInternal && !debug['d'] && HEADTYPE != Hopenbsd) {
-		sh = elfshname(".tbss");
-		sh->type = SHT_NOBITS;
-		sh->addralign = RegSize;
-		sh->size = -ctxt->tlsoffset;
-		sh->flags = SHF_ALLOC | SHF_TLS | SHF_WRITE;
-	}
+	for(sect=segtext.sect; sect!=nil; sect=sect->next)
+		elfshreloc(sect);
+	for(sect=segrodata.sect; sect!=nil; sect=sect->next)
+		elfshreloc(sect);
+	for(sect=segdata.sect; sect!=nil; sect=sect->next)
+		elfshreloc(sect);
+	// add a .note.GNU-stack section to mark the stack as non-executable
+	sh = elfshname(".note.GNU-stack");
+	sh->type = SHT_PROGBITS;
+	sh->addralign = 1;
+	sh->flags = 0;
 
 	if(!debug['s']) {
 		sh = elfshname(".symtab");
@@ -1548,20 +1243,9 @@ elfobj:
 		eh->ident[EI_DATA] = ELFDATA2LSB;
 	eh->ident[EI_VERSION] = EV_CURRENT;
 
-	if(linkmode == LinkExternal)
-		eh->type = ET_REL;
-	else
-		eh->type = ET_EXEC;
-
-	if(linkmode != LinkExternal)
-		eh->entry = entryvalue();
+	eh->type = ET_REL;
 
 	eh->version = EV_CURRENT;
-
-	if(pph != nil) {
-		pph->filesz = eh->phnum * eh->phentsize;
-		pph->memsz = pph->filesz;
-	}
 
 	cseek(0);
 	a = 0;
@@ -1570,14 +1254,6 @@ elfobj:
 	a += elfwriteshdrs();
 	if(!debug['d'])
 		a += elfwriteinterp();
-	if(linkmode != LinkExternal) {
-		if(HEADTYPE == Hnetbsd)
-			a += elfwritenetbsdsig();
-		if(HEADTYPE == Hopenbsd)
-			a += elfwriteopenbsdsig();
-		if(buildinfolen > 0)
-			a += elfwritebuildinfo();
-	}
 	if(a > ELFRESERVE)	
 		diag("ELFRESERVE too small: %lld > %d", a, ELFRESERVE);
 }

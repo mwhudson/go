@@ -659,24 +659,16 @@ putattr(int abbrev, int form, int cls, vlong value, char *data)
 
 	switch(form) {
 	case DW_FORM_addr:	// address
-		if(linkmode == LinkExternal) {
-			value -= ((LSym*)data)->value;
-			adddwarfrel(infosec, (LSym*)data, infoo, PtrSize, value);
-			break;
-		}
-		addrput(value);
+		value -= ((LSym*)data)->value;
+		adddwarfrel(infosec, (LSym*)data, infoo, PtrSize, value);
 		break;
 
 	case DW_FORM_block1:	// block
 		if(cls == DW_CLS_ADDRESS) {
 			cput(1+PtrSize);
 			cput(DW_OP_addr);
-			if(linkmode == LinkExternal) {
-				value -= ((LSym*)data)->value;
-				adddwarfrel(infosec, (LSym*)data, infoo, PtrSize, value);
-				break;
-			}
-			addrput(value);
+			value -= ((LSym*)data)->value;
+			adddwarfrel(infosec, (LSym*)data, infoo, PtrSize, value);
 			break;
 		}
 		value &= 0xff;
@@ -714,7 +706,7 @@ putattr(int abbrev, int form, int cls, vlong value, char *data)
 		break;
 
 	case DW_FORM_data4:	// constant, {line,loclist,mac,rangelist}ptr
-		if(linkmode == LinkExternal && cls == DW_CLS_PTR) {
+		if(cls == DW_CLS_PTR) {
 			adddwarfrel(infosec, linesym, infoo, 4, value);
 			break;
 		}
@@ -756,11 +748,8 @@ putattr(int abbrev, int form, int cls, vlong value, char *data)
 			off = ((DWDie*)data)->offs;
 			if (off == 0)
 				fwdcount++;
-			if(linkmode == LinkExternal) {
-				adddwarfrel(infosec, infosym, infoo, PtrSize, off);
-				break;
-			}
-			addrput(off);
+			adddwarfrel(infosec, infosym, infoo, PtrSize, off);
+			break;
 		}
 		break;
 
@@ -1602,10 +1591,7 @@ writelines(void)
 	pc = s->value;
 	line = 1;
 	file = 1;
-	if(linkmode == LinkExternal)
-		adddwarfrel(linesec, s, lineo, PtrSize, 0);
-	else
-		addrput(pc);
+	adddwarfrel(linesec, s, lineo, PtrSize, 0);
 
 	for(ctxt->cursym = ctxt->textp; ctxt->cursym != nil; ctxt->cursym = ctxt->cursym->next) {
 		s = ctxt->cursym;
@@ -1801,14 +1787,8 @@ writeframes(void)
 		// Emit the FDE header for real, Section 6.4.1.
 		cseek(fdeo);
 		LPUT(fdesize);
-		if(linkmode == LinkExternal) {
-			adddwarfrel(framesec, framesym, frameo, 4, 0);
-			adddwarfrel(framesec, s, frameo, PtrSize, 0);
-		}
-		else {
-			LPUT(0);
-			addrput(s->value);
-		}
+		adddwarfrel(framesec, framesym, frameo, 4, 0);
+		adddwarfrel(framesec, s, frameo, PtrSize, 0);
 		addrput(s->size);
 		cseek(fdeo + 4 + fdesize);
 	}
@@ -1850,10 +1830,7 @@ writeinfo(void)
 		WPUT(2);	// dwarf version (appendix F)
 
 		// debug_abbrev_offset (*)
-		if(linkmode == LinkExternal)
-			adddwarfrel(infosec, abbrevsym, infoo, 4, 0);
-		else
-			LPUT(0);
+		adddwarfrel(infosec, abbrevsym, infoo, 4, 0);
 
 		cput(PtrSize);	// address_size
 
@@ -1960,19 +1937,13 @@ writearanges(void)
 		WPUT(2);	// dwarf version (appendix F)
 
 		value = compunit->offs - COMPUNITHEADERSIZE;	// debug_info_offset
-		if(linkmode == LinkExternal)
-			adddwarfrel(arangessec, infosym, sectionstart, 4, value);
-		else
-			LPUT(value);
+		adddwarfrel(arangessec, infosym, sectionstart, 4, value);
 
 		cput(PtrSize);	// address_size
 		cput(0);	// segment_size
 		strnput("", headersize - (4+2+4+1+1));	// align to PtrSize
 
-		if(linkmode == LinkExternal)
-			adddwarfrel(arangessec, (LSym*)b->data, sectionstart, PtrSize, b->value-((LSym*)b->data)->value);
-		else
-			addrput(b->value);
+		adddwarfrel(arangessec, (LSym*)b->data, sectionstart, PtrSize, b->value-((LSym*)b->data)->value);
 
 		addrput(e->value - b->value);
 		addrput(0);
@@ -2032,9 +2003,6 @@ dwarfemitdebugsections(void)
 	DWDie* die;
 
 	if(debug['w'])  // disable dwarf
-		return;
-
-	if(linkmode == LinkExternal && !iself)
 		return;
 
 	// For diagnostic messages.
@@ -2172,31 +2140,22 @@ dwarfaddshstrings(LSym *shstrtab)
 	elfstrdbg[ElfStrDebugRanges]   = addstring(shstrtab, ".debug_ranges");
 	elfstrdbg[ElfStrDebugStr]      = addstring(shstrtab, ".debug_str");
 	elfstrdbg[ElfStrGDBScripts]    = addstring(shstrtab, ".debug_gdb_scripts");
-	if(linkmode == LinkExternal) {
-		if(thechar == '6' || thechar == '9') {
-			elfstrdbg[ElfStrRelDebugInfo] = addstring(shstrtab, ".rela.debug_info");
-			elfstrdbg[ElfStrRelDebugAranges] = addstring(shstrtab, ".rela.debug_aranges");
-			elfstrdbg[ElfStrRelDebugLine] = addstring(shstrtab, ".rela.debug_line");
-			elfstrdbg[ElfStrRelDebugFrame] = addstring(shstrtab, ".rela.debug_frame");
-		} else {
-			elfstrdbg[ElfStrRelDebugInfo] = addstring(shstrtab, ".rel.debug_info");
-			elfstrdbg[ElfStrRelDebugAranges] = addstring(shstrtab, ".rel.debug_aranges");
-			elfstrdbg[ElfStrRelDebugLine] = addstring(shstrtab, ".rel.debug_line");
-			elfstrdbg[ElfStrRelDebugFrame] = addstring(shstrtab, ".rel.debug_frame");
-		}
+	elfstrdbg[ElfStrRelDebugInfo] = addstring(shstrtab, ".rela.debug_info");
+	elfstrdbg[ElfStrRelDebugAranges] = addstring(shstrtab, ".rela.debug_aranges");
+	elfstrdbg[ElfStrRelDebugLine] = addstring(shstrtab, ".rela.debug_line");
+	elfstrdbg[ElfStrRelDebugFrame] = addstring(shstrtab, ".rela.debug_frame");
 
-		infosym = linklookup(ctxt, ".debug_info", 0);
-		infosym->hide = 1;
+	infosym = linklookup(ctxt, ".debug_info", 0);
+	infosym->hide = 1;
 
-		abbrevsym = linklookup(ctxt, ".debug_abbrev", 0);
-		abbrevsym->hide = 1;
+	abbrevsym = linklookup(ctxt, ".debug_abbrev", 0);
+	abbrevsym->hide = 1;
 
-		linesym = linklookup(ctxt, ".debug_line", 0);
-		linesym->hide = 1;
+	linesym = linklookup(ctxt, ".debug_line", 0);
+	linesym->hide = 1;
 
-		framesym = linklookup(ctxt, ".debug_frame", 0);
-		framesym->hide = 1;
-	}
+	framesym = linklookup(ctxt, ".debug_frame", 0);
+	framesym->hide = 1;
 }
 
 // Add section symbols for DWARF debug info.  This is called before

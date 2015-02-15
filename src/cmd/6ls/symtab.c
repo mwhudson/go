@@ -146,15 +146,14 @@ putelfsym(LSym *x, char *s, int t, vlong addr, vlong size, int ver, LSym *go)
 	// to get the exported symbols put into the dynamic symbol table.
 	// To avoid filling the dynamic table with lots of unnecessary symbols,
 	// mark all Go symbols local (not global) in the final executable.
-	if(linkmode == LinkExternal && !(x->cgoexport&CgoExportStatic))
+	if(!(x->cgoexport&CgoExportStatic))
 		bind = STB_LOCAL;
 
 	if(bind != elfbind)
 		return;
 
 	off = putelfstr(s);
-	if(linkmode == LinkExternal)
-		addr -= xo->sect->vaddr;
+	addr -= xo->sect->vaddr;
 	putelfsyment(off, addr, size, (bind<<4)|(type&0xf), xo->sect->elfsect->shnum, (x->type & SHIDDEN) ? 2 : 0);
 	x->elfsym = numelfsym++;
 }
@@ -198,21 +197,19 @@ asmelfsym(void)
 	elfbind = STB_LOCAL;
 	genasmsym(putelfsym);
 	
-	if(linkmode == LinkExternal && HEADTYPE != Hopenbsd) {
-		s = linklookup(ctxt, "runtime.tlsg", 0);
-		if(s->sect == nil) {
-			ctxt->cursym = nil;
-			diag("missing section for %s", s->name);
-			errorexit();
-		}
-		if (strcmp(goos, "android") == 0) {
-			// Android emulates runtime.tlsg as a regular variable.
-			putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_OBJECT, s->sect->elfsect->shnum, 0);
-		} else {
-			putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_TLS, s->sect->elfsect->shnum, 0);
-		}
-		s->elfsym = numelfsym++;
+	s = linklookup(ctxt, "runtime.tlsg", 0);
+	if(s->sect == nil) {
+		ctxt->cursym = nil;
+		diag("missing section for %s", s->name);
+		errorexit();
 	}
+	if (strcmp(goos, "android") == 0) {
+		// Android emulates runtime.tlsg as a regular variable.
+		putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_OBJECT, s->sect->elfsect->shnum, 0);
+	} else {
+		putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_TLS, s->sect->elfsect->shnum, 0);
+	}
+	s->elfsym = numelfsym++;
 
 	elfbind = STB_GLOBAL;
 	elfglobalsymndx = numelfsym;

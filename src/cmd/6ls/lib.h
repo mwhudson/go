@@ -102,7 +102,6 @@ EXTERN	char*	noname;
 EXTERN	char*	paramspace;
 EXTERN	int	nerrors;
 
-EXTERN	int	linkmode;
 EXTERN	int64	liveness;
 
 // for dynexport field of LSym
@@ -270,7 +269,6 @@ void	reloc(void);
 void	relocsym(LSym *s);
 void	setheadtype(char *s);
 void	setinterp(char *s);
-void	setlinkmode(char *arg);
 void	span(void);
 void	strnput(char *s, int n);
 vlong	symaddr(LSym *s);

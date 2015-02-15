@@ -449,10 +449,8 @@ void
 asmb(void)
 {
 	int32 magic;
-	int i;
 	vlong vl, symo;
 	Section *sect;
-	LSym *sym;
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f asmb\n", cputime());
@@ -492,18 +490,8 @@ asmb(void)
 	switch(HEADTYPE) {
 	default:
 		diag("unknown header type %d", HEADTYPE);
-	case Hplan9:
-	case Helf:
-		break;
 	case Hlinux:
-	case Hfreebsd:
-	case Hnetbsd:
-	case Hopenbsd:
-	case Hdragonfly:
-	case Hsolaris:
 		debug['8'] = 1;	/* 64-bit addresses */
-		break;
-	case Hnacl:
 		break;
 	}
 
@@ -517,18 +505,7 @@ asmb(void)
 		Bflush(&bso);
 		switch(HEADTYPE) {
 		default:
-		case Hplan9:
-		case Helf:
-			debug['s'] = 1;
-			symo = segdata.fileoff+segdata.filelen;
-			break;
-		case Hlinux:
-		case Hfreebsd:
-		case Hnetbsd:
-		case Hopenbsd:
-		case Hdragonfly:
-		case Hsolaris:
-		case Hnacl:
+ 		case Hlinux:
 			symo = segdata.fileoff+segdata.filelen;
 			symo = rnd(symo, INITRND);
 			break;
@@ -546,22 +523,7 @@ asmb(void)
 				       Bprint(&bso, "%5.2f dwarf\n", cputime());
 
 				dwarfemitdebugsections();
-				
-				if(linkmode == LinkExternal)
-					elfemitreloc();
-			}
-			break;
-		case Hplan9:
-			asmplan9sym();
-			cflush();
-
-			sym = linklookup(ctxt, "pclntab", 0);
-			if(sym != nil) {
-				lcsize = sym->np;
-				for(i=0; i < lcsize; i++)
-					cput(sym->p[i]);
-				
-				cflush();
+				elfemitreloc();
 			}
 			break;
 		}

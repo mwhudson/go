@@ -62,7 +62,6 @@ main(int argc, char *argv[])
 	INITDAT = -1;
 	INITRND = -1;
 	INITENTRY = 0;
-	linkmode = LinkAuto;
 	
 	// For testing behavior of go command when tools crash.
 	// Undocumented, not in standard flag parser to avoid
@@ -109,14 +108,13 @@ main(int argc, char *argv[])
 	flagcount("g", "disable go package data checks", &debug['g']);
 	flagstr("installsuffix", "suffix: pkg directory suffix", &flag_installsuffix);
 	flagstr("k", "sym: set field tracking symbol", &tracksym);
-	flagfn1("linkmode", "mode: set link mode (internal, external, auto)", setlinkmode);
 	flagcount("n", "dump symbol table", &debug['n']);
 	flagstr("o", "outfile: set output file", &outfile);
 	flagstr("r", "dir1:dir2:...: set ELF dynamic linker search path", &rpath);
 	flagcount("race", "enable race detector", &flag_race);
 	flagcount("s", "disable symbol table", &debug['s']);
 	if(thechar == '5' || thechar == '6') {
-		flagcount("shared", "generate shared object (implies -linkmode external)", &flag_shared);
+		flagcount("shared", "generate shared object", &flag_shared);
 		flagcount("dso", "generate shared library", &ctxt->flag_dso);
 	}
 	flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir);
