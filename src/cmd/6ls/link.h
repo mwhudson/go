@@ -538,8 +538,6 @@ struct	Link
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
 	char*	trimpath;
-	char*	goroot;
-	char*	goroot_final;
 
 	// hash table of all symbols
 	LSym*	hash[LINKHASH];
