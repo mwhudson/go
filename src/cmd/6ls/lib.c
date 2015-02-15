@@ -50,7 +50,7 @@ enum
 
 int iconv(Fmt*);
 
-char	symname[]	= SYMDEF;
+char	symname[]	= "__.GOSYMDEF";
 char	pkgname[]	= "__.PKGDEF";
 static int	cout = -1;
 
