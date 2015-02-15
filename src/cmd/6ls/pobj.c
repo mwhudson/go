@@ -47,7 +47,7 @@ main(int argc, char *argv[])
 
 	linkarchinit();
 	ctxt = linknew(thelinkarch);
-	ctxt->thechar = thechar;
+	ctxt->thechar = '6';
 	ctxt->thestring = thestring;
 	ctxt->diag = diag;
 	ctxt->bso = &bso;
@@ -70,28 +70,19 @@ main(int argc, char *argv[])
 		if(strcmp(argv[i], "-crash_for_testing") == 0)
 			*(volatile int*)0 = 0;
 	
-	if(thechar == '5' && ctxt->goarm == 5)
-		debug['F'] = 1;
 
 	flagcount("1", "use alternate profiling code", &debug['1']);
-	if(thechar == '6')
-		flagcount("8", "assume 64-bit addresses", &debug['8']);
+	flagcount("8", "assume 64-bit addresses", &debug['8']);
 	flagfn1("B", "info: define ELF NT_GNU_BUILD_ID note", addbuildinfo);
 	flagcount("C", "check Go calls to C code", &debug['C']);
 	flagint64("D", "addr: data address", &INITDAT);
 	flagstr("E", "sym: entry symbol", &INITENTRY);
-	if(thechar == '5')
-		flagcount("G", "debug pseudo-ops", &debug['G']);
 	flagfn1("I", "interp: set ELF interp", setinterp);
 	flagfn1("L", "dir: add dir to library path", Lflag);
 	flagfn1("H", "head: header type", setheadtype);
 	flagcount("K", "add stack underflow checks", &debug['K']);
-	if(thechar == '5')
-		flagcount("M", "disable software div/mod", &debug['M']);
 	flagcount("O", "print pc-line tables", &debug['O']);
 	flagcount("Q", "debug byte-register code gen", &debug['Q']);
-	if(thechar == '5')
-		flagcount("P", "debug code generation", &debug['P']);
 	flagint32("R", "rnd: address rounding", &INITRND);
 	flagcount("S", "check type signatures", &debug['S']);
 	flagint64("T", "addr: text address", &INITTEXT);
@@ -113,10 +104,8 @@ main(int argc, char *argv[])
 	flagstr("r", "dir1:dir2:...: set ELF dynamic linker search path", &rpath);
 	flagcount("race", "enable race detector", &flag_race);
 	flagcount("s", "disable symbol table", &debug['s']);
-	if(thechar == '5' || thechar == '6') {
-		flagcount("shared", "generate shared object", &flag_shared);
-		flagcount("dso", "generate shared library", &ctxt->flag_dso);
-	}
+	flagcount("shared", "generate shared object", &flag_shared);
+	flagcount("dso", "generate shared library", &ctxt->flag_dso);
 	flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir);
 	flagcount("u", "reject unsafe packages", &debug['u']);
 	flagcount("v", "print link trace", &debug['v']);
@@ -141,7 +130,7 @@ main(int argc, char *argv[])
 		usage();
 
 	if(outfile == nil) {
-		outfile = smprint("%c.out", thechar);
+		outfile = "6.out";
 	}
 	libinit(); // creates outfile
 
@@ -188,12 +177,6 @@ main(int argc, char *argv[])
 	}
 
 	loadlib();
-	if(thechar == '5') {
-		// mark some functions that are only referenced after linker code editing
-		if(debug['F'])
-			mark(linkrlookup(ctxt, "_sfloat", 0));
-		mark(linklookup(ctxt, "runtime.read_tls_fallback", 0));
-	}
 
 	checkgo();
 	deadcode();

@@ -40,7 +40,6 @@
 
 enum
 {
-	thechar = '6',
 	MaxAlign = 32,	// max data alignment
 	
 	// Loop alignment constants:

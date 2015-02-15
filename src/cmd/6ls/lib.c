@@ -191,8 +191,6 @@ loadlib(void)
 	}
 
 	loadinternal("runtime");
-	if(thechar == '5')
-		loadinternal("math");
 	if(flag_race)
 		loadinternal("runtime/race");
 
@@ -539,18 +537,7 @@ hostlink(void)
 	if(extld == nil)
 		extld = "gcc";
 	argv[argc++] = extld;
-	switch(thechar){
-	case '8':
-		argv[argc++] = "-m32";
-		break;
-	case '6':
-	case '9':
-		argv[argc++] = "-m64";
-		break;
-	case '5':
-		argv[argc++] = "-marm";
-		break;
-	}
+	argv[argc++] = "-m64";
 	if(!debug['s'] && !debug_s) {
 		argv[argc++] = "-gdwarf-2"; 
 	} else {
@@ -702,7 +689,7 @@ ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence)
 	line[n] = '\0';
 	if(strncmp(line, "go object ", 10) != 0) {
 		if(strlen(pn) > 3 && strcmp(pn+strlen(pn)-3, ".go") == 0) {
-			print("%cl: input %s is not .%c file (use %cg to compile .go files)\n", thechar, pn, thechar, thechar);
+			print("6l: input %s is not .6 file (use 6g to compile .go files)\n", pn);
 			errorexit();
 		}
 		if(strcmp(line, thestring) == 0) {
@@ -788,7 +775,7 @@ mywhatsys(void)
 	goarch = getgoarch();
 
 	if(strncmp(goarch, thestring, strlen(thestring)) != 0)
-		sysfatal("cannot use %cc with GOARCH=%s", thechar, goarch);
+		sysfatal("cannot use 6c with GOARCH=%s", goarch);
 }
 
 int
@@ -974,19 +961,12 @@ static void stkbroke(Chain*, int);
 static LSym *morestack;
 static LSym *newstack;
 
-enum
-{
-	HasLinkRegister = (thechar == '5' || thechar == '9'),
-};
-
 // TODO: Record enough information in new object files to
 // allow stack checks here.
 
 static int
 callsize(void)
 {
-	if(HasLinkRegister)
-		return 0;
 	return RegSize;
 }
 
@@ -1111,8 +1091,6 @@ stkcheck(Chain *up, int depth)
 				// to StackLimit beyond the frame size.
 				if(strncmp(r->sym->name, "runtime.morestack", 17) == 0) {
 					limit = StackLimit + s->locals;
-					if(HasLinkRegister)
-						limit += RegSize;
 				}
 				break;
 
@@ -1160,9 +1138,8 @@ stkprint(Chain *ch, int limit)
 		else
 			print("\t%d\tguaranteed after split check in %s\n", ch->limit, name);
 	} else {
-		stkprint(ch->up, ch->limit + (!HasLinkRegister)*RegSize);
-		if(!HasLinkRegister)
-			print("\t%d\ton entry to %s\n", ch->limit, name);
+		stkprint(ch->up, ch->limit + RegSize);
+		print("\t%d\ton entry to %s\n", ch->limit, name);
 	}
 	if(ch->limit != limit)
 		print("\t%d\tafter %s uses %d\n", limit, name, ch->limit - limit);
@@ -1262,7 +1239,7 @@ cwrite(void *buf, int n)
 void
 usage(void)
 {
-	fprint(2, "usage: %cl [options] main.%c\n", thechar, thechar);
+	fprint(2, "usage: 6l [options] main.6\n");
 	flagprint(2);
 	exits("usage");
 }
@@ -1291,7 +1268,7 @@ setinterp(char *s)
 void
 doversion(void)
 {
-	print("%cl version %s\n", thechar, getgoversion());
+	print("6l version %s\n", getgoversion());
 	errorexit();
 }
 

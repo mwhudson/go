@@ -76,27 +76,13 @@ putelfstr(char *s)
 static void
 putelfsyment(int off, vlong addr, vlong size, int info, int shndx, int other)
 {
-	switch(thechar) {
-	case '6':
-	case '9':
-		LPUT(off);
-		cput(info);
-		cput(other);
-		WPUT(shndx);
-		VPUT(addr);
-		VPUT(size);
-		symsize += ELF64SYMSIZE;
-		break;
-	default:
-		LPUT(off);
-		LPUT(addr);
-		LPUT(size);
-		cput(info);
-		cput(other);
-		WPUT(shndx);
-		symsize += ELF32SYMSIZE;
-		break;
-	}
+	LPUT(off);
+	cput(info);
+	cput(other);
+	WPUT(shndx);
+	VPUT(addr);
+	VPUT(size);
+	symsize += ELF64SYMSIZE;
 }
 
 static int numelfsym = 1; // 0 is reserved
@@ -171,14 +157,7 @@ putelfsymshndx(vlong sympos, int shndx)
 	vlong here;
 
 	here = cpos();
-	switch(thechar) {
-	case '6':
-		cseek(sympos+6);
-		break;
-	default:
-		cseek(sympos+14);
-		break;
-	}
+	cseek(sympos+6);
 	WPUT(shndx);
 	cseek(here);
 }
@@ -250,10 +229,6 @@ putplan9sym(LSym *x, char *s, int t, vlong addr, vlong size, int ver, LSym *go)
 	case 'Z':
 	case 'm':
 		l = 4;
-		if(HEADTYPE == Hplan9 && thechar == '6' && !debug['8']) {
-			lputb(addr>>32);
-			l = 8;
-		}
 		lputb(addr);
 		cput(t+0x80); /* 0x80 is variable length */
 

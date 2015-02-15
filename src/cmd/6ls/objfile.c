@@ -363,10 +363,7 @@ writesym(Link *ctxt, Biobuf *b, LSym *s)
 			name = "";
 			if(r->sym != nil)
 				name = r->sym->name;
-			if(ctxt->arch->thechar == '5' || ctxt->arch->thechar == '9')
-				Bprint(ctxt->bso, "\trel %d+%d t=%d %s+%llux\n", (int)r->off, r->siz, r->type, name, (vlong)r->add);
-			else
-				Bprint(ctxt->bso, "\trel %d+%d t=%d %s+%lld\n", (int)r->off, r->siz, r->type, name, (vlong)r->add);
+			Bprint(ctxt->bso, "\trel %d+%d t=%d %s+%lld\n", (int)r->off, r->siz, r->type, name, (vlong)r->add);
 		}
 	}
 
