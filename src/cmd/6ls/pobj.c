@@ -47,7 +47,6 @@ main(int argc, char *argv[])
 
 	linkarchinit();
 	ctxt = linknew(thelinkarch);
-	ctxt->thestring = thestring;
 	ctxt->diag = diag;
 	ctxt->bso = &bso;
 
@@ -118,11 +117,7 @@ main(int argc, char *argv[])
 
 	ctxt->bso = &bso;
 	ctxt->debugdivmod = debug['M'];
-	ctxt->debugfloat = debug['F'];
-	ctxt->debughist = debug['O'];
 	ctxt->debugpcln = debug['O'];
-	ctxt->debugread = debug['W'];
-	ctxt->debugstack = debug['K'];
 	ctxt->debugvlog = debug['v'];
 
 	if(!ctxt->flag_dso && argc != 1)
@@ -140,7 +135,6 @@ main(int argc, char *argv[])
 		headstring = headstr(HEADTYPE);
 
 	archinit();
-	ctxt->debugfloat = debug['F'];
 
 	if(debug['v'])
 		Bprint(&bso, "HEADER = -H%d -T0x%llux -D0x%llux -R0x%ux\n",

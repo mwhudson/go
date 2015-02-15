@@ -528,26 +528,17 @@ enum
 // to be linker input or for reading that input into the linker.
 struct	Link
 {
-	char*	thestring; // full name of architecture ("arm", "amd64", ..)
-	int32	goarm; // for arm only, GOARM setting
 	int	headtype;
 
 	LinkArch*	arch;
 	int32	(*ignore)(char*);	// do not emit names satisfying this function
-	int32	debugasm;	// -S flag in compiler
-	int32	debugline;	// -L flag in compiler
-	int32	debughist;	// -O flag in linker
-	int32	debugread;	// -W flag in linker
 	int32	debugvlog;	// -v flag in linker
-	int32	debugstack;	// -K flag in linker
 	int32	debugzerostack;	// -Z flag in linker
 	int32	debugdivmod;	// -M flag in 5l
-	int32	debugfloat;	// -F flag in 5l
 	int32	debugpcln;	// -O flag in linker
 	int32	flag_shared;	// -shared flag in linker
 	int32	flag_dso;	// -dso flag in linker
 	int32	addlibpath_ok;	// shush
-	int32	iself;
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
 	int32	windows;
@@ -581,12 +572,6 @@ struct	Link
 	Prog*	printp;
 	Prog*	blitrl;
 	Prog*	elitrl;
-	int	rexflag;
-	int	rep; // for nacl
-	int	repn; // for nacl
-	int	lock; // for nacl
-	int	asmode;
-	uchar*	andptr;
 	uchar	and[100];
 	int64	instoffset;
 	int32	autosize;

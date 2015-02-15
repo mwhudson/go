@@ -158,7 +158,7 @@ ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn)
 static void
 readsym(Link *ctxt, Biobuf *f, char *pkg, char *pn)
 {
-	int i, j, c, t, v, n, ndata, nreloc, size, dupok;
+	int i, t, v, n, ndata, nreloc, size, dupok;
 	static int ndup;
 	char *name;
 	uchar *data;
@@ -298,44 +298,6 @@ overwrite:
 		}
 	}
 
-	if(ctxt->debugasm) {
-		Bprint(ctxt->bso, "%s ", s->name);
-		if(s->version)
-			Bprint(ctxt->bso, "v=%d ", s->version);
-		if(s->type)
-			Bprint(ctxt->bso, "t=%d ", s->type);
-		if(s->dupok)
-			Bprint(ctxt->bso, "dupok ");
-		if(s->cfunc)
-			Bprint(ctxt->bso, "cfunc ");
-		if(s->nosplit)
-			Bprint(ctxt->bso, "nosplit ");
-		Bprint(ctxt->bso, "size=%lld value=%lld", (vlong)s->size, (vlong)s->value);
-		if(s->type == STEXT)
-			Bprint(ctxt->bso, " args=%#llux locals=%#llux", (uvlong)s->args, (uvlong)s->locals);
-		Bprint(ctxt->bso, "\n");
-		for(i=0; i<s->np; ) {
-			Bprint(ctxt->bso, "\t%#06ux", i);
-			for(j=i; j<i+16 && j<s->np; j++)
-				Bprint(ctxt->bso, " %02ux", s->p[j]);
-			for(; j<i+16; j++)
-				Bprint(ctxt->bso, "   ");
-			Bprint(ctxt->bso, "  ");
-			for(j=i; j<i+16 && j<s->np; j++) {
-				c = s->p[j];
-				if(' ' <= c && c <= 0x7e)
-					Bprint(ctxt->bso, "%c", c);
-				else
-					Bprint(ctxt->bso, ".");
-			}
-			Bprint(ctxt->bso, "\n");
-			i += 16;
-		}
-		for(i=0; i<s->nr; i++) {
-			r = &s->r[i];
-			Bprint(ctxt->bso, "\trel %d+%d t=%d %s+%lld\n", (int)r->off, r->siz, r->type, r->sym->name, (vlong)r->add);
-		}
-	}
 }
 
 static int64
