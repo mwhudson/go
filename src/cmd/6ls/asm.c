@@ -512,7 +512,6 @@ asmb(void)
 			elfemitreloc();
 		}
 	}
-	}
 
 	if(debug['v'])
 		Bprint(&bso, "%5.2f headr\n", cputime());
