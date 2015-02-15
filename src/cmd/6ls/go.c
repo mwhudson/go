@@ -698,9 +698,6 @@ void
 addexport(void)
 {
 	int i;
-	
-	if(HEADTYPE == Hdarwin)
-		return;
 
 	for(i=0; i<ndynexp; i++)
 		adddynsym(ctxt, dynexp[i]);

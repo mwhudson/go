@@ -33,7 +33,6 @@
 #include	"l.h"
 #include "lib.h"
 #include "elf.h"
-#include "macho.h"
 #include	"../../runtime/mgc0.h"
 
 void	dynreloc(void);
@@ -240,9 +239,6 @@ relocsym(LSym *s)
 				if(iself) {
 					if(thechar == '6')
 						o = 0;
-				} else if(HEADTYPE == Hdarwin) {
-					if(rs->type != SHOSTOBJ)
-						o += symaddr(rs);
 				} else {
 					diag("unhandled pcrel relocation for %s", headstring);
 				}
@@ -282,14 +278,6 @@ relocsym(LSym *s)
 				if(iself) {
 					if(thechar == '6')
 						o = 0;
-				} else if(HEADTYPE == Hdarwin) {
-					if(r->type == R_CALL) {
-						if(rs->type != SHOSTOBJ)
-							o += symaddr(rs) - rs->sect->vaddr;
-						o -= r->off; // relative to section offset, not symbol
-					} else {
-						o += r->siz;
-					}
 				} else {
 					diag("unhandled pcrel relocation for %s", headstring);
 				}
@@ -924,8 +912,6 @@ dodata(void)
 	 *
 	 * on darwin, we need the symbol table numbers for dynreloc.
 	 */
-	if(HEADTYPE == Hdarwin)
-		machosymorder();
 	dynreloc();
 
 	/* some symbols may no longer belong in datap (Mach-O) */

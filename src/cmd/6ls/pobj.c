@@ -34,7 +34,6 @@
 #include	"l.h"
 #include "lib.h"
 #include "elf.h"
-#include "macho.h"
 #include "dwarf.h"
 #include	<ar.h>
 
@@ -204,8 +203,6 @@ main(int argc, char *argv[])
 	paramspace = "SP";	/* (FP) now (SP) on output */
 
 	doelf();
-	if(HEADTYPE == Hdarwin)
-		domacho();
 	dostkcheck();
 	addexport();
 	gentext();		// trampolines, call stubs, etc.

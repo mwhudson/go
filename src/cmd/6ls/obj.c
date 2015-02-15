@@ -33,7 +33,6 @@
 #include	"l.h"
 #include "lib.h"
 #include "elf.h"
-#include "macho.h"
 #include "dwarf.h"
 #include	<ar.h>
 
@@ -68,7 +67,6 @@ archinit(void)
 		if(linkmode == LinkExternal && strcmp(getgoextlinkenabled(), "1") != 0)
 			sysfatal("cannot use -linkmode=external with -H %s", headstr(HEADTYPE));
 		break;
-	case Hdarwin:
 	case Hdragonfly:
 	case Hfreebsd:
 	case Hlinux:
@@ -100,16 +98,6 @@ archinit(void)
 			INITDAT = 0;
 		if(INITRND == -1)
 			INITRND = 4096;
-		break;
-	case Hdarwin:		/* apple MACH */
-		machoinit();
-		HEADR = INITIAL_MACHO_HEADR;
-		if(INITRND == -1)
-			INITRND = 4096;
-		if(INITTEXT == -1)
-			INITTEXT = 4096+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
 		break;
 	case Hlinux:		/* elf64 executable */
 	case Hfreebsd:		/* freebsd */

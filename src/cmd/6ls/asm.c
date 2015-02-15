@@ -34,7 +34,6 @@
 #include	"lib.h"
 #include	"elf.h"
 #include	"dwarf.h"
-#include	"macho.h"
 
 #define PADDR(a)	((uint32)(a) & ~0x80000000)
 
@@ -88,7 +87,7 @@ adddynrela(LSym *rela, LSym *s, Reloc *r)
 void
 adddynrel(LSym *s, Reloc *r)
 {
-	LSym *targ, *rela, *got;
+	LSym *targ, *rela;
 	
 	targ = r->sym;
 	ctxt->cursym = s;
@@ -147,56 +146,6 @@ adddynrel(LSym *s, Reloc *r)
 		r->type = R_ADDR;
 		return;
 	
-	// Handle relocations found in Mach-O object files.
-	case 512 + MACHO_X86_64_RELOC_UNSIGNED*2 + 0:
-	case 512 + MACHO_X86_64_RELOC_SIGNED*2 + 0:
-	case 512 + MACHO_X86_64_RELOC_BRANCH*2 + 0:
-		// TODO: What is the difference between all these?
-		r->type = R_ADDR;
-		if(targ->type == SDYNIMPORT)
-			diag("unexpected reloc for dynamic symbol %s", targ->name);
-		return;
-
-	case 512 + MACHO_X86_64_RELOC_BRANCH*2 + 1:
-		if(targ->type == SDYNIMPORT) {
-			addpltsym(targ);
-			r->sym = linklookup(ctxt, ".plt", 0);
-			r->add = targ->plt;
-			r->type = R_PCREL;
-			return;
-		}
-		// fall through
-	case 512 + MACHO_X86_64_RELOC_UNSIGNED*2 + 1:
-	case 512 + MACHO_X86_64_RELOC_SIGNED*2 + 1:
-	case 512 + MACHO_X86_64_RELOC_SIGNED_1*2 + 1:
-	case 512 + MACHO_X86_64_RELOC_SIGNED_2*2 + 1:
-	case 512 + MACHO_X86_64_RELOC_SIGNED_4*2 + 1:
-		r->type = R_PCREL;
-		if(targ->type == SDYNIMPORT)
-			diag("unexpected pc-relative reloc for dynamic symbol %s", targ->name);
-		return;
-
-	case 512 + MACHO_X86_64_RELOC_GOT_LOAD*2 + 1:
-		if(targ->type != SDYNIMPORT) {
-			// have symbol
-			// turn MOVQ of GOT entry into LEAQ of symbol itself
-			if(r->off < 2 || s->p[r->off-2] != 0x8b) {
-				diag("unexpected GOT_LOAD reloc for non-dynamic symbol %s", targ->name);
-				return;
-			}
-			s->p[r->off-2] = 0x8d;
-			r->type = R_PCREL;
-			return;
-		}
-		// fall through
-	case 512 + MACHO_X86_64_RELOC_GOT*2 + 1:
-		if(targ->type != SDYNIMPORT)
-			diag("unexpected GOT reloc for non-dynamic symbol %s", targ->name);
-		addgotsym(targ);
-		r->type = R_PCREL;
-		r->sym = linklookup(ctxt, ".got", 0);
-		r->add += targ->got;
-		return;
 	}
 	
 	// Handle references to ELF symbols from our own object files.
@@ -232,29 +181,6 @@ adddynrel(LSym *s, Reloc *r)
 			else
 				adduint64(ctxt, rela, ELF64_R_INFO(targ->dynid, R_X86_64_32));
 			adduint64(ctxt, rela, r->add);
-			r->type = 256;	// ignore during relocsym
-			return;
-		}
-		if(HEADTYPE == Hdarwin && s->size == PtrSize && r->off == 0) {
-			// Mach-O relocations are a royal pain to lay out.
-			// They use a compact stateful bytecode representation
-			// that is too much bother to deal with.
-			// Instead, interpret the C declaration
-			//	void *_Cvar_stderr = &stderr;
-			// as making _Cvar_stderr the name of a GOT entry
-			// for stderr.  This is separate from the usual GOT entry,
-			// just in case the C code assigns to the variable,
-			// and of course it only works for single pointers,
-			// but we only need to support cgo and that's all it needs.
-			adddynsym(ctxt, targ);
-			got = linklookup(ctxt, ".got", 0);
-			s->type = got->type | SSUB;
-			s->outer = got;
-			s->sub = got->sub;
-			got->sub = s;
-			s->value = got->size;
-			adduint64(ctxt, got, 0);
-			adduint32(ctxt, linklookup(ctxt, ".linkedit.got", 0), targ->dynid);
 			r->type = 256;	// ignore during relocsym
 			return;
 		}
@@ -333,67 +259,6 @@ elfreloc1(Reloc *r, vlong sectoff)
 	}
 
 	VPUT(r->xadd);
-	return 0;
-}
-
-int
-machoreloc1(Reloc *r, vlong sectoff)
-{
-	uint32 v;
-	LSym *rs;
-	
-	rs = r->xsym;
-
-	if(rs->type == SHOSTOBJ || r->type == R_PCREL) {
-		if(rs->dynid < 0) {
-			diag("reloc %d to non-macho symbol %s type=%d", r->type, rs->name, rs->type);
-			return -1;
-		}
-		v = rs->dynid;			
-		v |= 1<<27; // external relocation
-	} else {
-		v = rs->sect->extnum;
-		if(v == 0) {
-			diag("reloc %d to symbol %s in non-macho section %s type=%d", r->type, rs->name, rs->sect->name, rs->type);
-			return -1;
-		}
-	}
-
-	switch(r->type) {
-	default:
-		return -1;
-	case R_ADDR:
-		v |= MACHO_X86_64_RELOC_UNSIGNED<<28;
-		break;
-	case R_CALL:
-		v |= 1<<24; // pc-relative bit
-		v |= MACHO_X86_64_RELOC_BRANCH<<28;
-		break;
-	case R_PCREL:
-		// NOTE: Only works with 'external' relocation. Forced above.
-		v |= 1<<24; // pc-relative bit
-		v |= MACHO_X86_64_RELOC_SIGNED<<28;
-	}
-	
-	switch(r->siz) {
-	default:
-		return -1;
-	case 1:
-		v |= 0<<25;
-		break;
-	case 2:
-		v |= 1<<25;
-		break;
-	case 4:
-		v |= 2<<25;
-		break;
-	case 8:
-		v |= 3<<25;
-		break;
-	}
-
-	LPUT(sectoff);
-	LPUT(v);
 	return 0;
 }
 
@@ -482,30 +347,6 @@ addpltsym(LSym *s)
 		adduint64(ctxt, rela, 0);
 		
 		s->plt = plt->size - 16;
-	} else if(HEADTYPE == Hdarwin) {
-		// To do lazy symbol lookup right, we're supposed
-		// to tell the dynamic loader which library each 
-		// symbol comes from and format the link info
-		// section just so.  I'm too lazy (ha!) to do that
-		// so for now we'll just use non-lazy pointers,
-		// which don't need to be told which library to use.
-		//
-		// http://networkpx.blogspot.com/2009/09/about-lcdyldinfoonly-command.html
-		// has details about what we're avoiding.
-
-		LSym *plt;
-		
-		addgotsym(s);
-		plt = linklookup(ctxt, ".plt", 0);
-
-		adduint32(ctxt, linklookup(ctxt, ".linkedit.plt", 0), s->dynid);
-
-		// jmpq *got+size(IP)
-		s->plt = plt->size;
-
-		adduint8(ctxt, plt, 0xff);
-		adduint8(ctxt, plt, 0x25);
-		addpcrelplus(ctxt, plt, linklookup(ctxt, ".got", 0), s->got);
 	} else {
 		diag("addpltsym: unsupported binary format");
 	}
@@ -529,8 +370,6 @@ addgotsym(LSym *s)
 		addaddrplus(ctxt, rela, got, s->got);
 		adduint64(ctxt, rela, ELF64_R_INFO(s->dynid, R_X86_64_GLOB_DAT));
 		adduint64(ctxt, rela, 0);
-	} else if(HEADTYPE == Hdarwin) {
-		adduint32(ctxt, linklookup(ctxt, ".linkedit.got", 0), s->dynid);
 	} else {
 		diag("addgotsym: unsupported binary format");
 	}
@@ -583,8 +422,6 @@ adddynsym(Link *ctxt, LSym *s)
 			elfwritedynent(linklookup(ctxt, ".dynamic", 0), DT_NEEDED,
 				addstring(linklookup(ctxt, ".dynstr", 0), s->dynimplib));
 		}
-	} else if(HEADTYPE == Hdarwin) {
-		diag("adddynsym: missed symbol %s (%s)", s->name, s->extname);
 	} else {
 		diag("adddynsym: unsupported binary format");
 	}
@@ -603,8 +440,6 @@ adddynlib(char *lib)
 		if(s->size == 0)
 			addstring(s, "");
 		elfwritedynent(linklookup(ctxt, ".dynamic", 0), DT_NEEDED, addstring(s, lib));
-	} else if(HEADTYPE == Hdarwin) {
-		machoadddynlib(lib);
 	} else {
 		diag("adddynlib: unsupported binary format");
 	}
@@ -615,7 +450,7 @@ asmb(void)
 {
 	int32 magic;
 	int i;
-	vlong vl, symo, dwarfoff, machlink;
+	vlong vl, symo;
 	Section *sect;
 	LSym *sym;
 
@@ -654,29 +489,11 @@ asmb(void)
 	cseek(segdata.fileoff);
 	datblk(segdata.vaddr, segdata.filelen);
 
-	machlink = 0;
-	if(HEADTYPE == Hdarwin) {
-		if(debug['v'])
-			Bprint(&bso, "%5.2f dwarf\n", cputime());
-
-		dwarfoff = rnd(HEADR+segtext.len, INITRND) + rnd(segdata.filelen, INITRND);
-		cseek(dwarfoff);
-
-		segdwarf.fileoff = cpos();
-		dwarfemitdebugsections();
-		segdwarf.filelen = cpos() - segdwarf.fileoff;
-
-		machlink = domacholink();
-	}
-
 	switch(HEADTYPE) {
 	default:
 		diag("unknown header type %d", HEADTYPE);
 	case Hplan9:
 	case Helf:
-		break;
-	case Hdarwin:
-		debug['8'] = 1;	/* 64-bit addresses */
 		break;
 	case Hlinux:
 	case Hfreebsd:
@@ -704,9 +521,6 @@ asmb(void)
 		case Helf:
 			debug['s'] = 1;
 			symo = segdata.fileoff+segdata.filelen;
-			break;
-		case Hdarwin:
-			symo = segdata.fileoff+rnd(segdata.filelen, INITRND)+machlink;
 			break;
 		case Hlinux:
 		case Hfreebsd:
@@ -750,10 +564,6 @@ asmb(void)
 				cflush();
 			}
 			break;
-		case Hdarwin:
-			if(linkmode == LinkExternal)
-				machoemitreloc();
-			break;
 		}
 	}
 
@@ -776,9 +586,6 @@ asmb(void)
 		lputb(spsize);			/* sp offsets */
 		lputb(lcsize);			/* line offsets */
 		vputb(vl);			/* va of entry */
-		break;
-	case Hdarwin:
-		asmbmacho();
 		break;
 	case Hlinux:
 	case Hfreebsd:
