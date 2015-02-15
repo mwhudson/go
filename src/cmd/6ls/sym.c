@@ -34,12 +34,6 @@
 #include <bio.h>
 #include <link.h>
 
-static int
-yy_isalpha(int c)
-{
-	return c >= 0 && c <= 0xFF && isalpha(c);
-}
-
 static struct {
 	char *name;
 	int val;
@@ -107,15 +101,6 @@ linknew(LinkArch *arch)
 	
 	if(getwd(buf, sizeof buf) == 0)
 		strcpy(buf, "/???");
-	if(yy_isalpha(buf[0]) && buf[1] == ':') {
-		// On Windows.
-		ctxt->windows = 1;
-
-		// Canonicalize path by converting \ to / (Windows accepts both).
-		for(p=buf; *p; p++)
-			if(*p == '\\')
-				*p = '/';
-	}
 	ctxt->pathname = strdup(buf);
 	
 	ctxt->headtype = Hlinux;

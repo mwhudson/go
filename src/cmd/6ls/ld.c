@@ -61,7 +61,7 @@ addlib(Link *ctxt, char *src, char *obj, char *pathname)
 	if(p != nil)
 		*p = '.';
 
-	if((!ctxt->windows && name[0] == '/') || (ctxt->windows && name[1] == ':'))
+	if(name[0] == '/')
 		snprint(pname, sizeof pname, "%s", name);
 	else {
 		// try dot, -L "libdir", and then goroot.

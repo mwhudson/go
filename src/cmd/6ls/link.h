@@ -538,11 +538,9 @@ struct	Link
 	int32	addlibpath_ok;	// shush
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
-	int32	windows;
 	char*	trimpath;
 	char*	goroot;
 	char*	goroot_final;
-	int32	enforce_data_order;	// for use by assembler
 
 	// hash table of all symbols
 	LSym*	hash[LINKHASH];
@@ -552,23 +550,9 @@ struct	Link
 	// file-line history
 	Hist*	hist;
 	Hist*	ehist;
-	
-	// all programs
-	Plist*	plist;
-	Plist*	plast;
-	
+
 	// code generation
-	LSym*	sym_div;
-	LSym*	sym_divu;
-	LSym*	sym_mod;
-	LSym*	sym_modu;
-	LSym*	symmorestack[2];
 	LSym*	tlsg;
-	LSym*	plan9privates;
-	Prog*	curp;
-	Prog*	printp;
-	Prog*	blitrl;
-	Prog*	elitrl;
 	uchar	and[100];
 	int64	instoffset;
 	int32	autosize;
