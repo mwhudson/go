@@ -105,12 +105,6 @@ linknew(LinkArch *arch)
 	
 	ctxt->headtype = Hlinux;
 	
-	/*
-	 * ELF uses TLS offset negative from FS.
-	 * Translate 0(FS) and 8(FS) into -16(FS) and -8(FS).
-	 * Known to low-level assembly in package runtime and runtime/cgo.
-	 */
-	ctxt->tlsoffset = -2*ctxt->arch->ptrsize;
 	
 	ctxt->addlibpath_ok = 1;
 

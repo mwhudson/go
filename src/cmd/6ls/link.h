@@ -549,32 +549,22 @@ struct	Link
 
 	// file-line history
 	Hist*	hist;
-	Hist*	ehist;
 
 	// code generation
 	LSym*	tlsg;
-	int64	instoffset;
-	int32	autosize;
-	int32	armsize;
 
 	// for reading input files (during linker)
-	vlong	pc;
 	char**	libdir;
 	int32	nlibdir;
 	int32	maxlibdir;
 	Library*	library;
 	int	libraryp;
 	int	nlibrary;
-	int	tlsoffset;
 	void	(*diag)(char*, ...);
-	int	mode;
-	Auto*	curauto;
-	Auto*	curhist;
 	LSym*	cursym;
 	int	version;
 	LSym*	textp;
 	LSym*	etextp;
-	int32	histdepth;
 	int32	nhistfile;
 	LSym*	filesyms;
 };
