@@ -531,10 +531,7 @@ struct	Link
 	int	headtype;
 
 	LinkArch*	arch;
-	int32	(*ignore)(char*);	// do not emit names satisfying this function
 	int32	debugvlog;	// -v flag in linker
-	int32	debugzerostack;	// -Z flag in linker
-	int32	debugdivmod;	// -M flag in 5l
 	int32	debugpcln;	// -O flag in linker
 	int32	flag_shared;	// -shared flag in linker
 	int32	flag_dso;	// -dso flag in linker

@@ -116,7 +116,6 @@ main(int argc, char *argv[])
 	}
 
 	ctxt->bso = &bso;
-	ctxt->debugdivmod = debug['M'];
 	ctxt->debugpcln = debug['O'];
 	ctxt->debugvlog = debug['v'];
 
