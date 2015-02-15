@@ -35,7 +35,6 @@
 #include "elf.h"
 #include "macho.h"
 #include "dwarf.h"
-#include "pe.h"
 #include	<ar.h>
 
 char*	thestring 	= "amd64";
@@ -138,16 +137,6 @@ archinit(void)
 			INITDAT = 0;
 		if(INITRND == -1)
 			INITRND = 0x10000;
-		break;
-	case Hwindows:		/* PE executable */
-		peinit();
-		HEADR = PEFILEHEADR;
-		if(INITTEXT == -1)
-			INITTEXT = PEBASE+PESECTHEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = PESECTALIGN;
 		break;
 	}
 

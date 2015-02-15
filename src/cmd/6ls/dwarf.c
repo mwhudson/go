@@ -18,7 +18,6 @@
 #include "dwarf_defs.h"
 #include "elf.h"
 #include "macho.h"
-#include "pe.h"
 #include	"../../runtime/typekind.h"
 
 /*
@@ -1999,13 +1998,6 @@ writegdbscript(void)
 	return sectionstart;
 }
 
-static void
-align(vlong size)
-{
-	if(HEADTYPE == Hwindows) // Only Windows PE need section align.
-		strnput("", rnd(size, PEFILEALIGN) - size);
-}
-
 static vlong
 writedwarfreloc(LSym* s)
 {
@@ -2073,11 +2065,8 @@ dwarfemitdebugsections(void)
 	genasmsym(defdwsymb);
 
 	writeabbrev();
-	align(abbrevsize);
 	writelines();
-	align(linesize);
 	writeframes();
-	align(framesize);
 
 	synthesizestringtypes(dwtypes.child);
 	synthesizeslicetypes(dwtypes.child);
@@ -2114,41 +2103,32 @@ dwarfemitdebugsections(void)
 		}
 	}
 	infosize = infoe - infoo;
-	align(infosize);
 
 	pubnameso  = writepub(ispubname);
 	pubnamessize  = cpos() - pubnameso;
-	align(pubnamessize);
 
 	pubtypeso  = writepub(ispubtype);
 	pubtypessize  = cpos() - pubtypeso;
-	align(pubtypessize);
 
 	arangeso   = writearanges();
 	arangessize   = cpos() - arangeso;
-	align(arangessize);
 
 	gdbscripto = writegdbscript();
 	gdbscriptsize = cpos() - gdbscripto;
-	align(gdbscriptsize);
 
 	while(cpos()&7)
 		cput(0);
 	inforeloco = writedwarfreloc(infosec);
 	inforelocsize = cpos() - inforeloco;
-	align(inforelocsize);
 
 	arangesreloco = writedwarfreloc(arangessec);
 	arangesrelocsize = cpos() - arangesreloco;
-	align(arangesrelocsize);
 
 	linereloco = writedwarfreloc(linesec);
 	linerelocsize = cpos() - linereloco;
-	align(linerelocsize);
 
 	framereloco = writedwarfreloc(framesec);
 	framerelocsize = cpos() - framereloco;
-	align(framerelocsize);
 }
 
 /*
@@ -2444,23 +2424,4 @@ dwarfaddmachoheaders(void)
 		msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
 		ms->filesize += msect->size;
 	}
-}
-
-/*
- * Windows PE
- */
-void
-dwarfaddpeheaders(void)
-{
-	if(debug['w'])  // disable dwarf
-		return;
-
-	newPEDWARFSection(".debug_abbrev", abbrevsize);
-	newPEDWARFSection(".debug_line", linesize);
-	newPEDWARFSection(".debug_frame", framesize);
-	newPEDWARFSection(".debug_info", infosize);
-	newPEDWARFSection(".debug_pubnames", pubnamessize);
-	newPEDWARFSection(".debug_pubtypes", pubtypessize);
-	newPEDWARFSection(".debug_aranges", arangessize);
-	newPEDWARFSection(".debug_gdb_scripts", gdbscriptsize);
 }

@@ -35,7 +35,6 @@
 #include	"elf.h"
 #include	"dwarf.h"
 #include	"macho.h"
-#include	"pe.h"
 
 #define PADDR(a)	((uint32)(a) & ~0x80000000)
 
@@ -721,10 +720,6 @@ asmb(void)
 		case Hnacl:
 			symo = segdata.fileoff+segdata.filelen;
 			symo = rnd(symo, INITRND);
-			break;
-		case Hwindows:
-			symo = segdata.fileoff+segdata.filelen;
-			symo = rnd(symo, PEFILEALIGN);
 			break;
 		}
 		cseek(symo);

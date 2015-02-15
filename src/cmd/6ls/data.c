@@ -34,7 +34,6 @@
 #include "lib.h"
 #include "elf.h"
 #include "macho.h"
-#include "pe.h"
 #include	"../../runtime/mgc0.h"
 
 void	dynreloc(void);
@@ -1370,8 +1369,6 @@ address(void)
 	segdata.vaddr = va;
 	segdata.fileoff = va - segtext.vaddr + segtext.fileoff;
 	segdata.filelen = 0;
-	if(HEADTYPE == Hwindows)
-		segdata.fileoff = segtext.fileoff + rnd(segtext.len, PEFILEALIGN);
 	if(HEADTYPE == Hplan9)
 		segdata.fileoff = segtext.fileoff + segtext.filelen;
 	data = nil;

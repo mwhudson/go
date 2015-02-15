@@ -36,7 +36,6 @@
 #include "elf.h"
 #include "macho.h"
 #include "dwarf.h"
-#include "pe.h"
 #include	<ar.h>
 
 char	*noname		= "<none>";
@@ -145,10 +144,7 @@ main(int argc, char *argv[])
 		usage();
 
 	if(outfile == nil) {
-		if(HEADTYPE == Hwindows)
-			outfile = smprint("%c.out.exe", thechar);
-		else
-			outfile = smprint("%c.out", thechar);
+		outfile = smprint("%c.out", thechar);
 	}
 	libinit(); // creates outfile
 
