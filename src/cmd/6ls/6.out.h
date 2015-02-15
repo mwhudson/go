@@ -30,7 +30,7 @@
 
 #define	NSYM	50
 #define	NSNAME	8
-#include "../ld/textflag.h"
+#include "textflag.h"
 
 /*
  *	amd64

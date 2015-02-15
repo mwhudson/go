@@ -31,8 +31,8 @@
 
 #include	"l.h"
 #include	"lib.h"
-#include	"../ld/elf.h"
-#include	"../ld/dwarf.h"
+#include "elf.h"
+#include "dwarf.h"
 #include	"../../runtime/stack.h"
 #include	"../../runtime/funcdata.h"
 

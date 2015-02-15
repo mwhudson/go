@@ -32,11 +32,11 @@
 
 #define	EXTERN
 #include	"l.h"
-#include	"../ld/lib.h"
-#include	"../ld/elf.h"
-#include	"../ld/macho.h"
-#include	"../ld/dwarf.h"
-#include	"../ld/pe.h"
+#include "lib.h"
+#include "elf.h"
+#include "macho.h"
+#include "dwarf.h"
+#include "pe.h"
 #include	<ar.h>
 
 char	*noname		= "<none>";

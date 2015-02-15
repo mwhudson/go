@@ -31,8 +31,8 @@
 // Symbol table.
 
 #include	"l.h"
-#include	"../ld/lib.h"
-#include	"../ld/elf.h"
+#include "lib.h"
+#include "elf.h"
 
 static int maxelfstr;
 
