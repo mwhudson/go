@@ -434,10 +434,6 @@ loadcgo(char *file, char *pkg, char *p, int n)
 		}
 
 		if(strcmp(f[0], "cgo_export_static") == 0 || strcmp(f[0], "cgo_export_dynamic") == 0) {
-			// TODO: Remove once we know Windows is okay.
-			if(strcmp(f[0], "cgo_export_static") == 0 && HEADTYPE == Hwindows)
-				continue;
-
 			if(nf < 2 || nf > 3)
 				goto err;
 			local = f[1];

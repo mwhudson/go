@@ -585,8 +585,6 @@ adddynsym(Link *ctxt, LSym *s)
 		}
 	} else if(HEADTYPE == Hdarwin) {
 		diag("adddynsym: missed symbol %s (%s)", s->name, s->extname);
-	} else if(HEADTYPE == Hwindows) {
-		// already taken care of
 	} else {
 		diag("adddynsym: unsupported binary format");
 	}
@@ -689,7 +687,6 @@ asmb(void)
 		debug['8'] = 1;	/* 64-bit addresses */
 		break;
 	case Hnacl:
-	case Hwindows:
 		break;
 	}
 
@@ -752,12 +749,6 @@ asmb(void)
 				
 				cflush();
 			}
-			break;
-		case Hwindows:
-			if(debug['v'])
-			       Bprint(&bso, "%5.2f dwarf\n", cputime());
-
-			dwarfemitdebugsections();
 			break;
 		case Hdarwin:
 			if(linkmode == LinkExternal)
