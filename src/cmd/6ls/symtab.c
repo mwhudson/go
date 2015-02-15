@@ -182,12 +182,7 @@ asmelfsym(void)
 		diag("missing section for %s", s->name);
 		errorexit();
 	}
-	if (strcmp(goos, "android") == 0) {
-		// Android emulates runtime.tlsg as a regular variable.
-		putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_OBJECT, s->sect->elfsect->shnum, 0);
-	} else {
-		putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_TLS, s->sect->elfsect->shnum, 0);
-	}
+	putelfsyment(putelfstr(s->name), 0, s->size, (STB_LOCAL<<4)|STT_TLS, s->sect->elfsect->shnum, 0);
 	s->elfsym = numelfsym++;
 
 	elfbind = STB_GLOBAL;

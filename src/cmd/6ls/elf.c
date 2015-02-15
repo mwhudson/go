@@ -754,8 +754,7 @@ elfshbits(Section *sect)
 	if(sect->rwx & 2)
 		sh->flags |= SHF_WRITE;
 	if(strcmp(sect->name, ".tbss") == 0) {
-		if(strcmp(goos, "android") != 0)
-			sh->flags |= SHF_TLS; // no TLS on android
+		sh->flags |= SHF_TLS;
 		sh->type = SHT_NOBITS;
 	}
 	sh->addralign = sect->align;

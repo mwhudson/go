@@ -39,7 +39,6 @@ static struct {
 	int val;
 } headers[] = {
 	{"linux",	Hlinux},
-	{"android",	Hlinux}, // must be after "linux" entry or else headstr(Hlinux) == "android"
 };
 
 int
