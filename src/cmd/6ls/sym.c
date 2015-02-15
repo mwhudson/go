@@ -84,7 +84,6 @@ linknew(LinkArch *arch)
 	char *p;
 	char buf[1024];
 
-	linksetexp();
 	nuxiinit(arch);
 	
 	ctxt = emallocz(sizeof *ctxt);

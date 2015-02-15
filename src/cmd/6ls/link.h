@@ -659,11 +659,6 @@ void*	emallocz(long n);
 void*	erealloc(void *p, long n);
 char*	estrdup(char *p);
 char*	expandpkg(char *t0, char *pkg);
-void	linksetexp(void);
-char*	expstring(void);
-
-extern	int	fieldtrack_enabled;
-extern	int	framepointer_enabled;
 
 // ld.c
 void	addhist(Link *ctxt, int32 line, int type);
@@ -682,10 +677,7 @@ Prog*	appendp(Link*, Prog*);
 vlong	atolwhex(char*);
 
 // list[5689].c
-void	listinit5(void);
 void	listinit6(void);
-void	listinit8(void);
-void	listinit9(void);
 
 // obj.c
 int	linklinefmt(Link *ctxt, Fmt *fp);
@@ -695,11 +687,6 @@ void	linkprfile(Link *ctxt, int32 l);
 
 // objfile.c
 void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
-
-// pass.c
-Prog*	brchain(Link *ctxt, Prog *p);
-Prog*	brloop(Link *ctxt, Prog *p);
-void	linkpatch(Link *ctxt, LSym *sym);
 
 // pcln.c
 void	linkpcln(Link*, LSym*);
@@ -713,28 +700,11 @@ int	linksymfmt(Fmt *f);
 int	headtype(char*);
 char*	headstr(int);
 
-extern	char*	anames5[];
 extern	char*	anames6[];
-extern	char*	anames8[];
-extern	char*	anames9[];
-
-extern	char*	cnames5[];
-extern	char*	cnames9[];
-
-extern	char*	dnames5[];
 extern	char*	dnames6[];
-extern	char*	dnames8[];
-extern	char*	dnames9[];
 
-extern	LinkArch	link386;
 extern	LinkArch	linkamd64;
 extern	LinkArch	linkamd64p32;
-extern	LinkArch	linkarm;
-extern	LinkArch	linkppc64;
-extern	LinkArch	linkppc64le;
-
-extern	int	linkbasepointer;
-extern	void	linksetexp(void);
 
 #pragma	varargck	type	"A"	int
 #pragma	varargck	type	"E"	uint
