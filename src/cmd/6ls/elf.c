@@ -41,37 +41,12 @@ void
 elfinit(void)
 {
 	iself = 1;
-
-	switch(thechar) {
-	// 64-bit architectures
-	case '9':
-		if(ctxt->arch->endian == BigEndian)
-			hdr.flags = 1;		/* Version 1 ABI */
-		else
-			hdr.flags = 2;		/* Version 2 ABI */
-		// fallthrough
-	case '6':
-		elf64 = 1;
-		hdr.phoff = ELF64HDRSIZE;	/* Must be be ELF64HDRSIZE: first PHdr must follow ELF header */
-		hdr.shoff = ELF64HDRSIZE;	/* Will move as we add PHeaders */
-		hdr.ehsize = ELF64HDRSIZE;	/* Must be ELF64HDRSIZE */
-		hdr.phentsize = ELF64PHDRSIZE;	/* Must be ELF64PHDRSIZE */
-		hdr.shentsize = ELF64SHDRSIZE;	/* Must be ELF64SHDRSIZE */
-		break;
-
-	// 32-bit architectures
-	case '5':
-		// we use EABI on both linux/arm and freebsd/arm.
-		if(HEADTYPE == Hlinux || HEADTYPE == Hfreebsd)
-			hdr.flags = 0x5000002; // has entry point, Version5 EABI
-		// fallthrough
-	default:
-		hdr.phoff = ELF32HDRSIZE;	/* Must be be ELF32HDRSIZE: first PHdr must follow ELF header */
-		hdr.shoff = ELF32HDRSIZE;	/* Will move as we add PHeaders */
-		hdr.ehsize = ELF32HDRSIZE;	/* Must be ELF32HDRSIZE */
-		hdr.phentsize = ELF32PHDRSIZE;	/* Must be ELF32PHDRSIZE */
-		hdr.shentsize = ELF32SHDRSIZE;	/* Must be ELF32SHDRSIZE */
-	}
+	elf64 = 1;
+	hdr.phoff = ELF64HDRSIZE;	/* Must be be ELF64HDRSIZE: first PHdr must follow ELF header */
+	hdr.shoff = ELF64HDRSIZE;	/* Will move as we add PHeaders */
+	hdr.ehsize = ELF64HDRSIZE;	/* Must be ELF64HDRSIZE */
+	hdr.phentsize = ELF64PHDRSIZE;	/* Must be ELF64PHDRSIZE */
+	hdr.shentsize = ELF64SHDRSIZE;	/* Must be ELF64SHDRSIZE */
 }
 
 void
@@ -690,20 +665,11 @@ elfdynhash(void)
 		elfwritedynentsym(s, DT_VERSYM, linklookup(ctxt, ".gnu.version", 0));
 	}
 
-	if(thechar == '6' || thechar == '9') {
-		sy = linklookup(ctxt, ".rela.plt", 0);
-		if(sy->size > 0) {
-			elfwritedynent(s, DT_PLTREL, DT_RELA);
-			elfwritedynentsymsize(s, DT_PLTRELSZ, sy);
-			elfwritedynentsym(s, DT_JMPREL, sy);
-		}
-	} else {
-		sy = linklookup(ctxt, ".rel.plt", 0);
-		if(sy->size > 0) {
-			elfwritedynent(s, DT_PLTREL, DT_REL);
-			elfwritedynentsymsize(s, DT_PLTRELSZ, sy);
-			elfwritedynentsym(s, DT_JMPREL, sy);
-		}
+	sy = linklookup(ctxt, ".rela.plt", 0);
+	if(sy->size > 0) {
+		elfwritedynent(s, DT_PLTREL, DT_RELA);
+		elfwritedynentsymsize(s, DT_PLTRELSZ, sy);
+		elfwritedynentsym(s, DT_JMPREL, sy);
 	}
 
 	elfwritedynent(s, DT_NULL, 0);
@@ -814,13 +780,8 @@ elfshreloc(Section *sect)
 	if(strcmp(sect->name, ".shstrtab") == 0 || strcmp(sect->name, ".tbss") == 0)
 		return nil;
 
-	if(thechar == '6' || thechar == '9') {
-		prefix = ".rela";
-		typ = SHT_RELA;
-	} else {
-		prefix = ".rel";
-		typ = SHT_REL;
-	}
+	prefix = ".rela";
+	typ = SHT_RELA;
 
 	snprint(buf, sizeof buf, "%s%s", prefix, sect->name);
 	sh = elfshname(buf);
@@ -950,10 +911,7 @@ doelf(void)
 
 	if(flag_shared) {
 		addstring(shstrtab, ".init_array");
-		if(thechar == '6' || thechar == '9')
-			addstring(shstrtab, ".rela.init_array");
-		else
-			addstring(shstrtab, ".rel.init_array");
+		addstring(shstrtab, ".rela.init_array");
 	}
 
 	if(!debug['s']) {
@@ -967,19 +925,12 @@ doelf(void)
 		addstring(shstrtab, ".interp");
 		addstring(shstrtab, ".hash");
 		addstring(shstrtab, ".got");
-		if(thechar == '9')
-			addstring(shstrtab, ".glink");
 		addstring(shstrtab, ".got.plt");
 		addstring(shstrtab, ".dynamic");
 		addstring(shstrtab, ".dynsym");
 		addstring(shstrtab, ".dynstr");
-		if(thechar == '6' || thechar == '9') {
-			addstring(shstrtab, ".rela");
-			addstring(shstrtab, ".rela.plt");
-		} else {
-			addstring(shstrtab, ".rel");
-			addstring(shstrtab, ".rel.plt");
-		}
+		addstring(shstrtab, ".rela");
+		addstring(shstrtab, ".rela.plt");
 		addstring(shstrtab, ".plt");
 		addstring(shstrtab, ".gnu.version");
 		addstring(shstrtab, ".gnu.version_r");
@@ -988,10 +939,7 @@ doelf(void)
 		s = linklookup(ctxt, ".dynsym", 0);
 		s->type = SELFROSECT;
 		s->reachable = 1;
-		if(thechar == '6' || thechar == '9')
-			s->size += ELF64SYMSIZE;
-		else
-			s->size += ELF32SYMSIZE;
+		s->size += ELF64SYMSIZE;
 
 		/* dynamic string table */
 		s = linklookup(ctxt, ".dynstr", 0);
@@ -1002,10 +950,7 @@ doelf(void)
 		dynstr = s;
 
 		/* relocation table */
-		if(thechar == '6' || thechar == '9')
-			s = linklookup(ctxt, ".rela", 0);
-		else
-			s = linklookup(ctxt, ".rel", 0);
+		s = linklookup(ctxt, ".rela", 0);
 		s->reachable = 1;
 		s->type = SELFROSECT;
 
@@ -1013,13 +958,6 @@ doelf(void)
 		s = linklookup(ctxt, ".got", 0);
 		s->reachable = 1;
 		s->type = SELFGOT; // writable
-
-		/* ppc64 glink resolver */
-		if(thechar == '9') {
-			s = linklookup(ctxt, ".glink", 0);
-			s->reachable = 1;
-			s->type = SELFRXSECT;
-		}
 
 		/* hash */
 		s = linklookup(ctxt, ".hash", 0);
@@ -1032,19 +970,11 @@ doelf(void)
 
 		s = linklookup(ctxt, ".plt", 0);
 		s->reachable = 1;
-		if(thechar == '9')
-			// In the ppc64 ABI, .plt is a data section
-			// written by the dynamic linker.
-			s->type = SELFSECT;
-		else
-			s->type = SELFRXSECT;
+		s->type = SELFRXSECT;
 		
 		elfsetupplt();
 		
-		if(thechar == '6' || thechar == '9')
-			s = linklookup(ctxt, ".rela.plt", 0);
-		else
-			s = linklookup(ctxt, ".rel.plt", 0);
+		s = linklookup(ctxt, ".rela.plt", 0);
 		s->reachable = 1;
 		s->type = SELFROSECT;
 		
@@ -1066,31 +996,16 @@ doelf(void)
 		 */
 		elfwritedynentsym(s, DT_HASH, linklookup(ctxt, ".hash", 0));
 		elfwritedynentsym(s, DT_SYMTAB, linklookup(ctxt, ".dynsym", 0));
-		if(thechar == '6' || thechar == '9')
-			elfwritedynent(s, DT_SYMENT, ELF64SYMSIZE);
-		else
-			elfwritedynent(s, DT_SYMENT, ELF32SYMSIZE);
+		elfwritedynent(s, DT_SYMENT, ELF64SYMSIZE);
 		elfwritedynentsym(s, DT_STRTAB, linklookup(ctxt, ".dynstr", 0));
 		elfwritedynentsymsize(s, DT_STRSZ, linklookup(ctxt, ".dynstr", 0));
-		if(thechar == '6' || thechar == '9') {
-			elfwritedynentsym(s, DT_RELA, linklookup(ctxt, ".rela", 0));
-			elfwritedynentsymsize(s, DT_RELASZ, linklookup(ctxt, ".rela", 0));
-			elfwritedynent(s, DT_RELAENT, ELF64RELASIZE);
-		} else {
-			elfwritedynentsym(s, DT_REL, linklookup(ctxt, ".rel", 0));
-			elfwritedynentsymsize(s, DT_RELSZ, linklookup(ctxt, ".rel", 0));
-			elfwritedynent(s, DT_RELENT, ELF32RELSIZE);
-		}
+		elfwritedynentsym(s, DT_RELA, linklookup(ctxt, ".rela", 0));
+		elfwritedynentsymsize(s, DT_RELASZ, linklookup(ctxt, ".rela", 0));
+		elfwritedynent(s, DT_RELAENT, ELF64RELASIZE);
 		if(rpath)
 			elfwritedynent(s, DT_RUNPATH, addstring(dynstr, rpath));
 
-		if(thechar == '9')
-			elfwritedynentsym(s, DT_PLTGOT, linklookup(ctxt, ".plt", 0));
-		else
-			elfwritedynentsym(s, DT_PLTGOT, linklookup(ctxt, ".got.plt", 0));
-
-		if(thechar == '9')
-			elfwritedynent(s, DT_PPC64_OPT, 0);
+		elfwritedynentsym(s, DT_PLTGOT, linklookup(ctxt, ".got.plt", 0));
 
 		// Solaris dynamic linker can't handle an empty .rela.plt if
 		// DT_JMPREL is emitted so we have to defer generation of DT_PLTREL,
@@ -1149,23 +1064,7 @@ asmbelf(vlong symo)
 	Section *sect;
 
 	eh = getElfEhdr();
-	switch(thechar) {
-	default:
-		diag("unknown architecture in asmbelf");
-		errorexit();
-	case '5':
-		eh->machine = EM_ARM;
-		break;
-	case '6':
-		eh->machine = EM_X86_64;
-		break;
-	case '8':
-		eh->machine = EM_386;
-		break;
-	case '9':
-		eh->machine = EM_PPC64;
-		break;
-	}
+	eh->machine = EM_X86_64;
 
 	eh->phoff = 0;
 	eh->phentsize = 0;

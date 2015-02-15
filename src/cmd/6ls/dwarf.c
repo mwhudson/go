@@ -627,8 +627,7 @@ adddwarfrel(LSym* sec, LSym* sym, vlong offsetbase, int siz, vlong addend)
 	r->type = R_ADDR;
 	r->add = addend;
 	r->xadd = addend;
-	if(iself && thechar == '6')
-		addend = 0;
+	addend = 0;
 	switch(siz) {
 	case 4:
 		LPUT(addend);
@@ -2187,11 +2186,7 @@ dwarfaddelfrelocheader(int elfstr, ElfShdr *shdata, vlong off, vlong size)
 	ElfShdr *sh;
 
 	sh = newElfShdr(elfstrdbg[elfstr]);
-	if(thechar == '6' || thechar == '9') {
-		sh->type = SHT_RELA;
-	} else {
-		sh->type = SHT_REL;
-	}
+	sh->type = SHT_RELA;
 	sh->entsize = PtrSize*(2+(sh->type==SHT_RELA));
 	sh->link = elfshname(".symtab")->shnum;
 	sh->info = shdata->shnum;

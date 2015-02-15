@@ -207,13 +207,7 @@ relocsym(LSym *s)
 					diag("missing section for %s", rs->name);
 				r->xsym = rs;
 
-				o = r->xadd;
-				if(iself) {
-					if(thechar == '6')
-						o = 0;
-				} else {
-					diag("unhandled pcrel relocation for %s", headstring);
-				}
+				o = 0;
 				break;
 			}
 			o = symaddr(r->sym) + r->add;
@@ -246,13 +240,7 @@ relocsym(LSym *s)
 					diag("missing section for %s", rs->name);
 				r->xsym = rs;
 
-				o = r->xadd;
-				if(iself) {
-					if(thechar == '6')
-						o = 0;
-				} else {
-					diag("unhandled pcrel relocation for %s", headstring);
-				}
+				o = 0;
 				break;
 			}
 			o = 0;
