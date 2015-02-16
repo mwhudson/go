@@ -51,7 +51,6 @@ main(int argc, char *argv[])
 	ctxt->bso = &bso;
 
 	Binit(&bso, 1, OWRITE);
-	listinit();
 	memset(debug, 0, sizeof(debug));
 	nerrors = 0;
 	outfile = nil;
