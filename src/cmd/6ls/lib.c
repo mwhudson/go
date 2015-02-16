@@ -534,7 +534,7 @@ hostlink(void)
 		argv[argc++] = "-s";
 	}
 	
-	if(iself && AssumeGoldLinker)
+	if(AssumeGoldLinker)
 		argv[argc++] = "-Wl,--rosegment";
 
 	if(flag_shared) {
@@ -548,8 +548,7 @@ hostlink(void)
 		argv[argc++] = smprint("-Wl,-rpath,%s", rpath);
 
 	// Force global symbols to be exported for dlopen, etc.
-	if(iself)
-		argv[argc++] = "-rdynamic";
+	argv[argc++] = "-rdynamic";
 
 	if(strstr(argv[0], "clang") != nil)
 		argv[argc++] = "-Qunused-arguments";
@@ -606,7 +605,7 @@ hostlink(void)
 		// we added it.  We do it in this order, rather than
 		// only adding -rdynamic later, so that -extldflags
 		// can override -rdynamic without using -static.
-		if(iself && strncmp(p, "-static", 7) == 0 && (p[7]==' ' || p[7]=='\0')) {
+		if(strncmp(p, "-static", 7) == 0 && (p[7]==' ' || p[7]=='\0')) {
 			for(i=0; i<argc; i++) {
 				if(strcmp(argv[i], "-rdynamic") == 0)
 					argv[i] = "-static";

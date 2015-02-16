@@ -992,7 +992,6 @@ uint64	startelf(void);
 uint64	endelf(void);
 extern	int	numelfphdr;
 extern	int	numelfshdr;
-extern	int	iself;
 extern	int	elfverneed;
 int	elfinterp(ElfShdr*, uint64, uint64, char*);
 int	elfwriteinterp(void);

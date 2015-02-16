@@ -1976,10 +1976,7 @@ writedwarfreloc(LSym* s)
 	
 	start = cpos();
 	for(r = s->r; r < s->r+s->nr; r++) {
-		if(iself)
-			i = elfreloc1(r, r->off);
-		else
-			i = -1;
+		i = elfreloc1(r, r->off);
 		if(i < 0)
 			diag("unsupported obj reloc %d/%d to %s", r->type, r->siz, r->sym->name);
 	}

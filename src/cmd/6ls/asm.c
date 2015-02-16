@@ -161,7 +161,7 @@ adddynrel(LSym *s, Reloc *r)
 		return;
 	
 	case R_ADDR:
-		if(s->type == STEXT && iself) {
+		if(s->type == STEXT) {
 			// The code is asking for the address of an external
 			// function.  We provide it with the address of the
 			// correspondent GOT symbol.
@@ -172,19 +172,16 @@ adddynrel(LSym *s, Reloc *r)
 		}
 		if(s->type != SDATA)
 			break;
-		if(iself) {
-			adddynsym(ctxt, targ);
-			rela = linklookup(ctxt, ".rela", 0);
-			addaddrplus(ctxt, rela, s, r->off);
-			if(r->siz == 8)
-				adduint64(ctxt, rela, ELF64_R_INFO(targ->dynid, R_X86_64_64));
-			else
-				adduint64(ctxt, rela, ELF64_R_INFO(targ->dynid, R_X86_64_32));
-			adduint64(ctxt, rela, r->add);
-			r->type = 256;	// ignore during relocsym
-			return;
-		}
-		break;
+		adddynsym(ctxt, targ);
+		rela = linklookup(ctxt, ".rela", 0);
+		addaddrplus(ctxt, rela, s, r->off);
+		if(r->siz == 8)
+			adduint64(ctxt, rela, ELF64_R_INFO(targ->dynid, R_X86_64_64));
+		else
+			adduint64(ctxt, rela, ELF64_R_INFO(targ->dynid, R_X86_64_32));
+		adduint64(ctxt, rela, r->add);
+		r->type = 256;	// ignore during relocsym
+		return;
 	}
 	
 	ctxt->cursym = s;
@@ -311,45 +308,41 @@ elfsetupplt(void)
 static void
 addpltsym(LSym *s)
 {
+	LSym *plt, *got, *rela;
+
 	if(s->plt >= 0)
 		return;
 	
 	adddynsym(ctxt, s);
 	
-	if(iself) {
-		LSym *plt, *got, *rela;
-
-		plt = linklookup(ctxt, ".plt", 0);
-		got = linklookup(ctxt, ".got.plt", 0);
-		rela = linklookup(ctxt, ".rela.plt", 0);
-		if(plt->size == 0)
-			elfsetupplt();
+	plt = linklookup(ctxt, ".plt", 0);
+	got = linklookup(ctxt, ".got.plt", 0);
+	rela = linklookup(ctxt, ".rela.plt", 0);
+	if(plt->size == 0)
+		elfsetupplt();
 		
-		// jmpq *got+size(IP)
-		adduint8(ctxt, plt, 0xff);
-		adduint8(ctxt, plt, 0x25);
-		addpcrelplus(ctxt, plt, got, got->size);
+	// jmpq *got+size(IP)
+	adduint8(ctxt, plt, 0xff);
+	adduint8(ctxt, plt, 0x25);
+	addpcrelplus(ctxt, plt, got, got->size);
 	
-		// add to got: pointer to current pos in plt
-		addaddrplus(ctxt, got, plt, plt->size);
+	// add to got: pointer to current pos in plt
+	addaddrplus(ctxt, got, plt, plt->size);
 		
-		// pushq $x
-		adduint8(ctxt, plt, 0x68);
-		adduint32(ctxt, plt, (got->size-24-8)/8);
+	// pushq $x
+	adduint8(ctxt, plt, 0x68);
+	adduint32(ctxt, plt, (got->size-24-8)/8);
 		
-		// jmpq .plt
-		adduint8(ctxt, plt, 0xe9);
-		adduint32(ctxt, plt, -(plt->size+4));
+	// jmpq .plt
+	adduint8(ctxt, plt, 0xe9);
+	adduint32(ctxt, plt, -(plt->size+4));
 		
-		// rela
-		addaddrplus(ctxt, rela, got, got->size-8);
-		adduint64(ctxt, rela, ELF64_R_INFO(s->dynid, R_X86_64_JMP_SLOT));
-		adduint64(ctxt, rela, 0);
+	// rela
+	addaddrplus(ctxt, rela, got, got->size-8);
+	adduint64(ctxt, rela, ELF64_R_INFO(s->dynid, R_X86_64_JMP_SLOT));
+	adduint64(ctxt, rela, 0);
 		
-		s->plt = plt->size - 16;
-	} else {
-		diag("addpltsym: unsupported binary format");
-	}
+	s->plt = plt->size - 16;
 }
 
 static void
@@ -365,14 +358,10 @@ addgotsym(LSym *s)
 	s->got = got->size;
 	adduint64(ctxt, got, 0);
 
-	if(iself) {
-		rela = linklookup(ctxt, ".rela", 0);
-		addaddrplus(ctxt, rela, got, s->got);
-		adduint64(ctxt, rela, ELF64_R_INFO(s->dynid, R_X86_64_GLOB_DAT));
-		adduint64(ctxt, rela, 0);
-	} else {
-		diag("addgotsym: unsupported binary format");
-	}
+	rela = linklookup(ctxt, ".rela", 0);
+	addaddrplus(ctxt, rela, got, s->got);
+	adduint64(ctxt, rela, ELF64_R_INFO(s->dynid, R_X86_64_GLOB_DAT));
+	adduint64(ctxt, rela, 0);
 }
 
 void
@@ -385,45 +374,41 @@ adddynsym(Link *ctxt, LSym *s)
 	if(s->dynid >= 0)
 		return;
 
-	if(iself) {
-		s->dynid = nelfsym++;
+	s->dynid = nelfsym++;
 
-		d = linklookup(ctxt, ".dynsym", 0);
+	d = linklookup(ctxt, ".dynsym", 0);
 
-		name = s->extname;
-		adduint32(ctxt, d, addstring(linklookup(ctxt, ".dynstr", 0), name));
-		/* type */
-		t = STB_GLOBAL << 4;
-		if(s->cgoexport && (s->type&SMASK) == STEXT)
-			t |= STT_FUNC;
-		else
-			t |= STT_OBJECT;
-		adduint8(ctxt, d, t);
+	name = s->extname;
+	adduint32(ctxt, d, addstring(linklookup(ctxt, ".dynstr", 0), name));
+	/* type */
+	t = STB_GLOBAL << 4;
+	if(s->cgoexport && (s->type&SMASK) == STEXT)
+		t |= STT_FUNC;
+	else
+		t |= STT_OBJECT;
+	adduint8(ctxt, d, t);
 	
-		/* reserved */
-		adduint8(ctxt, d, 0);
+	/* reserved */
+	adduint8(ctxt, d, 0);
 	
-		/* section where symbol is defined */
-		if(s->type == SDYNIMPORT)
-			adduint16(ctxt, d, SHN_UNDEF);
-		else
-			adduint16(ctxt, d, 1);
+	/* section where symbol is defined */
+	if(s->type == SDYNIMPORT)
+		adduint16(ctxt, d, SHN_UNDEF);
+	else
+		adduint16(ctxt, d, 1);
 	
-		/* value */
-		if(s->type == SDYNIMPORT)
-			adduint64(ctxt, d, 0);
-		else
-			addaddr(ctxt, d, s);
+	/* value */
+	if(s->type == SDYNIMPORT)
+		adduint64(ctxt, d, 0);
+	else
+		addaddr(ctxt, d, s);
 	
-		/* size of object */
-		adduint64(ctxt, d, s->size);
+	/* size of object */
+	adduint64(ctxt, d, s->size);
 	
-		if(!(s->cgoexport & CgoExportDynamic) && s->dynimplib && needlib(s->dynimplib)) {
-			elfwritedynent(linklookup(ctxt, ".dynamic", 0), DT_NEEDED,
-				addstring(linklookup(ctxt, ".dynstr", 0), s->dynimplib));
-		}
-	} else {
-		diag("adddynsym: unsupported binary format");
+	if(!(s->cgoexport & CgoExportDynamic) && s->dynimplib && needlib(s->dynimplib)) {
+		elfwritedynent(linklookup(ctxt, ".dynamic", 0), DT_NEEDED,
+			       addstring(linklookup(ctxt, ".dynstr", 0), s->dynimplib));
 	}
 }
 
@@ -435,14 +420,10 @@ adddynlib(char *lib)
 	if(!needlib(lib))
 		return;
 	
-	if(iself) {
-		s = linklookup(ctxt, ".dynstr", 0);
-		if(s->size == 0)
-			addstring(s, "");
-		elfwritedynent(linklookup(ctxt, ".dynamic", 0), DT_NEEDED, addstring(s, lib));
-	} else {
-		diag("adddynlib: unsupported binary format");
-	}
+	s = linklookup(ctxt, ".dynstr", 0);
+	if(s->size == 0)
+		addstring(s, "");
+	elfwritedynent(linklookup(ctxt, ".dynamic", 0), DT_NEEDED, addstring(s, lib));
 }
 
 void
@@ -459,8 +440,7 @@ asmb(void)
 		Bprint(&bso, "%5.2f codeblk\n", cputime());
 	Bflush(&bso);
 
-	if(iself)
-		asmbelfsetup();
+	asmbelfsetup();
 
 	sect = segtext.sect;
 	cseek(sect->vaddr - segtext.vaddr + segtext.fileoff);
@@ -499,18 +479,16 @@ asmb(void)
 		symo = segdata.fileoff+segdata.filelen;
 		symo = rnd(symo, INITRND);
 		cseek(symo);
-		if(iself) {
-			cseek(symo);
-			asmelfsym();
-			cflush();
-			cwrite(elfstrdat, elfstrsize);
+		cseek(symo);
+		asmelfsym();
+		cflush();
+		cwrite(elfstrdat, elfstrsize);
 
-			if(debug['v'])
-				Bprint(&bso, "%5.2f dwarf\n", cputime());
+		if(debug['v'])
+			Bprint(&bso, "%5.2f dwarf\n", cputime());
 
-			dwarfemitdebugsections();
-			elfemitreloc();
-		}
+		dwarfemitdebugsections();
+		elfemitreloc();
 	}
 
 	if(debug['v'])

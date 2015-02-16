@@ -341,8 +341,7 @@ dynreloc(void)
 		dynrelocsym(s);
 	for(s=datap; s!=S; s=s->next)
 		dynrelocsym(s);
-	if(iself)
-		elfdynhash();
+	elfdynhash();
 }
 
 static void

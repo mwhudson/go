@@ -13,8 +13,6 @@
  */
 #define	NSECT	48
 
-int	iself;
-
 static	int	elf64;
 static	ElfEhdr	hdr;
 static	ElfPhdr	*phdr[NSECT];
@@ -40,7 +38,6 @@ static char buildinfo[32];
 void
 elfinit(void)
 {
-	iself = 1;
 	elf64 = 1;
 	hdr.phoff = ELF64HDRSIZE;	/* Must be be ELF64HDRSIZE: first PHdr must follow ELF header */
 	hdr.shoff = ELF64HDRSIZE;	/* Will move as we add PHeaders */
@@ -558,9 +555,6 @@ elfdynhash(void)
 	Elflib *l;
 	Elfaux *x;
 	
-	if(!iself)
-		return;
-
 	nsym = nelfsym;
 	s = linklookup(ctxt, ".hash", 0);
 	s->type = SELFROSECT;
@@ -862,9 +856,6 @@ void
 doelf(void)
 {
 	LSym *s, *shstrtab, *dynstr;
-
-	if(!iself)
-		return;
 
 	/* predefine strings we need for section headers */
 	shstrtab = linklookup(ctxt, ".shstrtab", 0);
