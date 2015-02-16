@@ -37,9 +37,6 @@
 #include "dwarf.h"
 #include	<ar.h>
 
-char	*noname		= "<none>";
-char*	paramspace	= "FP";
-
 void
 main(int argc, char *argv[])
 {
@@ -162,7 +159,6 @@ main(int argc, char *argv[])
 	checkgo();
 	deadcode();
 	callgraph();
-	paramspace = "SP";	/* (FP) now (SP) on output */
 
 	doelf();
 	dostkcheck();

@@ -753,12 +753,6 @@ mywhatsys(void)
 		sysfatal("cannot use 6c with GOARCH=%s", goarch);
 }
 
-int
-pathchar(void)
-{
-	return '/';
-}
-
 static	uchar*	hunk;
 static	uint32	nhunk;
 #define	NHUNK	(10UL<<20)

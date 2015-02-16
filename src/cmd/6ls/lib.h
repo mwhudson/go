@@ -97,8 +97,6 @@ EXTERN	int32	INITRND;
 EXTERN	int64	INITTEXT;
 EXTERN	int64	INITDAT;
 EXTERN	char*	INITENTRY;		/* entry point */
-EXTERN	char*	noname;
-EXTERN	char*	paramspace;
 EXTERN	int	nerrors;
 
 EXTERN	int64	liveness;
@@ -145,7 +143,6 @@ struct Header {
 
 extern	Header	headers[];
 
-#pragma	varargck	type	"Y"	LSym*
 #pragma	varargck	type	"Z"	char*
 #pragma	varargck	type	"i"	char*
 
@@ -168,7 +165,6 @@ EXTERN	char*	cbpmax;
 		cflush(); }
 
 void	Lflag(char *arg);
-int	Yconv(Fmt *fp);
 int	Zconv(Fmt *fp);
 void	addexport(void);
 void	address(void);
@@ -231,7 +227,6 @@ void	hostlink(void);
 int	iconv(Fmt *fp);
 void	importcycles(void);
 void	linkarchinit(void);
-void	ldelf(Biobuf *f, char *pkg, int64 len, char *pn);
 void	ldhostobj(void (*ld)(Biobuf*, char*, int64, char*), Biobuf *f, char *pkg, int64 len, char *pn, char *file);
 void	ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence);
 void	ldpkg(Biobuf *f, char *pkg, int64 len, char *filename, int whence);
@@ -249,15 +244,12 @@ void	mark(LSym *s);
 void	mywhatsys(void);
 struct ar_hdr;
 void	objfile(char *file, char *pkg);
-void	patch(void);
-int	pathchar(void);
 void	pcln(void);
 void	pclntab(void);
 void	findfunctab(void);
 void	putelfsectionsym(LSym* s, int shndx);
 void	putelfsymshndx(vlong sympos, int shndx);
 void	putsymb(LSym *s, char *name, int t, vlong v, vlong size, int ver, LSym *typ);
-int	rbyoff(const void *va, const void *vb);
 void	reloc(void);
 void	relocsym(LSym *s);
 void	setinterp(char *s);
