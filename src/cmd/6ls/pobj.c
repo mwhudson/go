@@ -47,7 +47,6 @@ main(int argc, char *argv[])
 
 	linkarchinit();
 	ctxt = linknew(thelinkarch);
-	ctxt->diag = diag;
 	ctxt->bso = &bso;
 
 	Binit(&bso, 1, OWRITE);

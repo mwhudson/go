@@ -304,7 +304,6 @@ struct	Link
 	Library*	library;
 	int	libraryp;
 	int	nlibrary;
-	void	(*diag)(char*, ...);
 	LSym*	cursym;
 	int	version;
 	LSym*	textp;
