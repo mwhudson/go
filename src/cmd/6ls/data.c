@@ -166,8 +166,7 @@ relocsym(LSym *s)
 		switch(r->type) {
 		default:
 			o = 0;
-			if(archreloc(r, s, &o) < 0)
-				diag("unknown reloc %d", r->type);
+			diag("unknown reloc %d", r->type);
 			break;
 		case R_TLS:
 			r->done = 0;
@@ -254,8 +253,6 @@ relocsym(LSym *s)
 			o = r->sym->size + r->add;
 			break;
 		}
-		if(r->variant != RV_NONE)
-			o = archrelocvariant(r, s, o);
 //print("relocate %s %#llux (%#llux+%#llux, size %d) => %s %#llux +%#llx [%llx]\n", s->name, (uvlong)(s->value+off), (uvlong)s->value, (uvlong)r->off, r->siz, r->sym ? r->sym->name : "<nil>", (uvlong)symaddr(r->sym), (vlong)r->add, (vlong)o);
 		switch(siz) {
 		default:

@@ -45,7 +45,6 @@ struct	Reloc
 	uchar	siz;
 	uchar	done;
 	int32	type;
-	int32	variant; // RV_*: variant on computed value
 	int64	add;
 	int64	xadd;
 	LSym*	sym;
@@ -183,18 +182,6 @@ enum
 	R_POWER_TOC,		// ELF R_PPC64_TOC16*
 };
 
-// Reloc.variant
-enum
-{
-	RV_NONE,		// identity variant
-	RV_POWER_LO,		// x & 0xFFFF
-	RV_POWER_HI,		// x >> 16
-	RV_POWER_HA,		// (x + 0x8000) >> 16
-	RV_POWER_DS,		// x & 0xFFFC, check x&0x3 == 0
-
-	RV_CHECK_OVERFLOW = 1<<8,	// check overflow flag
-	RV_TYPE_MASK = (RV_CHECK_OVERFLOW - 1),
-};
 
 // Auto.name
 enum
@@ -392,11 +379,3 @@ extern	char*	dnames6[];
 
 extern	LinkArch	linkamd64;
 extern	LinkArch	linkamd64p32;
-
-#pragma	varargck	type	"A"	int
-#pragma	varargck	type	"E"	uint
-#pragma	varargck	type	"R"	int
-
-// TODO(ality): remove this workaround.
-//   It's here because Pconv in liblink/list?.c references %L.
-#pragma	varargck	type	"L"	int32
