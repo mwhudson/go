@@ -65,7 +65,6 @@ EXTERN	int	PtrSize;
 EXTERN	int	IntSize;
 EXTERN	int	RegSize;
 
-#define	P		((Prog*)0)
 #define	S		((LSym*)0)
 enum
 {

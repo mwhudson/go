@@ -602,9 +602,6 @@ vlong	adduint32(Link *ctxt, LSym *s, uint32 v);
 vlong	adduint64(Link *ctxt, LSym *s, uint64 v);
 vlong	adduint8(Link *ctxt, LSym *s, uint8 v);
 vlong	adduintxx(Link *ctxt, LSym *s, uint64 v, int wid);
-void	mangle(char *file);
-void	savedata(Link *ctxt, LSym *s, Prog *p, char *pn);
-void	savedata1(Link *ctxt, LSym *s, Prog *p, char *pn, int enforce_order);
 vlong	setaddr(Link *ctxt, LSym *s, vlong off, LSym *t);
 vlong	setaddrplus(Link *ctxt, LSym *s, vlong off, LSym *t, vlong add);
 vlong	setuint16(Link *ctxt, LSym *s, vlong r, uint16 v);
@@ -630,12 +627,6 @@ vlong	atolwhex(char*);
 // list[5689].c
 void	listinit6(void);
 
-// obj.c
-int	linklinefmt(Link *ctxt, Fmt *fp);
-void	linklinehist(Link *ctxt, int lineno, char *f, int offset);
-Plist*	linknewplist(Link *ctxt);
-void	linkprfile(Link *ctxt, int32 l);
-
 // objfile.c
 void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
 
@@ -644,7 +635,6 @@ LSym*	linklookup(Link *ctxt, char *name, int v);
 Link*	linknew(LinkArch*);
 LSym*	linknewsym(Link *ctxt, char *symb, int v);
 LSym*	linkrlookup(Link *ctxt, char *name, int v);
-int	linksymfmt(Fmt *f);
 
 extern	char*	anames6[];
 extern	char*	dnames6[];

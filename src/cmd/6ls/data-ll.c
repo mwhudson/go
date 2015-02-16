@@ -35,12 +35,6 @@
 #include <link.h>
 
 void
-mangle(char *file)
-{
-	sysfatal("%s: mangled input file", file);
-}
-
-void
 symgrow(Link *ctxt, LSym *s, vlong lsiz)
 {
 	int32 siz;
@@ -68,79 +62,6 @@ symgrow(Link *ctxt, LSym *s, vlong lsiz)
 		memset(s->p+s->np, 0, s->maxp-s->np);
 	}
 	s->np = siz;
-}
-
-void
-savedata(Link *ctxt, LSym *s, Prog *p, char *pn)
-{
-	int32 off, siz, i, fl;
-	float32 flt;
-	uchar *cast;
-	vlong o;
-	Reloc *r;
-
-	off = p->from.offset;
-	siz = p->from3.offset;
-	if(off < 0 || siz < 0 || off >= 1<<30 || siz >= 100)
-		mangle(pn);
-	symgrow(ctxt, s, off+siz);
-
-	if(p->to.type == TYPE_FCONST) {
-		switch(siz) {
-		default:
-		case 4:
-			flt = p->to.u.dval;
-			cast = (uchar*)&flt;
-			for(i=0; i<4; i++)
-				s->p[off+i] = cast[fnuxi4[i]];
-			break;
-		case 8:
-			cast = (uchar*)&p->to.u.dval;
-			for(i=0; i<8; i++)
-				s->p[off+i] = cast[fnuxi8[i]];
-			break;
-		}
-	} else if(p->to.type == TYPE_SCONST) {
-		for(i=0; i<siz; i++)
-			s->p[off+i] = p->to.u.sval[i];
-	} else if(p->to.type == TYPE_CONST) {
-		if(p->to.sym)
-			goto addr;
-		o = p->to.offset;
-		fl = o;
-		cast = (uchar*)&fl;
-		switch(siz) {
-		default:
-			ctxt->diag("bad nuxi %d\n%P", siz, p);
-			break;
-		case 1:
-			s->p[off] = cast[inuxi1[0]];
-			break;
-		case 2:
-			for(i=0; i<2; i++)
-				s->p[off+i] = cast[inuxi2[i]];
-			break;
-		case 4:
-			for(i=0; i<4; i++)
-				s->p[off+i] = cast[inuxi4[i]];
-			break;
-		case 8:
-			cast = (uchar*)&o;
-			for(i=0; i<8; i++)
-				s->p[off+i] = cast[inuxi8[i]];
-			break;
-		}
-	} else if(p->to.type == TYPE_ADDR) {
-	addr:
-		r = addrel(s);
-		r->off = off;
-		r->siz = siz;
-		r->sym = p->to.sym;
-		r->type = R_ADDR;
-		r->add = p->to.offset;
-	} else {
-		ctxt->diag("bad data: %P", p);
-	}
 }
 
 Reloc*

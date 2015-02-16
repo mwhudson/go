@@ -120,15 +120,3 @@ linkrlookup(Link *ctxt, char *name, int v)
 	return _lookup(ctxt, name, v, 0);
 }
 
-int
-linksymfmt(Fmt *f)
-{
-	LSym *s;
-	
-	s = va_arg(f->args, LSym*);
-	if(s == nil)
-		return fmtstrcpy(f, "<nil>");
-	
-	return fmtstrcpy(f, s->name);
-}
-
