@@ -63,7 +63,6 @@ main(int argc, char *argv[])
 			*(volatile int*)0 = 0;
 	
 
-	flagcount("1", "use alternate profiling code", &debug['1']);
 	flagfn1("B", "info: define ELF NT_GNU_BUILD_ID note", addbuildinfo);
 	flagcount("C", "check Go calls to C code", &debug['C']);
 	flagint64("D", "addr: data address", &INITDAT);
@@ -72,14 +71,11 @@ main(int argc, char *argv[])
 	flagfn1("L", "dir: add dir to library path", Lflag);
 	flagcount("K", "add stack underflow checks", &debug['K']);
 	flagcount("O", "print pc-line tables", &debug['O']);
-	flagcount("Q", "debug byte-register code gen", &debug['Q']);
 	flagint32("R", "rnd: address rounding", &INITRND);
 	flagcount("S", "check type signatures", &debug['S']);
 	flagint64("T", "addr: text address", &INITTEXT);
 	flagfn0("V", "print version and exit", doversion);
-	flagcount("W", "disassemble input", &debug['W']);
 	flagfn2("X", "name value: define string data", addstrdata);
-	flagcount("Z", "clear stack frame on entry", &debug['Z']);
 	flagcount("a", "disassemble output", &debug['a']);
 	flagcount("c", "dump call graph", &debug['c']);
 	flagcount("d", "disable dynamic executable", &debug['d']);
@@ -108,7 +104,6 @@ main(int argc, char *argv[])
 	}
 
 	ctxt->bso = &bso;
-	ctxt->debugpcln = debug['O'];
 	ctxt->debugvlog = debug['v'];
 
 	if(!ctxt->flag_dso && argc != 1)

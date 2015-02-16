@@ -270,7 +270,6 @@ struct	Link
 
 	LinkArch*	arch;
 	int32	debugvlog;	// -v flag in linker
-	int32	debugpcln;	// -O flag in linker
 	int32	flag_dso;	// -dso flag in linker
 	int32	addlibpath_ok;	// shush
 	Biobuf*	bso;	// for -v flag
