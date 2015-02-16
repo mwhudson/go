@@ -6,9 +6,9 @@
 // http://www.microsoft.com/whdc/system/platform/firmware/PECOFF.mspx
 
 #include "l.h"
-#include "../ld/lib.h"
-#include "../ld/pe.h"
-#include "../ld/dwarf.h"
+#include "lib.h"
+#include "pe.h"
+#include "dwarf.h"
 
 // DOS stub that prints out
 // "This program cannot be run in DOS mode."

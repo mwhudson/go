@@ -31,10 +31,10 @@
 // Data layout and relocation.
 
 #include	"l.h"
-#include	"../ld/lib.h"
-#include	"../ld/elf.h"
-#include	"../ld/macho.h"
-#include	"../ld/pe.h"
+#include "lib.h"
+#include "elf.h"
+#include "macho.h"
+#include "pe.h"
 #include	"../../runtime/mgc0.h"
 
 void	dynreloc(void);

@@ -31,7 +31,7 @@
 // Printing.
 
 #include	"l.h"
-#include	"../ld/lib.h"
+#include "lib.h"
 
 void
 listinit(void)

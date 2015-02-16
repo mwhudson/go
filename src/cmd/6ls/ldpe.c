@@ -4,7 +4,7 @@
 
 #include	"l.h"
 #include	"lib.h"
-#include	"../ld/pe.h"
+#include "pe.h"
 
 #define IMAGE_SCN_MEM_DISCARDABLE 0x2000000
 

@@ -14,11 +14,11 @@
 //
 #include	"l.h"
 #include	"lib.h"
-#include	"../ld/dwarf.h"
-#include	"../ld/dwarf_defs.h"
-#include	"../ld/elf.h"
-#include	"../ld/macho.h"
-#include	"../ld/pe.h"
+#include "dwarf.h"
+#include "dwarf_defs.h"
+#include "elf.h"
+#include "macho.h"
+#include "pe.h"
 #include	"../../runtime/typekind.h"
 
 /*

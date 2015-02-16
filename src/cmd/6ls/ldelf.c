@@ -27,7 +27,7 @@ THE SOFTWARE.
 
 #include	"l.h"
 #include	"lib.h"
-#include	"../ld/elf.h"
+#include "elf.h"
 
 enum
 {
