@@ -449,22 +449,6 @@ enum
 	LINKHASH = 100003,
 };
 
-struct	Hist
-{
-	Hist*	link;
-	char*	name;
-	int32	line;
-	int32	offset;
-};
-
-struct	Plist
-{
-	LSym*	name;
-	Prog*	firstpc;
-	int	recur;
-	Plist*	link;
-};
-
 struct	Library
 {
 	char *objref;	// object where we found the reference
