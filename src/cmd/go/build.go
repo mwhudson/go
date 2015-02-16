@@ -128,6 +128,7 @@ var buildP = runtime.NumCPU() // -p flag
 var buildV bool               // -v flag
 var buildX bool               // -x flag
 var buildI bool               // -i flag
+var buildSS bool              // -SS flag
 var buildO = cmdBuild.Flag.String("o", "", "output file")
 var buildWork bool           // -work flag
 var buildGcflags []string    // -gcflags flag
@@ -181,6 +182,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.StringVar(&buildContext.InstallSuffix, "installsuffix", "", "")
 	cmd.Flag.BoolVar(&buildV, "v", false, "")
 	cmd.Flag.BoolVar(&buildX, "x", false, "")
+	cmd.Flag.BoolVar(&buildSS, "SS", false, "")
 	cmd.Flag.BoolVar(&buildWork, "work", false, "")
 	cmd.Flag.Var((*stringsFlag)(&buildGcflags), "gcflags", "")
 	cmd.Flag.Var((*stringsFlag)(&buildAsmflags), "asmflags", "")
@@ -1833,7 +1835,13 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 		}
 	}
 	ldflags = append(ldflags, buildLdflags...)
-	return b.run(".", p.ImportPath, nil, stringList(buildToolExec, tool(archChar+"l"), "-o", out, importArgs, ldflags, mainpkg))
+	var t string
+	if buildSS {
+		t = archChar + "ls"
+	} else {
+		t = archChar + "l"
+	}
+	return b.run(".", p.ImportPath, nil, stringList(buildToolExec, tool(t), "-o", out, importArgs, ldflags, mainpkg))
 }
 
 func (gcToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {

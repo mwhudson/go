@@ -75,6 +75,7 @@ var testFlagDefn = []*testFlagSpec{
 	{name: "n", boolVar: &buildN},
 	{name: "p"},
 	{name: "x", boolVar: &buildX},
+	{name: "SS", boolVar: &buildSS},
 	{name: "i", boolVar: &buildI},
 	{name: "work", boolVar: &buildWork},
 	{name: "gcflags"},
@@ -152,7 +153,7 @@ func testFlags(args []string) (packageNames, passToTest []string) {
 		var err error
 		switch f.name {
 		// bool flags.
-		case "a", "c", "i", "n", "x", "v", "race", "cover", "work":
+		case "a", "c", "i", "n", "x", "v", "race", "cover", "SS", "work":
 			setBoolFlag(f.boolVar, value)
 		case "o":
 			testO = value

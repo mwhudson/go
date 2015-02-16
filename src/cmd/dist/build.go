@@ -708,27 +708,36 @@ func install(dir string) {
 
 	var libs []string
 
-	for _, dt := range deptab {
-		if dir == dt.prefix || strings.HasSuffix(dt.prefix, "/") && strings.HasPrefix(dir, dt.prefix) {
-			for _, p := range dt.dep {
-				p = os.ExpandEnv(p)
-				switch {
-				case strings.HasSuffix(p, ".a"):
-					libs = append(libs, p)
+	if dir == "cmd/6ls" {
+		deps := []string{
+			"$GOROOT/pkg/obj/${GOHOSTOS}_$GOHOSTARCH/libbio.a",
+			"$GOROOT/pkg/obj/${GOHOSTOS}_$GOHOSTARCH/lib9.a"}
+		for _, p := range deps {
+			libs = append(libs, os.ExpandEnv(p))
+		}
+	} else {
+		for _, dt := range deptab {
+			if dir == dt.prefix || strings.HasSuffix(dt.prefix, "/") && strings.HasPrefix(dir, dt.prefix) {
+				for _, p := range dt.dep {
+					p = os.ExpandEnv(p)
+					switch {
+					case strings.HasSuffix(p, ".a"):
+						libs = append(libs, p)
 
-				case strings.HasSuffix(p, "/*"):
-					dir := strings.TrimSuffix(p, "/*")
-					for _, name := range xreaddir(pathf("%s/%s", path, dir)) {
-						files = append(files, pathf("%s/%s", dir, name))
+					case strings.HasSuffix(p, "/*"):
+						dir := strings.TrimSuffix(p, "/*")
+						for _, name := range xreaddir(pathf("%s/%s", path, dir)) {
+							files = append(files, pathf("%s/%s", dir, name))
+						}
+
+					case strings.HasPrefix(p, "-"):
+						files = filter(files, func(s string) bool {
+							return !strings.HasPrefix(s, p[1:])
+						})
+
+					default:
+						files = append(files, p)
 					}
-
-				case strings.HasPrefix(p, "-"):
-					files = filter(files, func(s string) bool {
-						return !strings.HasPrefix(s, p[1:])
-					})
-
-				default:
-					files = append(files, p)
 				}
 			}
 		}
@@ -796,33 +805,35 @@ func install(dir string) {
 			pathf("%s/src/runtime/funcdata.h", goroot), 0)
 	}
 
-	// Generate any missing files; regenerate existing ones.
-	for _, p := range files {
-		elem := filepath.Base(p)
-		for _, gt := range gentab {
-			if gt.gen == nil {
-				continue
-			}
-			if strings.HasPrefix(elem, gt.nameprefix) {
-				if vflag > 1 {
-					errprintf("generate %s\n", p)
+	if dir != "cmd/6ls" {
+		// Generate any missing files; regenerate existing ones.
+		for _, p := range files {
+			elem := filepath.Base(p)
+			for _, gt := range gentab {
+				if gt.gen == nil {
+					continue
 				}
-				gt.gen(path, p)
-				// Do not add generated file to clean list.
-				// In runtime, we want to be able to
-				// build the package with the go tool,
-				// and it assumes these generated files already
-				// exist (it does not know how to build them).
-				// The 'clean' command can remove
-				// the generated files.
-				goto built
+				if strings.HasPrefix(elem, gt.nameprefix) {
+					if vflag > 1 {
+						errprintf("generate %s\n", p)
+					}
+					gt.gen(path, p)
+					// Do not add generated file to clean list.
+					// In runtime, we want to be able to
+					// build the package with the go tool,
+					// and it assumes these generated files already
+					// exist (it does not know how to build them).
+					// The 'clean' command can remove
+					// the generated files.
+					goto built
+				}
 			}
+			// Did not rebuild p.
+			if find(p, missing) >= 0 {
+				fatal("missing file %s", p)
+			}
+		built:
 		}
-		// Did not rebuild p.
-		if find(p, missing) >= 0 {
-			fatal("missing file %s", p)
-		}
-	built:
 	}
 
 	if (goos != gohostos || goarch != gohostarch) && isgo {
@@ -886,7 +897,9 @@ func install(dir string) {
 				case "386":
 					compile = append(compile, "-m32")
 				}
-				compile = append(compile, "-I", pathf("%s/include", goroot))
+				if dir != "cmd/6ls" {
+					compile = append(compile, "-I", pathf("%s/include", goroot))
+				}
 			}
 
 			if dir == "lib9" {
@@ -1100,9 +1113,10 @@ var buildorder = []string{
 	"libbio",
 	"liblink",
 
-	"cmd/gc",  // must be before g
-	"cmd/ld",  // must be before l
-	"cmd/%sl", // must be before a, g
+	"cmd/gc",   // must be before g
+	"cmd/ld",   // must be before l
+	"cmd/%sl",  // must be before a, g
+	"cmd/%sls", // must be before a, g
 	"cmd/%sa",
 	"cmd/%sg",
 
@@ -1165,6 +1179,7 @@ var cleantab = []string{
 	"cmd/6a",
 	"cmd/6g",
 	"cmd/6l",
+	"cmd/6ls",
 	"cmd/8a",
 	"cmd/8g",
 	"cmd/8l",
@@ -1229,6 +1244,9 @@ func clean() {
 	for _, name := range cleantab {
 		path := pathf("%s/src/%s", goroot, name)
 		// Remove generated files.
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue
+		}
 		for _, elem := range xreaddir(path) {
 			for _, gt := range gentab {
 				if strings.HasPrefix(elem, gt.nameprefix) {
@@ -1362,6 +1380,10 @@ func cmdbootstrap() {
 		dir := pattern
 		if strings.Contains(pattern, "%s") {
 			dir = fmt.Sprintf(pattern, gohostchar)
+		}
+		path := pathf("%s/src/%s", goroot, dir)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			continue
 		}
 		install(dir)
 		if oldgochar != gohostchar && strings.Contains(pattern, "%s") {
