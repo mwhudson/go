@@ -77,14 +77,6 @@ gentext(void)
 }
 
 void
-adddynrela(LSym *rela, LSym *s, Reloc *r)
-{
-	addaddrplus(ctxt, rela, s, r->off);
-	adduint64(ctxt, rela, R_X86_64_RELATIVE);
-	addaddrplus(ctxt, rela, r->sym, r->add); // Addend
-}
-
-void
 adddynrel(LSym *s, Reloc *r)
 {
 	LSym *targ, *rela;
@@ -92,60 +84,9 @@ adddynrel(LSym *s, Reloc *r)
 	targ = r->sym;
 	ctxt->cursym = s;
 
-	switch(r->type) {
-	default:
-		if(r->type >= 256) {
-			diag("unexpected relocation type %d", r->type);
-			return;
-		}
-		break;
-
-	// Handle relocations found in ELF object files.
-	case 256 + R_X86_64_PC32:
-		if(targ->type == SDYNIMPORT)
-			diag("unexpected R_X86_64_PC32 relocation for dynamic symbol %s", targ->name);
-		if(targ->type == 0 || targ->type == SXREF)
-			diag("unknown symbol %s in pcrel", targ->name);
-		r->type = R_PCREL;
-		r->add += 4;
+	if(r->type >= 256) {
+		diag("unexpected relocation type %d", r->type);
 		return;
-	
-	case 256 + R_X86_64_PLT32:
-		r->type = R_PCREL;
-		r->add += 4;
-		if(targ->type == SDYNIMPORT) {
-			addpltsym(targ);
-			r->sym = linklookup(ctxt, ".plt", 0);
-			r->add += targ->plt;
-		}
-		return;
-	
-	case 256 + R_X86_64_GOTPCREL:
-		if(targ->type != SDYNIMPORT) {
-			// have symbol
-			if(r->off >= 2 && s->p[r->off-2] == 0x8b) {
-				// turn MOVQ of GOT entry into LEAQ of symbol itself
-				s->p[r->off-2] = 0x8d;
-				r->type = R_PCREL;
-				r->add += 4;
-				return;
-			}
-			// fall back to using GOT and hope for the best (CMOV*)
-			// TODO: just needs relocation, no need to put in .dynsym
-		}
-		addgotsym(targ);
-		r->type = R_PCREL;
-		r->sym = linklookup(ctxt, ".got", 0);
-		r->add += 4;
-		r->add += targ->got;
-		return;
-	
-	case 256 + R_X86_64_64:
-		if(targ->type == SDYNIMPORT)
-			diag("unexpected R_X86_64_64 relocation for dynamic symbol %s", targ->name);
-		r->type = R_ADDR;
-		return;
-	
 	}
 	
 	// Handle references to ELF symbols from our own object files.

@@ -85,7 +85,6 @@ EXTERN	int32	symsize;
 int	Iconv(Fmt *fp);
 void	adddynlib(char *lib);
 void	adddynrel(LSym *s, Reloc *r);
-void	adddynrela(LSym *rela, LSym *s, Reloc *r);
 void	adddynsym(Link *ctxt, LSym *s);
 int	archreloc(Reloc *r, LSym *s, vlong *val);
 vlong	archrelocvariant(Reloc *r, LSym *s, vlong t);
