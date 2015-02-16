@@ -744,15 +744,6 @@ eof:
 }
 
 void
-zerosig(char *sp)
-{
-	LSym *s;
-
-	s = linklookup(ctxt, sp, 0);
-	s->sig = 0;
-}
-
-void
 mywhatsys(void)
 {
 	goroot = getgoroot();

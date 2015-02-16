@@ -275,7 +275,6 @@ void	vputl(uint64 v);
 void	wputb(ushort w);
 void	wputl(ushort w);
 void	xdefine(char *p, int t, vlong v);
-void	zerosig(char *sp);
 void	archinit(void);
 void	diag(char *fmt, ...);
 

@@ -70,7 +70,6 @@ linknewsym(Link *ctxt, char *symb, int v)
 	s->type = 0;
 	s->version = v;
 	s->value = 0;
-	s->sig = 0;
 	s->size = 0;
 	ctxt->nsymbol++;
 

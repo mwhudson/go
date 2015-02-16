@@ -296,13 +296,8 @@ struct	LSym
 	uchar	stkcheck;
 	uchar	hide;
 	uchar	leaf;	// arm only
-	uchar	fnptr;	// arm only
-	uchar	localentry;	// ppc64: instrs between global & local entry
-	uchar	seenglobl;
 	uchar	onlist;	// on the textp or datap lists
-	int16	symid;	// for writing .5/.6/.8 files
 	int32	dynid;
-	int32	sig;
 	int32	plt;
 	int32	got;
 	int32	align;	// if non-zero, required alignment in bytes
@@ -326,8 +321,6 @@ struct	LSym
 	
 	// STEXT
 	Auto*	autom;
-	Prog*	text;
-	Prog*	etext;
 	Pcln*	pcln;
 
 	// SDATA, SBSS
