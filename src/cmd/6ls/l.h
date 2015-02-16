@@ -32,7 +32,6 @@
 #include	<libc.h>
 #include	<bio.h>
 #include	<link.h>
-#include	"6.out.h"
 
 #ifndef	EXTERN
 #define	EXTERN	extern
