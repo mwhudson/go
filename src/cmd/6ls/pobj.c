@@ -67,7 +67,6 @@ main(int argc, char *argv[])
 	
 
 	flagcount("1", "use alternate profiling code", &debug['1']);
-	flagcount("8", "assume 64-bit addresses", &debug['8']);
 	flagfn1("B", "info: define ELF NT_GNU_BUILD_ID note", addbuildinfo);
 	flagcount("C", "check Go calls to C code", &debug['C']);
 	flagint64("D", "addr: data address", &INITDAT);

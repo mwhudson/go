@@ -389,8 +389,6 @@ asmb(void)
 	cseek(segdata.fileoff);
 	datblk(segdata.vaddr, segdata.filelen);
 
-	debug['8'] = 1;	/* 64-bit addresses */
-
 	symsize = 0;
 	spsize = 0;
 	lcsize = 0;
