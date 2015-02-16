@@ -923,9 +923,6 @@ defgotype(LSym *gotype)
 	if (die != nil)
 		return die;
 
-	if (0 && debug['v'] > 2)
-		print("new type: %Y\n", gotype);
-
 	kind = decodetype_kind(gotype);
 	bytesize = decodetype_size(gotype);
 

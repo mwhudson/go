@@ -107,7 +107,6 @@ libinit(void)
 
 	funcalign = FuncAlign;
 	fmtinstall('i', iconv);
-	fmtinstall('Y', Yconv);
 	fmtinstall('Z', Zconv);
 	mywhatsys();	// get goroot, goarch, goos
 
@@ -1119,41 +1118,6 @@ stkprint(Chain *ch, int limit)
 	}
 	if(ch->limit != limit)
 		print("\t%d\tafter %s uses %d\n", limit, name, ch->limit - limit);
-}
-
-int
-Yconv(Fmt *fp)
-{
-	LSym *s;
-	Fmt fmt;
-	int i;
-	char *str;
-
-	s = va_arg(fp->args, LSym*);
-	if (s == S) {
-		fmtprint(fp, "<nil>");
-	} else {
-		fmtstrinit(&fmt);
-		fmtprint(&fmt, "%s @0x%08llx [%lld]", s->name, (vlong)s->value, (vlong)s->size);
-		for (i = 0; i < s->size; i++) {
-			if (!(i%8)) fmtprint(&fmt,  "\n\t0x%04x ", i);
-			fmtprint(&fmt, "%02x ", s->p[i]);
-		}
-		fmtprint(&fmt, "\n");
-		for (i = 0; i < s->nr; i++) {
-			fmtprint(&fmt, "\t0x%04x[%x] %d %s[%llx]\n",
-			      s->r[i].off,
-			      s->r[i].siz,
-			      s->r[i].type,
-			      s->r[i].sym->name,
-			      (vlong)s->r[i].add);
-		}
-		str = fmtstrflush(&fmt);
-		fmtstrcpy(fp, str);
-		free(str);
-	}
-
-	return 0;
 }
 
 vlong coutpos;
