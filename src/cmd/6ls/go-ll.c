@@ -9,8 +9,6 @@
 #include <bio.h>
 #include <link.h>
 
-Prog zprog;
-
 // replace all "". with pkg.
 char*
 expandpkg(char *t0, char *pkg)

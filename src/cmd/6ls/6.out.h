@@ -38,6 +38,11 @@
 
 enum
 {
+	A_ARCHSPECIFIC = 0,
+};
+
+enum
+{
 	AAAA = A_ARCHSPECIFIC,
 	AAAD,
 	AAAM,

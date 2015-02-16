@@ -41,15 +41,12 @@
 //
 //	%D Addr*	Addresses (instruction operands)
 //
-//	%P Prog*	Instructions
-//
 //	%R int		Registers
 //
 //	%$ char*	String constant addresses (for internal use only)
 
 static int	Aconv(Fmt *fp);
 static int	Dconv(Fmt *fp);
-static int	Pconv(Fmt *fp);
 static int	Rconv(Fmt *fp);
 static int	DSconv(Fmt *fp);
 
@@ -65,47 +62,10 @@ listinit6(void)
 {
 	fmtinstall('A', Aconv);
 	fmtinstall('D', Dconv);
-	fmtinstall('P', Pconv);
 	fmtinstall('R', Rconv);
 
 	// for internal use
 	fmtinstall('$', DSconv);
-}
-
-static	Prog*	bigP;
-
-static int
-Pconv(Fmt *fp)
-{
-	char str[STRINGSZ];
-	Prog *p;
-
-	p = va_arg(fp->args, Prog*);
-	bigP = p;
-
-	switch(p->as) {
-	case ADATA:
-		sprint(str, "%.5lld (%L)	%A	%D/%lld,%D",
-			p->pc, p->lineno, p->as, &p->from, p->from3.offset, &p->to);
-		break;
-
-	case ATEXT:
-		if(p->from3.offset) {
-			sprint(str, "%.5lld (%L)	%A	%D,%lld,%D",
-				p->pc, p->lineno, p->as, &p->from, p->from3.offset, &p->to);
-			break;
-		}
-		sprint(str, "%.5lld (%L)	%A	%D,%D",
-			p->pc, p->lineno, p->as, &p->from, &p->to);
-		break;
-
-	default:
-		sprint(str, "%.5lld (%L)	%A	%D,%D",
-			p->pc, p->lineno, p->as, &p->from, &p->to);
-		break;
-	}
-	bigP = nil;
-	return fmtstrcpy(fp, str);
 }
 
 static int
@@ -149,10 +109,6 @@ Dconv(Fmt *fp)
 	case TYPE_BRANCH:
 		if(a->sym != nil)
 			sprint(str, "%s(SB)", a->sym->name);
-		else if(bigP != nil && bigP->pcond != nil)
-			sprint(str, "%lld", bigP->pcond->pc);
-		else if(a->u.branch != nil)
-			sprint(str, "%lld", a->u.branch->pc);
 		else
 			sprint(str, "%lld(PC)", a->offset);
 		break;
