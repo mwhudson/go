@@ -572,6 +572,7 @@ hostlink(void)
 		argv[argc++] = "-Wl,--rosegment";
 
 	if(flag_shared) {
+		// TODO(mwhudson): needs to change when -dso
 		argv[argc++] = "-Wl,-Bsymbolic";
 		argv[argc++] = "-shared";
 	}
