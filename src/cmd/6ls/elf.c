@@ -24,7 +24,6 @@ static	int	elf64;
 static	ElfEhdr	hdr;
 static	ElfPhdr	*phdr[NSECT];
 static	ElfShdr	*shdr[NSECT];
-static	char	*interp;
 
 typedef struct Elfstring Elfstring;
 struct Elfstring
@@ -333,31 +332,6 @@ elfwritedynentsymsize(LSym *s, int tag, LSym *t)
 	else
 		adduint32(ctxt, s, tag);
 	addsize(ctxt, s, t);
-}
-
-int
-elfinterp(ElfShdr *sh, uint64 startva, uint64 resoff, char *p)
-{
-	int n;
-
-	interp = p;
-	n = strlen(interp)+1;
-	sh->addr = startva + resoff - n;
-	sh->off = resoff - n;
-	sh->size = n;
-
-	return n;
-}
-
-int
-elfwriteinterp(void)
-{
-	ElfShdr *sh;
-	
-	sh = elfshname(".interp");
-	cseek(sh->off);
-	cwrite(interp, sh->size);
-	return sh->size;
 }
 
 int
@@ -1133,7 +1107,7 @@ asmbelf(vlong symo)
 	a += elfwritephdrs();
 	a += elfwriteshdrs();
 	if(!debug['d'])
-		a += elfwriteinterp();
+		sysfatal("err what");
 	if(a > ELFRESERVE)	
 		diag("ELFRESERVE too small: %lld > %d", a, ELFRESERVE);
 }
