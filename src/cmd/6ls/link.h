@@ -412,6 +412,3 @@ LSym*	linknewsym(Link *ctxt, char *symb, int v);
 LSym*	linkrlookup(Link *ctxt, char *name, int v);
 int	headtype(char*);
 char*	headstr(int);
-
-extern	LinkArch	linkamd64;
-extern	LinkArch	linkamd64p32;

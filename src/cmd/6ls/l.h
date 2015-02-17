@@ -58,7 +58,6 @@ vlong	archrelocvariant(Reloc *r, LSym *s, vlong t);
 void	asmb(void);
 int	elfreloc1(Reloc *r, vlong sectoff);
 void	elfsetupplt(void);
-void	listinit(void);
 
 /* Used by ../ld/dwarf.c */
 enum

@@ -55,7 +55,6 @@ ldmain(int argc, char **argv)
 	ctxt->bso = &bso;
 
 	Binit(&bso, 1, OWRITE);
-	thearch.listinit();
 	memset(debug, 0, sizeof(debug));
 	nerrors = 0;
 	outfile = nil;
@@ -219,23 +218,3 @@ ldmain(int argc, char **argv)
 	errorexit();
 }
 
-
-LinkArch linkamd64 = {
-	.name = "amd64",
-	.thechar = '6',
-	.endian = LittleEndian,
-
-	.minlc = 1,
-	.ptrsize = 8,
-	.regsize = 8,
-};
-
-LinkArch linkamd64p32 = {
-	.name = "amd64p32",
-	.thechar = '6',
-	.endian = LittleEndian,
-
-	.minlc = 1,
-	.ptrsize = 4,
-	.regsize = 8,
-};

@@ -43,13 +43,21 @@ main(int argc, char **argv)
 	ldmain(argc, argv);
 }
 
+static LinkArch linkamd64 = {
+	.name = "amd64",
+	.thechar = '6',
+	.endian = LittleEndian,
+
+	.minlc = 1,
+	.ptrsize = 8,
+	.regsize = 8,
+};
+
 void
 linkarchinit(void)
 {
 	thestring = "amd64";
 	thelinkarch = &linkamd64;
-	if(strcmp(getgoarch(), "amd64p32") == 0)
-		thelinkarch = &linkamd64p32;
 
 	thearch.thechar = thechar;
 	thearch.ptrsize = thelinkarch->ptrsize;
@@ -70,7 +78,6 @@ linkarchinit(void)
 	thearch.elfreloc1 = elfreloc1;
 	thearch.elfsetupplt = elfsetupplt;
 	thearch.gentext = gentext;
-	thearch.listinit = listinit;
 	thearch.lput = lputl;
 	thearch.wput = wputl;
 	thearch.vput = vputl;
