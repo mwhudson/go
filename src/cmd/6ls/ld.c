@@ -80,7 +80,7 @@ addlib(Link *ctxt, char *src, char *obj, char *pathname)
 	if(ctxt->debugvlog > 1 && ctxt->bso)
 		Bprint(ctxt->bso, "%5.2f addlib: %s %s pulls in %s\n", cputime(), obj, src, pname);
 
-	addlibpath(ctxt, src, obj, pname, name);
+	addlibpath(ctxt, src, obj, pname, name, NULL);
 }
 
 /*
@@ -91,7 +91,7 @@ addlib(Link *ctxt, char *src, char *obj, char *pathname)
  *	pkg: package import path, e.g. container/vector
  */
 void
-addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg)
+addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg, char* dso)
 {
 	int i;
 	Library *l;
@@ -114,6 +114,11 @@ addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg)
 	l->srcref = estrdup(srcref);
 	l->file = estrdup(file);
 	l->pkg = estrdup(pkg);
+	if (dso != NULL) {
+		l->dso = estrdup(dso);
+	} else {
+		l->dso = NULL;
+	}
 }
 
 int

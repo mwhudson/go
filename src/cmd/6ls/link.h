@@ -225,6 +225,7 @@ struct	Library
 	char *srcref;	// src file where we found the reference
 	char *file;	// object file
 	char *pkg;	// import path
+	char *dso;	// DSO containing this library
 };
 
 struct Pcdata
@@ -284,7 +285,7 @@ struct	Link
 
 	LinkArch*	arch;
 	int32	debugvlog;	// -v flag in linker
-	int32	flag_shared;	// -shared flag in linker
+	int32	flag_dso;	// -dso flag in linker
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
 	int32	windows;
@@ -391,7 +392,7 @@ char*	expandpkg(char *t0, char *pkg);
 
 // ld.c
 void	addlib(Link *ctxt, char *src, char *obj, char *path);
-void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg);
+void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg, char* dso);
 int	find1(int32 l, int c);
 void	linkgetline(Link *ctxt, int32 line, LSym **f, int32 *l);
 void	nuxiinit(LinkArch*);

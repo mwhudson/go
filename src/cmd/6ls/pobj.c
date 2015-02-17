@@ -117,8 +117,10 @@ ldmain(int argc, char **argv)
 	flagstr("r", "dir1:dir2:...: set ELF dynamic linker search path", &rpath);
 	flagcount("race", "enable race detector", &flag_race);
 	flagcount("s", "disable symbol table", &debug['s']);
-	if(thearch.thechar == '5' || thearch.thechar == '6')
+	if(thearch.thechar == '5' || thearch.thechar == '6') {
 		flagcount("shared", "generate shared object (implies -linkmode external)", &flag_shared);
+		flagcount("dso", "shared library mode", &ctxt->flag_dso);
+	}
 	flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir);
 	flagcount("u", "reject unsafe packages", &debug['u']);
 	flagcount("v", "print link trace", &debug['v']);
@@ -128,7 +130,7 @@ ldmain(int argc, char **argv)
 	ctxt->bso = &bso;
 	ctxt->debugvlog = debug['v'];
 
-	if(argc != 1)
+	if(argc != 1 && !ctxt->flag_dso)
 		usage();
 
 	if(outfile == nil) {
@@ -155,7 +157,29 @@ ldmain(int argc, char **argv)
 	cbp = buf.cbuf;
 	cbc = sizeof(buf.cbuf);
 
-	addlibpath(ctxt, "command line", "command line", argv[0], "main");
+        if(ctxt->flag_dso) {
+                int i = 0;
+                while (i < argc) {
+                        if (strcmp(argv[i], "ar") == 0) {
+                                if (i + 2 >= argc) {
+                                        usage();
+                                }
+                                addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1], NULL);
+                                i += 3;
+                        } else if (strcmp(argv[i], "dso") == 0) {
+                                if (i + 3 >= argc) {
+                                        usage();
+                                }
+                                addlibpath(ctxt, "command line", "command line", argv[i+2], argv[i+1], argv[i+3]);
+                                i += 4;
+                        } else {
+                                usage();
+                        }
+                }
+        } else {
+                addlibpath(ctxt, "command line", "command line", argv[0], "main", NULL);
+        }
+
 	loadlib();
 	
 	if(thearch.thechar == '5') {

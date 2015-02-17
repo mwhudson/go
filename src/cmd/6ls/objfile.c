@@ -116,7 +116,7 @@ static char endmagic[] = "\xff\xffgo13ld";
 void
 ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn)
 {
-	int c;
+	int c, i;
 	uchar buf[8];
 	int64 start;
 	char *lib;
@@ -134,7 +134,16 @@ ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn)
 		lib = rdstring(f);
 		if(lib[0] == 0)
 			break;
-		addlib(ctxt, pkg, pn, lib);
+		if (!ctxt->flag_dso) {
+			addlib(ctxt, pkg, pn, lib);
+		} else {
+			for(i=0; i<ctxt->libraryp; i++)
+				if(strcmp(pkg, ctxt->library[i].pkg) == 0)
+					break;
+			if(i == ctxt->libraryp) {
+				sysfatal("package %s not passed on command line", pkg);
+			}
+		}
 	}
 	
 	for(;;) {

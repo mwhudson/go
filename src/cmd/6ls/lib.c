@@ -171,7 +171,7 @@ loadinternal(char *name)
 		if(debug['v'])
 			Bprint(&bso, "searching for %s.a in %s\n", name, pname);
 		if(access(pname, AEXIST) >= 0) {
-			addlibpath(ctxt, "internal", "internal", pname, name);
+			addlibpath(ctxt, "internal", "internal", pname, name, NULL);
 			found = 1;
 			break;
 		}
@@ -193,11 +193,13 @@ loadlib(void)
 		adduint8(ctxt, s, 1);
 	}
 
-	loadinternal("runtime");
-	if(thearch.thechar == '5')
-		loadinternal("math");
-	if(flag_race)
-		loadinternal("runtime/race");
+	if (!ctxt->flag_dso) {
+		loadinternal("runtime");
+		if(thearch.thechar == '5')
+			loadinternal("math");
+		if(flag_race)
+			loadinternal("runtime/race");
+	}
 
 	for(i=0; i<ctxt->libraryp; i++) {
 		if(debug['v'] > 1)
@@ -206,7 +208,7 @@ loadlib(void)
 		objfile(ctxt->library[i].file, ctxt->library[i].pkg);
 	}
 
-	if(!iscgo) {
+	if(!iscgo && !ctxt->flag_dso) {
 		// This indicates an implicit -linkmode=external.
 		// The startup code uses an import of runtime/cgo to decide
 		// whether to initialize the TLS.  So give it one.  This could
