@@ -33,9 +33,7 @@
 #include	"l.h"
 #include "lib.h"
 #include "elf.h"
-#include "macho.h"
 #include "dwarf.h"
-#include "pe.h"
 #include	<ar.h>
 
 void
@@ -73,7 +71,6 @@ linkarchinit(void)
 	thearch.elfsetupplt = elfsetupplt;
 	thearch.gentext = gentext;
 	thearch.listinit = listinit;
-	thearch.machoreloc1 = machoreloc1;
 	thearch.lput = lputl;
 	thearch.wput = wputl;
 	thearch.vput = vputl;
@@ -137,16 +134,6 @@ archinit(void)
 		if(INITRND == -1)
 			INITRND = 4096;
 		break;
-	case Hdarwin:		/* apple MACH */
-		machoinit();
-		HEADR = INITIAL_MACHO_HEADR;
-		if(INITRND == -1)
-			INITRND = 4096;
-		if(INITTEXT == -1)
-			INITTEXT = 4096+HEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		break;
 	case Hlinux:		/* elf64 executable */
 	case Hfreebsd:		/* freebsd */
 	case Hnetbsd:		/* netbsd */
@@ -173,16 +160,6 @@ archinit(void)
 			INITDAT = 0;
 		if(INITRND == -1)
 			INITRND = 0x10000;
-		break;
-	case Hwindows:		/* PE executable */
-		peinit();
-		HEADR = PEFILEHEADR;
-		if(INITTEXT == -1)
-			INITTEXT = PEBASE+PESECTHEADR;
-		if(INITDAT == -1)
-			INITDAT = 0;
-		if(INITRND == -1)
-			INITRND = PESECTALIGN;
 		break;
 	}
 

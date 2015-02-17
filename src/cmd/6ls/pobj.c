@@ -37,9 +37,7 @@
 #include	<link.h>
 #include	"lib.h"
 #include	"elf.h"
-#include	"macho.h"
 #include	"dwarf.h"
-#include	"pe.h"
 #include	<ar.h>
 
 char	*noname		= "<none>";
@@ -180,11 +178,7 @@ ldmain(int argc, char **argv)
 	paramspace = "SP";	/* (FP) now (SP) on output */
 
 	doelf();
-	if(HEADTYPE == Hdarwin)
-		domacho();
 	dostkcheck();
-	if(HEADTYPE == Hwindows)
-		dope();
 	addexport();
 	thearch.gentext();		// trampolines, call stubs, etc.
 	textaddress();

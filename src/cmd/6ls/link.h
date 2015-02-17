@@ -420,20 +420,6 @@ extern	uchar	inuxi2[2];
 extern	uchar	inuxi4[4];
 extern	uchar	inuxi8[8];
 
-// asm5.c
-void	span5(Link *ctxt, LSym *s);
-int	chipfloat5(Link *ctxt, float64 e);
-int	chipzero5(Link *ctxt, float64 e);
-
-// asm6.c
-void	span6(Link *ctxt, LSym *s);
-
-// asm8.c
-void	span8(Link *ctxt, LSym *s);
-
-// asm9.c
-void	span9(Link *ctxt, LSym *s);
-
 // data.c
 vlong	addaddr(Link *ctxt, LSym *s, LSym *t);
 vlong	addaddrplus(Link *ctxt, LSym *s, LSym *t, vlong add);

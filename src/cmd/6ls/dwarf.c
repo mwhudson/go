@@ -20,8 +20,6 @@
 #include	"dwarf.h"
 #include	"dwarf_defs.h"
 #include	"elf.h"
-#include	"macho.h"
-#include	"pe.h"
 #include	"../../runtime/typekind.h"
 
 /*
@@ -2005,8 +2003,7 @@ writegdbscript(void)
 static void
 align(vlong size)
 {
-	if(HEADTYPE == Hwindows) // Only Windows PE need section align.
-		strnput("", rnd(size, PEFILEALIGN) - size);
+	USED(size);
 }
 
 static vlong
@@ -2020,8 +2017,6 @@ writedwarfreloc(LSym* s)
 	for(r = s->r; r < s->r+s->nr; r++) {
 		if(iself)
 			i = thearch.elfreloc1(r, r->off);
-		else if(HEADTYPE == Hdarwin)
-			i = thearch.machoreloc1(r, r->off);
 		else
 			i = -1;
 		if(i < 0)
@@ -2356,114 +2351,4 @@ dwarfaddelfheaders(void)
 
 	if(framerelocsize)
 		dwarfaddelfrelocheader(ElfStrRelDebugFrame, shframe, framereloco, framerelocsize);
-}
-
-/*
- * Macho
- */
-void
-dwarfaddmachoheaders(void)
-{
-	MachoSect *msect;
-	MachoSeg *ms;
-	vlong fakestart;
-	int nsect;
-
-	if(debug['w'])  // disable dwarf
-		return;
-
-	// Zero vsize segments won't be loaded in memory, even so they
-	// have to be page aligned in the file.
-	fakestart = abbrevo & ~0xfff;
-
-	nsect = 4;
-	if (pubnamessize  > 0)
-		nsect++;
-	if (pubtypessize  > 0)
-		nsect++;
-	if (arangessize	  > 0)
-		nsect++;
-	if (gdbscriptsize > 0)
-		nsect++;
-
-	ms = newMachoSeg("__DWARF", nsect);
-	ms->fileoffset = fakestart;
-	ms->filesize = abbrevo-fakestart;
-	ms->vaddr = ms->fileoffset + segdata.vaddr - segdata.fileoff;
-
-	msect = newMachoSect(ms, "__debug_abbrev", "__DWARF");
-	msect->off = abbrevo;
-	msect->size = abbrevsize;
-	msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-	ms->filesize += msect->size;
-
-	msect = newMachoSect(ms, "__debug_line", "__DWARF");
-	msect->off = lineo;
-	msect->size = linesize;
-	msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-	ms->filesize += msect->size;
-
-	msect = newMachoSect(ms, "__debug_frame", "__DWARF");
-	msect->off = frameo;
-	msect->size = framesize;
-	msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-	ms->filesize += msect->size;
-
-	msect = newMachoSect(ms, "__debug_info", "__DWARF");
-	msect->off = infoo;
-	msect->size = infosize;
-	msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-	ms->filesize += msect->size;
-
-	if (pubnamessize > 0) {
-		msect = newMachoSect(ms, "__debug_pubnames", "__DWARF");
-		msect->off = pubnameso;
-		msect->size = pubnamessize;
-		msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-		ms->filesize += msect->size;
-	}
-
-	if (pubtypessize > 0) {
-		msect = newMachoSect(ms, "__debug_pubtypes", "__DWARF");
-		msect->off = pubtypeso;
-		msect->size = pubtypessize;
-		msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-		ms->filesize += msect->size;
-	}
-
-	if (arangessize > 0) {
-		msect = newMachoSect(ms, "__debug_aranges", "__DWARF");
-		msect->off = arangeso;
-		msect->size = arangessize;
-		msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-		ms->filesize += msect->size;
-	}
-
-	// TODO(lvd) fix gdb/python to load MachO (16 char section name limit)
-	if (gdbscriptsize > 0) {
-		msect = newMachoSect(ms, "__debug_gdb_scripts", "__DWARF");
-		msect->off = gdbscripto;
-		msect->size = gdbscriptsize;
-		msect->addr = msect->off + segdata.vaddr - segdata.fileoff;
-		ms->filesize += msect->size;
-	}
-}
-
-/*
- * Windows PE
- */
-void
-dwarfaddpeheaders(void)
-{
-	if(debug['w'])  // disable dwarf
-		return;
-
-	newPEDWARFSection(".debug_abbrev", abbrevsize);
-	newPEDWARFSection(".debug_line", linesize);
-	newPEDWARFSection(".debug_frame", framesize);
-	newPEDWARFSection(".debug_info", infosize);
-	newPEDWARFSection(".debug_pubnames", pubnamessize);
-	newPEDWARFSection(".debug_pubtypes", pubtypessize);
-	newPEDWARFSection(".debug_aranges", arangessize);
-	newPEDWARFSection(".debug_gdb_scripts", gdbscriptsize);
 }

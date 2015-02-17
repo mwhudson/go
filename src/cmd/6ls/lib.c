@@ -757,14 +757,6 @@ ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence)
 		ldhostobj(ldelf, f, pkg, len, pn, file);
 		return;
 	}
-	if((magic&~1) == 0xfeedface || (magic&~0x01000000) == 0xcefaedfe) {
-		ldhostobj(ldmacho, f, pkg, len, pn, file);
-		return;
-	}
-	if(c1 == 0x4c && c2 == 0x01 || c1 == 0x64 && c2 == 0x86) {
-		ldhostobj(ldpe, f, pkg, len, pn, file);
-		return;
-	}
 
 	/* check the header */
 	line = Brdline(f, '\n');
