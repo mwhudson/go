@@ -126,12 +126,6 @@ ldmain(int argc, char **argv)
 	
 	flagparse(&argc, &argv, usage);
 	ctxt->bso = &bso;
-	ctxt->debugdivmod = debug['M'];
-	ctxt->debugfloat = debug['F'];
-	ctxt->debughist = debug['O'];
-	ctxt->debugpcln = debug['O'];
-	ctxt->debugread = debug['W'];
-	ctxt->debugstack = debug['K'];
 	ctxt->debugvlog = debug['v'];
 
 	if(argc != 1)
@@ -152,7 +146,6 @@ ldmain(int argc, char **argv)
 		headstring = headstr(HEADTYPE);
 
 	thearch.archinit();
-	ctxt->debugfloat = debug['F'];
 
 	if(debug['v'])
 		Bprint(&bso, "HEADER = -H%d -T0x%llux -D0x%llux -R0x%ux\n",

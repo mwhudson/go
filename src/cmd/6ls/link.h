@@ -31,9 +31,7 @@
 typedef	struct	LSym	LSym;
 typedef	struct	Reloc	Reloc;
 typedef	struct	Auto	Auto;
-typedef	struct	Hist	Hist;
 typedef	struct	Link	Link;
-typedef	struct	Plist	Plist;
 typedef	struct	LinkArch	LinkArch;
 typedef	struct	Library	Library;
 
@@ -224,14 +222,6 @@ enum
 	LINKHASH = 100003,
 };
 
-struct	Hist
-{
-	Hist*	link;
-	char*	name;
-	int32	line;
-	int32	offset;
-};
-
 struct	Library
 {
 	char *objref;	// object where we found the reference
@@ -300,16 +290,7 @@ struct	Link
 	int	headtype;
 
 	LinkArch*	arch;
-	int32	debugasm;	// -S flag in compiler
-	int32	debugline;	// -L flag in compiler
-	int32	debughist;	// -O flag in linker
-	int32	debugread;	// -W flag in linker
 	int32	debugvlog;	// -v flag in linker
-	int32	debugstack;	// -K flag in linker
-	int32	debugzerostack;	// -Z flag in linker
-	int32	debugdivmod;	// -M flag in 5l
-	int32	debugfloat;	// -F flag in 5l
-	int32	debugpcln;	// -O flag in linker
 	int32	flag_shared;	// -shared flag in linker
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
@@ -323,14 +304,6 @@ struct	Link
 	LSym*	hash[LINKHASH];
 	LSym*	allsym;
 	int32	nsymbol;
-
-	// file-line history
-	Hist*	hist;
-	Hist*	ehist;
-	
-	// all programs
-	Plist*	plist;
-	Plist*	plast;
 	
 	// code generation
 	LSym*	sym_div;
@@ -470,7 +443,6 @@ vlong	atolwhex(char*);
 // obj.c
 int	linklinefmt(Link *ctxt, Fmt *fp);
 void	linklinehist(Link *ctxt, int lineno, char *f, int offset);
-Plist*	linknewplist(Link *ctxt);
 void	linkprfile(Link *ctxt, int32 l);
 
 // objfile.c
