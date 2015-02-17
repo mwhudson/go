@@ -64,7 +64,7 @@ ldmain(int argc, char **argv)
 	INITDAT = -1;
 	INITRND = -1;
 	INITENTRY = 0;
-	linkmode = LinkAuto;
+	linkmode = LinkExternal;
 	
 	// For testing behavior of go command when tools crash.
 	// Undocumented, not in standard flag parser to avoid

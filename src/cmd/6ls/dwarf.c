@@ -662,12 +662,8 @@ putattr(int abbrev, int form, int cls, vlong value, char *data)
 
 	switch(form) {
 	case DW_FORM_addr:	// address
-		if(linkmode == LinkExternal) {
-			value -= ((LSym*)data)->value;
-			adddwarfrel(infosec, (LSym*)data, infoo, thearch.ptrsize, value);
-			break;
-		}
-		addrput(value);
+		value -= ((LSym*)data)->value;
+		adddwarfrel(infosec, (LSym*)data, infoo, thearch.ptrsize, value);
 		break;
 
 	case DW_FORM_block1:	// block

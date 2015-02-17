@@ -206,27 +206,8 @@ loadlib(void)
 		objfile(ctxt->library[i].file, ctxt->library[i].pkg);
 	}
 
-	if(linkmode == LinkAuto) {
-		if(iscgo && externalobj)
-			linkmode = LinkExternal;
-		else
-			linkmode = LinkInternal;
-
-		// Force external linking for android.
-		if(strcmp(goos, "android") == 0)
-			linkmode = LinkExternal;
-
-		// cgo on Darwin must use external linking
-		// we can always use external linking, but then there will be circular
-		// dependency problems when compiling natively (external linking requires
-		// runtime/cgo, runtime/cgo requires cmd/cgo, but cmd/cgo needs to be
-		// compiled using external linking.)
-		if(thearch.thechar == '5' && HEADTYPE == Hdarwin && iscgo)
-			linkmode = LinkExternal;
-	}
-
-	if(linkmode == LinkExternal && !iscgo) {
-		// This indicates a user requested -linkmode=external.
+	if(!iscgo) {
+		// This indicates an implicit -linkmode=external.
 		// The startup code uses an import of runtime/cgo to decide
 		// whether to initialize the TLS.  So give it one.  This could
 		// be handled differently but it's an unusual case.
@@ -251,22 +232,6 @@ loadlib(void)
 		}
 	}
 
-	if(linkmode == LinkInternal) {
-		// Drop all the cgo_import_static declarations.
-		// Turns out we won't be needing them.
-		for(s = ctxt->allsym; s != nil; s = s->allsym)
-			if(s->type == SHOSTOBJ) {
-				// If a symbol was marked both
-				// cgo_import_static and cgo_import_dynamic,
-				// then we want to make it cgo_import_dynamic
-				// now.
-				if(s->extname != nil && s->dynimplib != nil && s->cgoexport == 0) {
-					s->type = SDYNIMPORT;
-				} else
-					s->type = 0;
-			}
-	}
-	
 	tlsg = linklookup(ctxt, "runtime.tlsg", 0);
 	// For most ports, runtime.tlsg is a placeholder symbol for TLS
 	// relocation. However, the Android and Darwin arm ports need it
@@ -283,20 +248,17 @@ loadlib(void)
 	ctxt->tlsg = tlsg;
 
 	// Now that we know the link mode, trim the dynexp list.
-	x = CgoExportDynamic;
-	if(linkmode == LinkExternal)
-		x = CgoExportStatic;
+//	x = CgoExportDynamic;
+//	if(linkmode == LinkExternal)
+	x = CgoExportStatic;
+
 	w = 0;
 	for(i=0; i<ndynexp; i++)
 		if(dynexp[i]->cgoexport & x)
 			dynexp[w++] = dynexp[i];
 	ndynexp = w;
 	
-	// In internal link mode, read the host object files.
-	if(linkmode == LinkInternal)
-		hostobjs();
-	else
-		hostlinksetup();
+	hostlinksetup();
 
 	// We've loaded all the code now.
 	// If there are no dynamic libraries needed, gcc disables dynamic linking.
@@ -560,9 +522,6 @@ hostlinksetup(void)
 {
 	char *p;
 
-	if(linkmode != LinkExternal)
-		return;
-
 	// create temporary directory and arrange cleanup
 	if(tmpdir == nil) {
 		tmpdir = mktempdir();
@@ -589,7 +548,7 @@ hostlink(void)
 	Biobuf *f;
 	static char buf[64<<10];
 
-	if(linkmode != LinkExternal || nerrors > 0)
+	if(nerrors > 0)
 		return;
 
 	c = 0;

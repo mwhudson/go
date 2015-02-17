@@ -851,14 +851,5 @@ importcycles(void)
 void
 setlinkmode(char *arg)
 {
-	if(strcmp(arg, "internal") == 0)
-		linkmode = LinkInternal;
-	else if(strcmp(arg, "external") == 0)
-		linkmode = LinkExternal;
-	else if(strcmp(arg, "auto") == 0)
-		linkmode = LinkAuto;
-	else {
-		fprint(2, "unknown link mode -linkmode %s\n", arg);
-		errorexit();
-	}
+	USED(arg);
 }

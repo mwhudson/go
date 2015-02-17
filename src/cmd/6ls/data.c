@@ -177,24 +177,13 @@ relocsym(LSym *s)
 				diag("unknown reloc %d", r->type);
 			break;
 		case R_TLS:
-			if(linkmode == LinkInternal && iself && thearch.thechar == '5') {
-				// On ELF ARM, the thread pointer is 8 bytes before
-				// the start of the thread-local data block, so add 8
-				// to the actual TLS offset (r->sym->value).
-				// This 8 seems to be a fundamental constant of
-				// ELF on ARM (or maybe Glibc on ARM); it is not
-				// related to the fact that our own TLS storage happens
-				// to take up 8 bytes.
-				o = 8 + r->sym->value;
-				break;
-			}
 			r->done = 0;
 			o = 0;
 			if(thearch.thechar != '6')
 				o = r->add;
 			break;
 		case R_TLS_LE:
-			if(linkmode == LinkExternal && iself && HEADTYPE != Hopenbsd) {
+			if(iself && HEADTYPE != Hopenbsd) {
 				r->done = 0;
 				r->sym = ctxt->tlsg;
 				r->xsym = ctxt->tlsg;
@@ -208,7 +197,7 @@ relocsym(LSym *s)
 			break;
 
 		case R_TLS_IE:
-			if(linkmode == LinkExternal && iself && HEADTYPE != Hopenbsd) {
+			if(iself && HEADTYPE != Hopenbsd) {
 				r->done = 0;
 				r->sym = ctxt->tlsg;
 				r->xsym = ctxt->tlsg;
@@ -226,7 +215,7 @@ relocsym(LSym *s)
 				sysfatal("unexpected R_TLS_IE relocation for %s", headstr(ctxt->headtype));
 			break;
 		case R_ADDR:
-			if(linkmode == LinkExternal && r->sym->type != SCONST) {
+			if(r->sym->type != SCONST) {
 				r->done = 0;
 
 				// set up addend for eventual relocation via outer symbol.
@@ -267,7 +256,7 @@ relocsym(LSym *s)
 		case R_CALL:
 		case R_PCREL:
 			// r->sym can be null when CALL $(constant) is transformed from absolute PC to relative PC call.
-			if(linkmode == LinkExternal && r->sym && r->sym->type != SCONST && r->sym->sect != ctxt->cursym->sect) {
+			if(r->sym && r->sym->type != SCONST && r->sym->sect != ctxt->cursym->sect) {
 				r->done = 0;
 
 				// set up addend for eventual relocation via outer symbol.
@@ -591,28 +580,26 @@ datblk(int64 addr, int64 size)
 			Bprint(&bso, " %.2ux", 0);
 		Bprint(&bso, "\n");
 		
-		if(linkmode == LinkExternal) {
-			for(i=0; i<sym->nr; i++) {
-				r = &sym->r[i];
-				rsname = "";
-				if(r->sym)
-					rsname = r->sym->name;
-				typ = "?";
-				switch(r->type) {
-				case R_ADDR:
-					typ = "addr";
-					break;
-				case R_PCREL:
-					typ = "pcrel";
-					break;
-				case R_CALL:
-					typ = "call";
-					break;
-				}
-				Bprint(&bso, "\treloc %.8ux/%d %s %s+%#llx [%#llx]\n",
-					(uint)(sym->value+r->off), r->siz, typ, rsname, (vlong)r->add, (vlong)(r->sym->value+r->add));
+		for(i=0; i<sym->nr; i++) {
+			r = &sym->r[i];
+			rsname = "";
+			if(r->sym)
+				rsname = r->sym->name;
+			typ = "?";
+			switch(r->type) {
+			case R_ADDR:
+				typ = "addr";
+				break;
+			case R_PCREL:
+				typ = "pcrel";
+				break;
+			case R_CALL:
+				typ = "call";
+				break;
 			}
-		}				
+			Bprint(&bso, "\treloc %.8ux/%d %s %s+%#llx [%#llx]\n",
+				(uint)(sym->value+r->off), r->siz, typ, rsname, (vlong)r->add, (vlong)(r->sym->value+r->add));
+		}
 	}
 
 	if(addr < eaddr)
@@ -1129,7 +1116,7 @@ dodata(void)
 		diag("data or bss segment too large");
 	}
 	
-	if(iself && linkmode == LinkExternal && s != nil && s->type == STLSBSS && HEADTYPE != Hopenbsd) {
+	if(iself && s != nil && s->type == STLSBSS && HEADTYPE != Hopenbsd) {
 		sect = addsection(&segdata, ".tbss", 06);
 		sect->align = thearch.ptrsize;
 		sect->vaddr = 0;
@@ -1166,10 +1153,7 @@ dodata(void)
 	 * since it's not our decision; that code expects the sections in
 	 * segtext.
 	 */
-	if(iself && linkmode == LinkInternal)
-		segro = &segrodata;
-	else
-		segro = &segtext;
+	segro = &segtext;
 
 	s = datap;
 	

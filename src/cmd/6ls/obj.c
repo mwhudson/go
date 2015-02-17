@@ -86,31 +86,7 @@ linkarchinit(void)
 void
 archinit(void)
 {
-	// getgoextlinkenabled is based on GO_EXTLINK_ENABLED when
-	// Go was built; see ../../make.bash.
-	if(linkmode == LinkAuto && strcmp(getgoextlinkenabled(), "0") == 0)
-		linkmode = LinkInternal;
-
-	if(flag_shared)
-		linkmode = LinkExternal;
-
-	switch(HEADTYPE) {
-	default:
-		if(linkmode == LinkAuto)
-			linkmode = LinkInternal;
-		if(linkmode == LinkExternal && strcmp(getgoextlinkenabled(), "1") != 0)
-			sysfatal("cannot use -linkmode=external with -H %s", headstr(HEADTYPE));
-		break;
-	case Hdarwin:
-	case Hdragonfly:
-	case Hfreebsd:
-	case Hlinux:
-	case Hnacl:
-	case Hnetbsd:
-	case Hopenbsd:
-	case Hsolaris:
-		break;
-	}
+	linkmode = LinkExternal;
 
 	switch(HEADTYPE) {
 	default:
