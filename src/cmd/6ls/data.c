@@ -66,7 +66,7 @@ LSym*
 listsort(LSym *l, int (*cmp)(LSym*, LSym*), int off)
 {
 	LSym *l1, *l2, *le;
-	#define NEXT(l) (*(LSym**)((char*)(l)+off))
+#define NEXT(l) (*(LSym**)((char*)(l)+off))
 
 	if(l == 0 || NEXT(l) == 0)
 		return l;
@@ -129,7 +129,7 @@ listsort(LSym *l, int (*cmp)(LSym*, LSym*), int off)
 	NEXT(le) = 0;
 	return l;
 	
-	#undef NEXT
+#undef NEXT
 }
 
 void
