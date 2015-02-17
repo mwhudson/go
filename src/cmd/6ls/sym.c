@@ -90,7 +90,6 @@ linknew(LinkArch *arch)
 	char *p;
 	char buf[1024];
 
-	linksetexp();
 	nuxiinit(arch);
 	
 	ctxt = emallocz(sizeof *ctxt);
@@ -208,7 +207,6 @@ linknewsym(Link *ctxt, char *symb, int v)
 	s->type = 0;
 	s->version = v;
 	s->value = 0;
-	s->sig = 0;
 	s->size = 0;
 	ctxt->nsymbol++;
 
@@ -256,16 +254,4 @@ LSym*
 linkrlookup(Link *ctxt, char *name, int v)
 {
 	return _lookup(ctxt, name, v, 0);
-}
-
-int
-linksymfmt(Fmt *f)
-{
-	LSym *s;
-	
-	s = va_arg(f->args, LSym*);
-	if(s == nil)
-		return fmtstrcpy(f, "<nil>");
-	
-	return fmtstrcpy(f, s->name);
 }

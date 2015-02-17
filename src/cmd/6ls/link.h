@@ -72,12 +72,9 @@ struct	LSym
 	uchar	hide;
 	uchar	leaf;	// arm only
 	uchar	fnptr;	// arm only
-	uchar	localentry;	// ppc64: instrs between global & local entry
 	uchar	seenglobl;
 	uchar	onlist;	// on the textp or datap lists
-	int16	symid;	// for writing .5/.6/.8 files
 	int32	dynid;
-	int32	sig;
 	int32	plt;
 	int32	got;
 	int32	align;	// if non-zero, required alignment in bytes
@@ -250,10 +247,6 @@ struct Pcln
 	
 	LSym **file;
 	int nfile;
-	int mfile;
-
-	LSym *lastfile;
-	int lastindex;
 };
 
 // Pcdata iterator.
@@ -295,10 +288,8 @@ struct	Link
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
 	int32	windows;
-	char*	trimpath;
 	char*	goroot;
 	char*	goroot_final;
-	int32	enforce_data_order;	// for use by assembler
 
 	// hash table of all symbols
 	LSym*	hash[LINKHASH];
@@ -306,26 +297,9 @@ struct	Link
 	int32	nsymbol;
 	
 	// code generation
-	LSym*	sym_div;
-	LSym*	sym_divu;
-	LSym*	sym_mod;
-	LSym*	sym_modu;
-	LSym*	symmorestack[2];
 	LSym*	tlsg;
-	LSym*	plan9privates;
-	int	rexflag;
-	int	rep; // for nacl
-	int	repn; // for nacl
-	int	lock; // for nacl
-	int	asmode;
-	uchar*	andptr;
-	uchar	and[100];
-	int64	instoffset;
-	int32	autosize;
-	int32	armsize;
 
 	// for reading input files (during linker)
-	vlong	pc;
 	char**	libdir;
 	int32	nlibdir;
 	int32	maxlibdir;
@@ -334,14 +308,10 @@ struct	Link
 	int	nlibrary;
 	int	tlsoffset;
 	void	(*diag)(char*, ...);
-	int	mode;
-	Auto*	curauto;
-	Auto*	curhist;
 	LSym*	cursym;
 	int	version;
 	LSym*	textp;
 	LSym*	etextp;
-	int32	histdepth;
 	int32	nhistfile;
 	LSym*	filesyms;
 };
@@ -381,8 +351,6 @@ enum {
 
 enum
 {
-	LinkAuto = 0,
-	LinkInternal,
 	LinkExternal,
 };
 
@@ -420,30 +388,14 @@ void*	emallocz(long n);
 void*	erealloc(void *p, long n);
 char*	estrdup(char *p);
 char*	expandpkg(char *t0, char *pkg);
-void	linksetexp(void);
-char*	expstring(void);
-
-extern	int	fieldtrack_enabled;
-extern	int	framepointer_enabled;
 
 // ld.c
-void	addhist(Link *ctxt, int32 line, int type);
 void	addlib(Link *ctxt, char *src, char *obj, char *path);
 void	addlibpath(Link *ctxt, char *srcref, char *objref, char *file, char *pkg);
-void	collapsefrog(Link *ctxt, LSym *s);
-void	copyhistfrog(Link *ctxt, char *buf, int nbuf);
 int	find1(int32 l, int c);
 void	linkgetline(Link *ctxt, int32 line, LSym **f, int32 *l);
-void	histtoauto(Link *ctxt);
-void	mkfwd(LSym*);
 void	nuxiinit(LinkArch*);
-void	savehist(Link *ctxt, int32 line, int32 off);
 vlong	atolwhex(char*);
-
-// obj.c
-int	linklinefmt(Link *ctxt, Fmt *fp);
-void	linklinehist(Link *ctxt, int lineno, char *f, int offset);
-void	linkprfile(Link *ctxt, int32 l);
 
 // objfile.c
 void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
@@ -457,23 +409,8 @@ LSym*	linklookup(Link *ctxt, char *name, int v);
 Link*	linknew(LinkArch*);
 LSym*	linknewsym(Link *ctxt, char *symb, int v);
 LSym*	linkrlookup(Link *ctxt, char *name, int v);
-int	linksymfmt(Fmt *f);
 int	headtype(char*);
 char*	headstr(int);
 
 extern	LinkArch	linkamd64;
 extern	LinkArch	linkamd64p32;
-
-extern	int	linkbasepointer;
-extern	void	linksetexp(void);
-
-#pragma	varargck	type	"A"	int
-#pragma	varargck	type	"E"	uint
-#pragma	varargck	type	"D"	Addr*
-#pragma	varargck	type	"lD"	Addr*
-#pragma	varargck	type	"R"	int
-#pragma	varargck	type	"^"	int // for 5l/9l, C_* classes (liblink internal)
-
-// TODO(ality): remove this workaround.
-//   It's here because Pconv in liblink/list?.c references %L.
-#pragma	varargck	type	"L"	int32
