@@ -275,22 +275,3 @@ linkprfile(Link *ctxt, int32 l)
 	for(i=0; i<n; i++)
 		print("%s:%ld ", a[i].name, (long)(l-a[i].line+a[i].offset+1));
 }
-
-/*
- * start a new Prog list.
- */
-Plist*
-linknewplist(Link *ctxt)
-{
-	Plist *pl;
-
-	pl = malloc(sizeof(*pl));
-	memset(pl, 0, sizeof *pl);
-	if(ctxt->plist == nil)
-		ctxt->plist = pl;
-	else
-		ctxt->plast->link = pl;
-	ctxt->plast = pl;
-
-	return pl;
-}

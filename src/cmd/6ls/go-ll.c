@@ -11,7 +11,6 @@
 
 int framepointer_enabled;
 int fieldtrack_enabled;
-Prog zprog;
 
 // Toolchain experiments.
 // These are controlled by the GOEXPERIMENT environment
@@ -132,25 +131,5 @@ void
 double2ieee(uint64 *ieee, float64 f)
 {
 	memmove(ieee, &f, 8);
-}
-
-void
-nopout(Prog *p)
-{
-	p->as = ANOP;
-	p->scond = zprog.scond;
-	p->from = zprog.from;
-	p->from3 = zprog.from3;
-	p->reg = zprog.reg;
-	p->to = zprog.to;
-}
-
-void
-nocache(Prog *p)
-{
-	p->optab = 0;
-	p->from.class = 0;
-	p->from3.class = 0;
-	p->to.class = 0;
 }
 
