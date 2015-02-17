@@ -420,7 +420,6 @@ typedef struct Hostobj Hostobj;
 
 struct Hostobj
 {
-	void (*ld)(Biobuf*, char*, int64, char*);
 	char *pkg;
 	char *pn;
 	char *file;
@@ -443,7 +442,7 @@ const char *internalpkg[] = {
 };
 
 void
-ldhostobj(void (*ld)(Biobuf*, char*, int64, char*), Biobuf *f, char *pkg, int64 len, char *pn, char *file)
+ldhostobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file)
 {
 	int i, isinternal;
 	Hostobj *h;
@@ -477,33 +476,11 @@ ldhostobj(void (*ld)(Biobuf*, char*, int64, char*), Biobuf *f, char *pkg, int64 
 		hostobj = erealloc(hostobj, mhostobj*sizeof hostobj[0]);
 	}
 	h = &hostobj[nhostobj++];
-	h->ld = ld;
 	h->pkg = estrdup(pkg);
 	h->pn = estrdup(pn);
 	h->file = estrdup(file);
 	h->off = Boffset(f);
 	h->len = len;
-}
-
-void
-hostobjs(void)
-{
-	int i;
-	Biobuf *f;
-	Hostobj *h;
-	
-	for(i=0; i<nhostobj; i++) {
-		h = &hostobj[i];
-		f = Bopen(h->file, OREAD);
-		if(f == nil) {
-			ctxt->cursym = nil;
-			diag("cannot reopen %s: %r", h->pn);
-			errorexit();
-		}
-		Bseek(f, h->off, 0);
-		h->ld(f, h->pkg, h->len, h->pn);
-		Bterm(f);
-	}
 }
 
 // provided by lib9
@@ -713,7 +690,7 @@ ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence)
 
 	magic = c1<<24 | c2<<16 | c3<<8 | c4;
 	if(magic == 0x7f454c46) {	// \x7F E L F
-		ldhostobj(ldelf, f, pkg, len, pn, file);
+		ldhostobj(f, pkg, len, pn, file);
 		return;
 	}
 

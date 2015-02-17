@@ -78,7 +78,7 @@ adddynrela(LSym *rela, LSym *s, Reloc *r)
 void
 adddynrel(LSym *s, Reloc *r)
 {
-	LSym *targ, *rela, *got;
+	LSym *targ, *rela;
 	
 	targ = r->sym;
 	ctxt->cursym = s;
@@ -91,52 +91,6 @@ adddynrel(LSym *s, Reloc *r)
 		}
 		break;
 
-	// Handle relocations found in ELF object files.
-	case 256 + R_X86_64_PC32:
-		if(targ->type == SDYNIMPORT)
-			diag("unexpected R_X86_64_PC32 relocation for dynamic symbol %s", targ->name);
-		if(targ->type == 0 || targ->type == SXREF)
-			diag("unknown symbol %s in pcrel", targ->name);
-		r->type = R_PCREL;
-		r->add += 4;
-		return;
-	
-	case 256 + R_X86_64_PLT32:
-		r->type = R_PCREL;
-		r->add += 4;
-		if(targ->type == SDYNIMPORT) {
-			addpltsym(targ);
-			r->sym = linklookup(ctxt, ".plt", 0);
-			r->add += targ->plt;
-		}
-		return;
-	
-	case 256 + R_X86_64_GOTPCREL:
-		if(targ->type != SDYNIMPORT) {
-			// have symbol
-			if(r->off >= 2 && s->p[r->off-2] == 0x8b) {
-				// turn MOVQ of GOT entry into LEAQ of symbol itself
-				s->p[r->off-2] = 0x8d;
-				r->type = R_PCREL;
-				r->add += 4;
-				return;
-			}
-			// fall back to using GOT and hope for the best (CMOV*)
-			// TODO: just needs relocation, no need to put in .dynsym
-		}
-		addgotsym(targ);
-		r->type = R_PCREL;
-		r->sym = linklookup(ctxt, ".got", 0);
-		r->add += 4;
-		r->add += targ->got;
-		return;
-	
-	case 256 + R_X86_64_64:
-		if(targ->type == SDYNIMPORT)
-			diag("unexpected R_X86_64_64 relocation for dynamic symbol %s", targ->name);
-		r->type = R_ADDR;
-		return;
-	
 	}
 	
 	// Handle references to ELF symbols from our own object files.
@@ -172,29 +126,6 @@ adddynrel(LSym *s, Reloc *r)
 			else
 				adduint64(ctxt, rela, ELF64_R_INFO(targ->dynid, R_X86_64_32));
 			adduint64(ctxt, rela, r->add);
-			r->type = 256;	// ignore during relocsym
-			return;
-		}
-		if(HEADTYPE == Hdarwin && s->size == thearch.ptrsize && r->off == 0) {
-			// Mach-O relocations are a royal pain to lay out.
-			// They use a compact stateful bytecode representation
-			// that is too much bother to deal with.
-			// Instead, interpret the C declaration
-			//	void *_Cvar_stderr = &stderr;
-			// as making _Cvar_stderr the name of a GOT entry
-			// for stderr.  This is separate from the usual GOT entry,
-			// just in case the C code assigns to the variable,
-			// and of course it only works for single pointers,
-			// but we only need to support cgo and that's all it needs.
-			adddynsym(ctxt, targ);
-			got = linklookup(ctxt, ".got", 0);
-			s->type = got->type | SSUB;
-			s->outer = got;
-			s->sub = got->sub;
-			got->sub = s;
-			s->value = got->size;
-			adduint64(ctxt, got, 0);
-			adduint32(ctxt, linklookup(ctxt, ".linkedit.got", 0), targ->dynid);
 			r->type = 256;	// ignore during relocsym
 			return;
 		}
