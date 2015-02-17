@@ -31,11 +31,11 @@
 // Writing object files.
 
 #include	"l.h"
-#include	"../ld/lib.h"
-#include	"../ld/elf.h"
-#include	"../ld/dwarf.h"
-#include	"../ld/macho.h"
-#include	"../ld/pe.h"
+#include "lib.h"
+#include "elf.h"
+#include "dwarf.h"
+#include "macho.h"
+#include "pe.h"
 
 #define PADDR(a)	((uint32)(a) & ~0x80000000)
 
