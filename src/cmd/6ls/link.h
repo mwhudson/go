@@ -536,7 +536,6 @@ struct	Link
 	int	headtype;
 
 	LinkArch*	arch;
-	int32	(*ignore)(char*);	// do not emit names satisfying this function
 	int32	debugasm;	// -S flag in compiler
 	int32	debugline;	// -L flag in compiler
 	int32	debughist;	// -O flag in linker
@@ -548,7 +547,6 @@ struct	Link
 	int32	debugfloat;	// -F flag in 5l
 	int32	debugpcln;	// -O flag in linker
 	int32	flag_shared;	// -shared flag in linker
-	int32	iself;
 	Biobuf*	bso;	// for -v flag
 	char*	pathname;
 	int32	windows;
@@ -627,11 +625,6 @@ struct LinkArch
 	int	thechar;	// '5', '6', and so on
 	int32	endian; // LittleEndian or BigEndian
 
-	void	(*preprocess)(Link*, LSym*);
-	void	(*assemble)(Link*, LSym*);
-	void	(*follow)(Link*, LSym*);
-	void	(*progedit)(Link*, Prog*);
-
 	int	minlc;
 	int	ptrsize;
 	int	regsize;
@@ -693,9 +686,6 @@ vlong	adduint32(Link *ctxt, LSym *s, uint32 v);
 vlong	adduint64(Link *ctxt, LSym *s, uint64 v);
 vlong	adduint8(Link *ctxt, LSym *s, uint8 v);
 vlong	adduintxx(Link *ctxt, LSym *s, uint64 v, int wid);
-void	mangle(char *file);
-void	savedata(Link *ctxt, LSym *s, Prog *p, char *pn);
-void	savedata1(Link *ctxt, LSym *s, Prog *p, char *pn, int enforce_order);
 vlong	setaddr(Link *ctxt, LSym *s, vlong off, LSym *t);
 vlong	setaddrplus(Link *ctxt, LSym *s, vlong off, LSym *t, vlong add);
 vlong	setuint16(Link *ctxt, LSym *s, vlong r, uint16 v);
@@ -733,12 +723,6 @@ Prog*	copyp(Link*, Prog*);
 Prog*	appendp(Link*, Prog*);
 vlong	atolwhex(char*);
 
-// list[5689].c
-void	listinit5(void);
-void	listinit6(void);
-void	listinit8(void);
-void	listinit9(void);
-
 // obj.c
 int	linklinefmt(Link *ctxt, Fmt *fp);
 void	linklinehist(Link *ctxt, int lineno, char *f, int offset);
@@ -748,11 +732,6 @@ void	linkprfile(Link *ctxt, int32 l);
 // objfile.c
 void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
 void	writeobj(Link *ctxt, Biobuf *b);
-
-// pass.c
-Prog*	brchain(Link *ctxt, Prog *p);
-Prog*	brloop(Link *ctxt, Prog *p);
-void	linkpatch(Link *ctxt, LSym *sym);
 
 // pcln.c
 void	linkpcln(Link*, LSym*);
@@ -766,25 +745,8 @@ int	linksymfmt(Fmt *f);
 int	headtype(char*);
 char*	headstr(int);
 
-extern	char*	anames5[];
-extern	char*	anames6[];
-extern	char*	anames8[];
-extern	char*	anames9[];
-
-extern	char*	cnames5[];
-extern	char*	cnames9[];
-
-extern	char*	dnames5[];
-extern	char*	dnames6[];
-extern	char*	dnames8[];
-extern	char*	dnames9[];
-
-extern	LinkArch	link386;
 extern	LinkArch	linkamd64;
 extern	LinkArch	linkamd64p32;
-extern	LinkArch	linkarm;
-extern	LinkArch	linkppc64;
-extern	LinkArch	linkppc64le;
 
 extern	int	linkbasepointer;
 extern	void	linksetexp(void);
