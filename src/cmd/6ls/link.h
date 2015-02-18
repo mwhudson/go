@@ -399,7 +399,7 @@ void	nuxiinit(LinkArch*);
 vlong	atolwhex(char*);
 
 // objfile.c
-void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path);
+void	ldobjfile(Link *ctxt, Biobuf *b, char *pkg, int64 len, char *path, char *dso);
 void	writeobj(Link *ctxt, Biobuf *b);
 
 // pcln.c

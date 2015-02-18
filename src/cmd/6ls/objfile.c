@@ -114,12 +114,14 @@ static char startmagic[] = "\x00\x00go13ld";
 static char endmagic[] = "\xff\xffgo13ld";
 
 void
-ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn)
+ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn, char* dso)
 {
 	int c, i;
 	uchar buf[8];
 	int64 start;
 	char *lib;
+
+	USED(dso);
 
 	start = Boffset(f);
 	ctxt->version++;

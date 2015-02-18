@@ -299,7 +299,7 @@ nextar(Biobuf *bp, vlong off, struct ar_hdr *a)
 }
 
 void
-objfile(char *file, char *pkg)
+objfile(char *file, char *pkg, char *dso)
 {
 	vlong off, l;
 	Biobuf *f;
@@ -322,7 +322,7 @@ objfile(char *file, char *pkg)
 		/* load it as a regular file */
 		l = Bseek(f, 0L, 2);
 		Bseek(f, 0L, 0);
-		ldobj(f, pkg, l, file, file, FileObj);
+		ldobj(f, pkg, l, file, file, FileObj, dso);
 		Bterm(f);
 		free(pkg);
 		return;
@@ -380,7 +380,7 @@ objfile(char *file, char *pkg)
 			l--;
 		snprint(pname, sizeof pname, "%s(%.*s)", file, utfnlen(arhdr.name, l), arhdr.name);
 		l = atolwhex(arhdr.size);
-		ldobj(f, pkg, l, pname, file, ArchiveObj);
+		ldobj(f, pkg, l, pname, file, ArchiveObj, dso);
 	}
 
 out:
@@ -657,7 +657,7 @@ hostlink(void)
 }
 
 void
-ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence)
+ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence, char* dso)
 {
 	char *line;
 	int n, c1, c2, c3, c4;
@@ -757,7 +757,7 @@ ldobj(Biobuf *f, char *pkg, int64 len, char *pn, char *file, int whence)
 	ldpkg(f, pkg, import1 - import0 - 2, pn, whence);	// -2 for !\n
 	Bseek(f, import1, 0);
 
-	ldobjfile(ctxt, f, pkg, eof - Boffset(f), pn);
+	ldobjfile(ctxt, f, pkg, eof - Boffset(f), pn, dso);
 	free(pn);
 	return;
 
