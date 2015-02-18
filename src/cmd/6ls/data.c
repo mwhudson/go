@@ -364,45 +364,6 @@ dynrelocsym(LSym *s)
 {
 	Reloc *r;
 
-	if(HEADTYPE == Hwindows) {
-		LSym *rel, *targ;
-
-		rel = linklookup(ctxt, ".rel", 0);
-		if(s == rel)
-			return;
-		for(r=s->r; r<s->r+s->nr; r++) {
-			targ = r->sym;
-			if(targ == nil)
-				continue;
-			if(!targ->reachable)
-				diag("internal inconsistency: dynamic symbol %s is not reachable.", targ->name);
-			if(r->sym->plt == -2 && r->sym->got != -2) { // make dynimport JMP table for PE object files.
-				targ->plt = rel->size;
-				r->sym = rel;
-				r->add = targ->plt;
-
-				// jmp *addr
-				if(thearch.thechar == '8') {
-					adduint8(ctxt, rel, 0xff);
-					adduint8(ctxt, rel, 0x25);
-					addaddr(ctxt, rel, targ);
-					adduint8(ctxt, rel, 0x90);
-					adduint8(ctxt, rel, 0x90);
-				} else {
-					adduint8(ctxt, rel, 0xff);
-					adduint8(ctxt, rel, 0x24);
-					adduint8(ctxt, rel, 0x25);
-					addaddrplus4(ctxt, rel, targ, 0);
-					adduint8(ctxt, rel, 0x90);
-				}
-			} else if(r->sym->plt >= 0) {
-				r->sym = rel;
-				r->add = targ->plt;
-			}
-		}
-		return;
-	}
-
 	for(r=s->r; r<s->r+s->nr; r++) {
 		if(r->sym != nil && r->sym->type == SDYNIMPORT || r->type >= 256) {
 			if(r->sym != nil && !r->sym->reachable)
