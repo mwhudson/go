@@ -184,8 +184,8 @@ void
 loadlib(void)
 {
 	int i, w, x;
-	LSym *s, *tlsg;
-	char* cgostrsym;
+	LSym *s, *tlsg, *tlsgoffset;
+	Reloc* r;
 
 	if(flag_shared) {
 		s = linklookup(ctxt, "runtime.islibrary", 0);
@@ -205,36 +205,16 @@ loadlib(void)
 		if(debug['v'] > 1)
 			Bprint(&bso, "%5.2f autolib: %s (from %s)\n", cputime(), ctxt->library[i].file, ctxt->library[i].objref);
 		iscgo |= strcmp(ctxt->library[i].pkg, "runtime/cgo") == 0;
-		objfile(ctxt->library[i].file, ctxt->library[i].pkg);
+		objfile(ctxt->library[i].file, ctxt->library[i].pkg, ctxt->library[i].dso);
 	}
 
-	if(!iscgo && !ctxt->flag_dso) {
-		// This indicates an implicit -linkmode=external.
-		// The startup code uses an import of runtime/cgo to decide
-		// whether to initialize the TLS.  So give it one.  This could
-		// be handled differently but it's an unusual case.
-		loadinternal("runtime/cgo");
-		if(i < ctxt->libraryp)
-			objfile(ctxt->library[i].file, ctxt->library[i].pkg);
-
-		// Pretend that we really imported the package.
-		s = linklookup(ctxt, "go.importpath.runtime/cgo.", 0);
-		s->type = SDATA;
-		s->dupok = 1;
-		s->reachable = 1;
-
-		// Provided by the code that imports the package.
-		// Since we are simulating the import, we have to provide this string.
-		cgostrsym = "go.string.\"runtime/cgo\"";
-		if(linkrlookup(ctxt, cgostrsym, 0) == nil) {
-			s = linklookup(ctxt, cgostrsym, 0);
-			s->type = SRODATA;
-			s->reachable = 1;
-			addstrdata(cgostrsym, "runtime/cgo");
-		}
-	}
 
 	tlsg = linklookup(ctxt, "runtime.tlsg", 0);
+	tlsgoffset = linkrlookup(ctxt, "runtime.tlsgoffset", 0);
+
+	if (tlsgoffset == nil) {
+		sysfatal("no tlsgoffset symbol");
+	}
 	// For most ports, runtime.tlsg is a placeholder symbol for TLS
 	// relocation. However, the Android and Darwin arm ports need it
 	// to be a real variable.
@@ -248,6 +228,13 @@ loadlib(void)
 	tlsg->hide = 1;
 	tlsg->reachable = 1;
 	ctxt->tlsg = tlsg;
+	// Get later stages in linking (whether internal or external)
+	// to overwrite the value of tlsgoffset with the offset from
+	// the tls base to g.
+	r = addrel(tlsgoffset);
+	r->sym = r->xsym = tlsg;
+	r->siz = 4;
+	r->type = R_TLS_LE;
 
 	// Now that we know the link mode, trim the dynexp list.
 //	x = CgoExportDynamic;
