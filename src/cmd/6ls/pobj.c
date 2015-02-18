@@ -206,7 +206,9 @@ ldmain(int argc, char **argv)
 	doweak();
 	reloc();
 	thearch.asmb();
-	undef();
+	if (!ctxt->flag_dso) {
+		undef();
+	}
 	hostlink();
 	if(debug['v']) {
 		Bprint(&bso, "%5.2f cpu time\n", cputime());
