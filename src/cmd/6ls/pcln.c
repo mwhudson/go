@@ -243,7 +243,9 @@ pclntab(void)
 		nfunc++;
 	}
 	// Final entry of table is just end pc.
-	setaddrplus(ctxt, ftab, 8+thearch.ptrsize+nfunc*2*thearch.ptrsize, last, last->size);
+	if (last != nil) {
+		setaddrplus(ctxt, ftab, 8+thearch.ptrsize+nfunc*2*thearch.ptrsize, last, last->size);
+	}
 	
 	// Start file table.
 	start = ftab->np;
