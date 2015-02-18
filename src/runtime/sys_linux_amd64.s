@@ -345,10 +345,14 @@ TEXT runtime·sigaltstack(SB),NOSPLIT,$-8
 	MOVL	$0xf1, 0xf1  // crash
 	RET
 
+// Magic in the linker causes this to be set to the offset from the TLS base to g.
+DATA runtime·tlsgoffset(SB)/4, $0
+GLOBL runtime·tlsgoffset(SB), NOPTR, $4
+
 // set tls base to DI
 TEXT runtime·settls(SB),NOSPLIT,$32
-	ADDQ	$16, DI	// ELF wants to use -16(FS), -8(FS)
-
+	MOVLQSX	runtime·tlsgoffset(SB), AX
+	SUBQ	AX, DI
 	MOVQ	DI, SI
 	MOVQ	$0x1002, DI	// ARCH_SET_FS
 	MOVQ	$158, AX	// arch_prctl

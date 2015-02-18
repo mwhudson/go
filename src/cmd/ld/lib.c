@@ -184,8 +184,9 @@ void
 loadlib(void)
 {
 	int i, w, x;
-	LSym *s, *tlsg;
+	LSym *s, *tlsg, *tlsgoffset;
 	char* cgostrsym;
+	Reloc* r;
 
 	if(flag_shared) {
 		s = linklookup(ctxt, "runtime.islibrary", 0);
@@ -225,7 +226,13 @@ loadlib(void)
 			linkmode = LinkExternal;
 	}
 
-	if(linkmode == LinkExternal && !iscgo) {
+	// On some platforms (e.g. linux/amd64), the runtime declares a
+	// tlsgoffset symbol to compute the offset between the TLS base and g
+	// and expects us to fill it out. In these cases, there is no need to
+	// implicitly import runtime/cgo to ensure TLS gets set up correctly.
+	tlsgoffset = linkrlookup(ctxt, "runtime.tlsgoffset", 0);
+
+	if(linkmode == LinkExternal && !iscgo && tlsgoffset == nil) {
 		// This indicates a user requested -linkmode=external.
 		// The startup code uses an import of runtime/cgo to decide
 		// whether to initialize the TLS.  So give it one.  This could
@@ -281,6 +288,17 @@ loadlib(void)
 	tlsg->hide = 1;
 	tlsg->reachable = 1;
 	ctxt->tlsg = tlsg;
+	if (tlsgoffset) {
+		// Get later stages in linking (whether internal or external)
+		// to overwrite the value of tlsgoffset with the offset from
+		// the tls base to g.
+		r = addrel(tlsgoffset);
+		r->sym = r->xsym = tlsg;
+		r->off = 0;
+		r->siz = 4;
+		r->add = 0;
+		r->type = R_TLS_LE;
+	}
 
 	// Now that we know the link mode, trim the dynexp list.
 	x = CgoExportDynamic;
