@@ -601,14 +601,23 @@ deadcode(void)
 	if(debug['v'])
 		Bprint(&bso, "%5.2f deadcode\n", cputime());
 
-	mark(linklookup(ctxt, INITENTRY, 0));
-	for(i=0; i<nelem(markextra); i++)
-		mark(linklookup(ctxt, markextra[i], 0));
+	if(ctxt->flag_dso) {
+		for(s = ctxt->allsym; s != nil; s = s->allsym) {
+			if(s->type != 0) {
+				print("marking %s\n", s->name);
+				mark(s);
+			}
+		}
+	} else {
+		mark(linklookup(ctxt, INITENTRY, 0));
+		for(i=0; i<nelem(markextra); i++)
+			mark(linklookup(ctxt, markextra[i], 0));
 
-	for(i=0; i<ndynexp; i++)
-		mark(dynexp[i]);
+		for(i=0; i<ndynexp; i++)
+			mark(dynexp[i]);
 
-	markflood();
+		markflood();
+	}
 	
 	// keep each beginning with 'typelink.' if the symbol it points at is being kept.
 	for(s = ctxt->allsym; s != nil; s = s->allsym) {
