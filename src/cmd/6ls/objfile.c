@@ -105,7 +105,7 @@
 #include "textflag.h"
 #include "../../runtime/funcdata.h"
 
-static void readsym(Link*, Biobuf*, char*, char*);
+static void readsym(Link*, Biobuf*, char*, char*, char*);
 static int64 rdint(Biobuf*);
 static char *rdstring(Biobuf*);
 static void rddata(Biobuf*, uchar**, int*);
@@ -120,8 +120,6 @@ ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn, char* dso)
 	uchar buf[8];
 	int64 start;
 	char *lib;
-
-	USED(dso);
 
 	start = Boffset(f);
 	ctxt->version++;
@@ -153,7 +151,7 @@ ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn, char* dso)
 		Bungetc(f);
 		if(c == 0xff)
 			break;
-		readsym(ctxt, f, pkg, pn);
+		readsym(ctxt, f, pkg, pn, dso);
 	}
 	
 	memset(buf, 0, sizeof buf);
@@ -166,7 +164,7 @@ ldobjfile(Link *ctxt, Biobuf *f, char *pkg, int64 len, char *pn, char* dso)
 }
 
 static void
-readsym(Link *ctxt, Biobuf *f, char *pkg, char *pn)
+readsym(Link *ctxt, Biobuf *f, char *pkg, char *pn, char *dso)
 {
 	int i, t, v, n, ndata, nreloc, size, dupok;
 	static int ndup;
@@ -296,7 +294,7 @@ overwrite:
 		for(i=0; i<n; i++)
 			pc->file[i] = rdsym(ctxt, f, pkg);
 
-		if(dup == nil) {
+		if(dup == nil && dso == nil) {
 			if(s->onlist)
 				sysfatal("symbol %s listed multiple times", s->name);
 			s->onlist = 1;
@@ -306,6 +304,10 @@ overwrite:
 				ctxt->textp = s;
 			ctxt->etextp = s;
 		}
+	}
+	if (dso != nil) {
+		s->type = SDYNIMPORT;
+		s->dynimplib = dso;
 	}
 }
 
