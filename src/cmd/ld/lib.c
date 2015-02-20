@@ -849,15 +849,6 @@ eof:
 }
 
 void
-zerosig(char *sp)
-{
-	LSym *s;
-
-	s = linklookup(ctxt, sp, 0);
-	s->sig = 0;
-}
-
-void
 mywhatsys(void)
 {
 	goroot = getgoroot();
@@ -866,12 +857,6 @@ mywhatsys(void)
 
 	if(strncmp(goarch, thestring, strlen(thestring)) != 0)
 		sysfatal("cannot use %cc with GOARCH=%s", thearch.thechar, goarch);
-}
-
-int
-pathchar(void)
-{
-	return '/';
 }
 
 static	uchar*	hunk;

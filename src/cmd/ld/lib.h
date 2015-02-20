@@ -73,11 +73,9 @@ vlong rnd(vlong, vlong);
 EXTERN	Arch	thearch;
 EXTERN	LSym*	datap;
 EXTERN	int	debug[128];
-EXTERN	char	literal[32];
 EXTERN	int32	lcsize;
 EXTERN	char*	rpath;
 EXTERN	int32	spsize;
-EXTERN	LSym*	symlist;
 EXTERN	int32	symsize;
 
 // Terrible but standard terminology.
@@ -151,8 +149,6 @@ EXTERN	int32	INITRND;
 EXTERN	int64	INITTEXT;
 EXTERN	int64	INITDAT;
 EXTERN	char*	INITENTRY;		/* entry point */
-EXTERN	char*	noname;
-EXTERN	char*	paramspace;
 EXTERN	int	nerrors;
 
 EXTERN	int	linkmode;
@@ -279,7 +275,6 @@ void	dynreloc(void);
 void	dynrelocsym(LSym *s);
 vlong	entryvalue(void);
 void	errorexit(void);
-void	follow(void);
 void	genasmsym(void (*put)(LSym*, char*, int, vlong, vlong, int, LSym*));
 void	gentext(void);
 void	growdatsize(vlong *datsizep, LSym *s);
@@ -310,9 +305,6 @@ void	mark(LSym *s);
 void	mywhatsys(void);
 struct ar_hdr;
 void	objfile(char *file, char *pkg);
-void	patch(void);
-int	pathchar(void);
-void	pcln(void);
 void	pclntab(void);
 void	findfunctab(void);
 void	putelfsectionsym(LSym* s, int shndx);
@@ -324,7 +316,6 @@ void	relocsym(LSym *s);
 void	setheadtype(char *s);
 void	setinterp(char *s);
 void	setlinkmode(char *arg);
-void	span(void);
 void	strnput(char *s, int n);
 vlong	symaddr(LSym *s);
 void	symtab(void);
@@ -338,7 +329,6 @@ void	vputl(uint64 v);
 void	wputb(ushort w);
 void	wputl(ushort w);
 void	xdefine(char *p, int t, vlong v);
-void	zerosig(char *sp);
 void	archinit(void);
 void	diag(char *fmt, ...);
 

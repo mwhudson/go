@@ -42,9 +42,6 @@
 #include	"pe.h"
 #include	<ar.h>
 
-char	*noname		= "<none>";
-char*	paramspace	= "FP";
-
 void
 ldmain(int argc, char **argv)
 {
@@ -177,7 +174,6 @@ ldmain(int argc, char **argv)
 	checkgo();
 	deadcode();
 	callgraph();
-	paramspace = "SP";	/* (FP) now (SP) on output */
 
 	doelf();
 	if(HEADTYPE == Hdarwin)
