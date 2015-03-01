@@ -7,6 +7,7 @@ package gc
 import (
 	"cmd/internal/obj"
 	"fmt"
+	"log"
 )
 
 /*
@@ -92,7 +93,15 @@ func dumpobj() {
 	ggloblsym(zero, int32(zerosize), obj.DUPOK|obj.RODATA)
 
 	dumpdata()
-	obj.Writeobjdirect(Ctxt, bout)
+	exportb, err := obj.MaybeBopena(exportfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	obj.Writeobjdirect(Ctxt, bout, exportb)
+
+	if exportb != nil {
+		obj.Bterm(exportb)
+	}
 
 	if writearchive != 0 {
 		obj.Bflush(bout)

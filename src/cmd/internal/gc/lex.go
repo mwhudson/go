@@ -225,6 +225,7 @@ func Main() {
 	if Thearch.Thechar == '6' {
 		obj.Flagcount("largemodel", "generate code that assumes a large memory model", &flag_largemodel)
 		obj.Flagcount("shared", "generate code that can be linked into a shared library", &flag_shared)
+		obj.Flagstr("exportfile", "file: write export data to named file", &exportfile)
 	}
 
 	obj.Flagstr("cpuprofile", "file: write cpu profile to file", &cpuprofile)

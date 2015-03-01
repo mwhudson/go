@@ -247,7 +247,7 @@ func assemble(file string) int {
 		}
 	}
 
-	obj.Writeobjdirect(Ctxt, &obuf)
+	obj.Writeobjdirect(Ctxt, &obuf, nil)
 	obj.Bflush(&obuf)
 	return 0
 }

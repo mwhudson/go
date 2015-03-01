@@ -807,6 +807,7 @@ var idirs *Idir
 var localimport string
 
 var asmhdr string
+var exportfile string
 
 var Types [NTYPE]*Type
 

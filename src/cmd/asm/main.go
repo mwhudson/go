@@ -44,6 +44,7 @@ func main() {
 	if *flags.Shared {
 		ctxt.Flag_shared = 1
 	}
+	exportfile := *flags.Exportfile
 	ctxt.Bso = obj.Binitw(os.Stdout)
 	defer obj.Bflush(ctxt.Bso)
 	ctxt.Diag = log.Fatalf
@@ -60,6 +61,13 @@ func main() {
 		log.Fatalf("asm: assembly of %s failed", flag.Arg(0))
 		os.Exit(1)
 	}
-	obj.Writeobjdirect(ctxt, output)
+	exportb, err := obj.MaybeBopena(exportfile)
+	if err != nil {
+		log.Fatal(err)
+	}
+	obj.Writeobjdirect(ctxt, output, exportb)
 	obj.Bflush(output)
+	if exportb != nil {
+		obj.Bflush(exportb)
+	}
 }

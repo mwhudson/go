@@ -16,7 +16,7 @@ var outfile string
 // The Go and C compilers, and the assembler, call writeobj to write
 // out a Go object file.  The linker does not call this; the linker
 // does not write out object files.
-func Writeobjdirect(ctxt *Link, b *Biobuf) {
+func Writeobjdirect(ctxt *Link, b *Biobuf, exportb *Biobuf) {
 	var flag int
 	var s *LSym
 	var p *Prog
@@ -220,9 +220,17 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	// Emit symbols.
 	for s := text; s != nil; s = s.Next {
 		writesym(ctxt, b, s)
+		if exportb != nil {
+			Bputc(exportb, 0xfe)
+			wrstring(exportb, s.Name)
+		}
 	}
 	for s := data; s != nil; s = s.Next {
 		writesym(ctxt, b, s)
+		if exportb != nil {
+			Bputc(exportb, 0xfe)
+			wrstring(exportb, s.Name)
+		}
 	}
 
 	// Emit footer.

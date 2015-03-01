@@ -35,6 +35,17 @@ type Biobuf struct {
 	linelen  int
 }
 
+func MaybeBopena(name string) (*Biobuf, error) {
+	if name == "" {
+		return nil, nil
+	}
+	f, err := os.OpenFile(name, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+	if err != nil {
+		return nil, err
+	}
+	return &Biobuf{f: f, w: bufio.NewWriter(f)}, nil
+}
+
 func Bopenw(name string) (*Biobuf, error) {
 	f, err := os.Create(name)
 	if err != nil {
