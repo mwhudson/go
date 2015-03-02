@@ -338,7 +338,9 @@ func pclntab() {
 	}
 
 	// Final entry of table is just end pc.
-	setaddrplus(Ctxt, ftab, 8+int64(Thearch.Ptrsize)+int64(nfunc)*2*int64(Thearch.Ptrsize), last, last.Size)
+	if last != nil {
+		setaddrplus(Ctxt, ftab, 8+int64(Thearch.Ptrsize)+int64(nfunc)*2*int64(Thearch.Ptrsize), last, last.Size)
+	}
 
 	// Start file table.
 	start := int32(len(ftab.P))
@@ -374,6 +376,9 @@ func findfunctab() {
 	t.Reachable = true
 
 	// find min and max address
+	if Ctxt.Textp == nil {
+		return
+	}
 	min := Ctxt.Textp.Value
 
 	max := int64(0)
