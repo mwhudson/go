@@ -126,6 +126,7 @@ func Ldmain() {
 	obj.Flagcount("s", "disable symbol table", &Debug['s'])
 	if Thearch.Thechar == '5' || Thearch.Thechar == '6' {
 		obj.Flagcount("shared", "generate shared object (implies -linkmode external)", &Flag_shared)
+		obj.Flagcount("dso", "TODO(mwhudson) write this", &Flag_dso)
 		obj.Flagstr("exportfile", "TODO write this", &exportfile)
 	}
 	obj.Flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir)
@@ -147,6 +148,11 @@ func Ldmain() {
 	obj.Flagstr("cpuprofile", "file: write cpu profile to file", &cpuprofile)
 	obj.Flagstr("memprofile", "file: write memory profile to file", &memprofile)
 	obj.Flagparse(usage)
+
+	if Flag_dso != 0 {
+		Flag_shared = 1
+	}
+
 	startProfile()
 	Ctxt.Bso = &Bso
 	Ctxt.Debugvlog = int32(Debug['v'])

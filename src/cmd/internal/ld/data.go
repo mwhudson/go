@@ -329,10 +329,14 @@ func relocsym(s *LSym) {
 		}
 
 		if r.Sym != nil && (r.Sym.Type&(SMASK|SHIDDEN) == 0 || r.Sym.Type&SMASK == SXREF) {
-			switch r.Sym.Name {
-			case "main.main", "main.init":
-				r.Sym.Type = SDYNIMPORT
-			default:
+			if Flag_dso != 0 {
+				switch r.Sym.Name {
+				case "main.main", "main.init":
+					r.Sym.Type = SDYNIMPORT
+				default:
+					Diag("%s: not defined", r.Sym.Name)
+				}
+			} else {
 				Diag("%s: not defined", r.Sym.Name)
 			}
 			continue

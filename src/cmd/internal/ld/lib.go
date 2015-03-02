@@ -181,6 +181,7 @@ var flag_installsuffix string
 
 var flag_race int
 
+var Flag_dso int
 var Flag_shared int
 
 var tracksym string
@@ -1224,7 +1225,7 @@ func stkcheck(up *Chain, depth int) int {
 		// external function.
 		// should never be called directly.
 		// only diagnose the direct caller.
-		if depth == 1 && s.Type != SXREF && Flag_shared == 0 {
+		if depth == 1 && s.Type != SXREF && Flag_dso == 0 {
 			Diag("call to external function %s", s.Name)
 		}
 		return -1
