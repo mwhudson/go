@@ -31,6 +31,7 @@
 package ld
 
 import (
+	"bufio"
 	"cmd/internal/obj"
 	"flag"
 	"fmt"
@@ -196,14 +197,41 @@ func Ldmain() {
 				addlibpath(Ctxt, "command line", "command line", flag.Arg(i+2), flag.Arg(i+1))
 				i += 3
 			case "gox":
-				// TODO(mwhudson): yea, this.
+				if i+1 >= flag.NArg() {
+					usage()
+				}
+				gox, err := os.Open(flag.Arg(i + 1))
+				if err != nil {
+					Diag("cannot open %s: %v", flag.Arg(i+1), err)
+					Errorexit()
+				}
+				scanner := bufio.NewScanner(gox)
+				scanner.Scan()
+				libname := scanner.Text()
+				scanner.Scan()
+				if scanner.Text() != "!" {
+					Diag("malformed gox")
+					Errorexit()
+				}
+				for scanner.Scan() {
+					p := scanner.Text()
+					if p == "!" {
+						break
+					}
+					addlibpath(Ctxt, libname, libname, "", p)
+				}
+				for scanner.Scan() {
+					sym := scanner.Text()
+					Linklookup(Ctxt, sym, 0).Type = SDYNIMPORT
+				}
+				gox.Close()
 				i += 2
 
 			}
 		}
 		if exportfile != "" {
 			var err error
-			exportb, err = os.OpenFile(exportfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0775)
+			exportb, err = os.OpenFile(exportfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0664)
 			if err != nil {
 				Diag("cannot create %s: %v", exportfile, err)
 				Errorexit()

@@ -393,7 +393,9 @@ func loadlib() {
 			fmt.Fprintf(&Bso, "%5.2f autolib: %s (from %s)\n", obj.Cputime(), Ctxt.Library[i].File, Ctxt.Library[i].Objref)
 		}
 		iscgo = iscgo || Ctxt.Library[i].Pkg == "runtime/cgo"
-		objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+		if Ctxt.Library[i].File != "" {
+			objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+		}
 	}
 
 	if Linkmode == LinkAuto {
