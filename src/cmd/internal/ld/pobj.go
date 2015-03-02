@@ -45,6 +45,7 @@ var noname string = "<none>"
 var paramspace string = "FP"
 
 var exportfile string
+var exportb *os.File
 
 func Ldmain() {
 	Ctxt = linknew(Thelinkarch)
@@ -170,6 +171,15 @@ func Ldmain() {
 	}
 
 	libinit() // creates outfile
+
+	if exportfile != "" {
+		var err error
+		exportb, err = os.OpenFile(exportfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0775)
+		if err != nil {
+			Diag("cannot create %s: %v", exportfile, err)
+			Errorexit()
+		}
+	}
 
 	if HEADTYPE == -1 {
 		HEADTYPE = int32(headtype(goos))

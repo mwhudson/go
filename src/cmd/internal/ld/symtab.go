@@ -138,8 +138,12 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	}
 
 	off := putelfstr(s)
-	if bind == STB_GLOBAL && exportfile != "" {
-		println("outputting", s)
+	if bind == STB_GLOBAL && exportb != nil {
+		_, err := exportb.WriteString(s + "\n")
+		if err != nil {
+			Diag("cannot create write to exportb: %v", err)
+			Errorexit()
+		}
 	}
 
 	if Linkmode == LinkExternal {
