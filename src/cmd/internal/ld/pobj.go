@@ -148,10 +148,6 @@ func Ldmain() {
 	obj.Flagstr("memprofile", "file: write memory profile to file", &memprofile)
 	obj.Flagparse(usage)
 
-	if Flag_dso != 0 {
-		Flag_shared = 1
-	}
-
 	startProfile()
 	Ctxt.Bso = &Bso
 	Ctxt.Debugvlog = int32(Debug['v'])
