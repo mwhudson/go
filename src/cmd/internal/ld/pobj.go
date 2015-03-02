@@ -112,6 +112,8 @@ func Ldmain() {
 	obj.Flagcount("d", "disable dynamic executable", &Debug['d'])
 	obj.Flagstr("extld", "ld: linker to run in external mode", &extld)
 	obj.Flagstr("extldflags", "ldflags: flags for external linker", &extldflags)
+	cmdlinepkg := "main"
+	obj.Flagstr("cmdlinepkg", "ldflags: flags for external linker", &cmdlinepkg)
 	obj.Flagcount("f", "ignore version mismatch", &Debug['f'])
 	obj.Flagcount("g", "disable go package data checks", &Debug['g'])
 	obj.Flagstr("installsuffix", "suffix: pkg directory suffix", &flag_installsuffix)
@@ -178,7 +180,7 @@ func Ldmain() {
 	}
 	Bflush(&Bso)
 
-	addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
+	addlibpath(Ctxt, "command line", "command line", flag.Arg(0), cmdlinepkg)
 	loadlib()
 
 	if Thearch.Thechar == '5' {
