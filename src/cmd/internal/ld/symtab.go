@@ -138,6 +138,10 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	}
 
 	off := putelfstr(s)
+	if bind == STB_GLOBAL && exportfile != "" {
+		println("outputting", s)
+	}
+
 	if Linkmode == LinkExternal {
 		addr -= int64((xo.Sect.(*Section)).Vaddr)
 	}

@@ -44,6 +44,8 @@ var noname string = "<none>"
 
 var paramspace string = "FP"
 
+var exportfile string
+
 func Ldmain() {
 	Ctxt = linknew(Thelinkarch)
 	Ctxt.Thechar = int32(Thearch.Thechar)
@@ -122,6 +124,7 @@ func Ldmain() {
 	obj.Flagcount("s", "disable symbol table", &Debug['s'])
 	if Thearch.Thechar == '5' || Thearch.Thechar == '6' {
 		obj.Flagcount("shared", "generate shared object (implies -linkmode external)", &Flag_shared)
+		obj.Flagstr("exportfile", "TODO write this", &exportfile)
 	}
 	obj.Flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir)
 	obj.Flagcount("u", "reject unsafe packages", &Debug['u'])
