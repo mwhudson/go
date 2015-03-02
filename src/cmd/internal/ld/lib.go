@@ -377,12 +377,14 @@ func loadlib() {
 		Adduint8(Ctxt, s, 1)
 	}
 
-	loadinternal("runtime")
-	if Thearch.Thechar == '5' {
-		loadinternal("math")
-	}
-	if flag_race != 0 {
-		loadinternal("runtime/race")
+	if Flag_dso == 0 {
+		loadinternal("runtime")
+		if Thearch.Thechar == '5' {
+			loadinternal("math")
+		}
+		if flag_race != 0 {
+			loadinternal("runtime/race")
+		}
 	}
 
 	var i int
