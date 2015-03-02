@@ -113,8 +113,6 @@ func Ldmain() {
 	obj.Flagcount("d", "disable dynamic executable", &Debug['d'])
 	obj.Flagstr("extld", "ld: linker to run in external mode", &extld)
 	obj.Flagstr("extldflags", "ldflags: flags for external linker", &extldflags)
-	cmdlinepkg := "main"
-	obj.Flagstr("cmdlinepkg", "ldflags: flags for external linker", &cmdlinepkg)
 	obj.Flagcount("f", "ignore version mismatch", &Debug['f'])
 	obj.Flagcount("g", "disable go package data checks", &Debug['g'])
 	obj.Flagstr("installsuffix", "suffix: pkg directory suffix", &flag_installsuffix)
@@ -158,7 +156,7 @@ func Ldmain() {
 	Ctxt.Bso = &Bso
 	Ctxt.Debugvlog = int32(Debug['v'])
 
-	if flag.NArg() != 1 {
+	if flag.NArg() != 1 && Flag_dso == 0 {
 		usage()
 	}
 
@@ -171,15 +169,6 @@ func Ldmain() {
 	}
 
 	libinit() // creates outfile
-
-	if exportfile != "" {
-		var err error
-		exportb, err = os.OpenFile(exportfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0775)
-		if err != nil {
-			Diag("cannot create %s: %v", exportfile, err)
-			Errorexit()
-		}
-	}
 
 	if HEADTYPE == -1 {
 		HEADTYPE = int32(headtype(goos))
@@ -196,7 +185,53 @@ func Ldmain() {
 	}
 	Bflush(&Bso)
 
-	addlibpath(Ctxt, "command line", "command line", flag.Arg(0), cmdlinepkg)
+	if Flag_dso == 0 {
+		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
+	} else {
+		i := 0
+		packages := []string{}
+		for i < flag.NArg() {
+			switch flag.Arg(i) {
+			case "ar":
+				if i+2 >= flag.NArg() {
+					usage()
+				}
+				packages = append(packages, flag.Arg(i+1))
+				addlibpath(Ctxt, "command line", "command line", flag.Arg(i+2), flag.Arg(i+1))
+				i += 3
+			case "gox":
+				// TODO(mwhudson): yea, this.
+				i += 2
+
+			}
+		}
+		if exportfile != "" {
+			var err error
+			exportb, err = os.OpenFile(exportfile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0775)
+			if err != nil {
+				Diag("cannot create %s: %v", exportfile, err)
+				Errorexit()
+			}
+			_, err = exportb.WriteString(outfile + "\n!\n")
+			if err != nil {
+				Diag("cannot write to exportfile: %v", err)
+				Errorexit()
+			}
+			for _, p := range packages {
+				_, err = exportb.WriteString(p + "\n")
+				if err != nil {
+					Diag("cannot write to exportfile: %v", err)
+					Errorexit()
+				}
+			}
+			_, err = exportb.WriteString("!\n")
+			if err != nil {
+				Diag("cannot write to exportfile: %v", err)
+				Errorexit()
+			}
+		}
+
+	}
 	loadlib()
 
 	if Thearch.Thechar == '5' {
