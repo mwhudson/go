@@ -1224,7 +1224,7 @@ func stkcheck(up *Chain, depth int) int {
 		// external function.
 		// should never be called directly.
 		// only diagnose the direct caller.
-		if depth == 1 && s.Type != SXREF {
+		if depth == 1 && s.Type != SXREF && Flag_shared == 0 {
 			Diag("call to external function %s", s.Name)
 		}
 		return -1
