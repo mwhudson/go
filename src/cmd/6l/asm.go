@@ -295,6 +295,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case ld.R_TLS_IE:
 		if r.Siz == 4 {
 			ld.Thearch.Vput(ld.R_X86_64_GOTTPOFF | uint64(elfsym)<<32)
+			r.Xadd = -4
 		} else {
 			return -1
 		}

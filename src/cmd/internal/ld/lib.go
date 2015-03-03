@@ -425,7 +425,7 @@ func loadlib() {
 		// The startup code uses an import of runtime/cgo to decide
 		// whether to initialize the TLS.  So give it one.  This could
 		// be handled differently but it's an unusual case.
-		loadinternal("runtime/cgo")
+		//		loadinternal("runtime/cgo")
 
 		if i < len(Ctxt.Library) {
 			objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)

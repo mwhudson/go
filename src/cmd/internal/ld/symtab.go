@@ -199,7 +199,11 @@ func Asmelfsym() {
 			// Android emulates runtime.tlsg as a regular variable.
 			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_LOCAL<<4|STT_OBJECT, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
 		} else {
-			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_LOCAL<<4|STT_TLS, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
+			bind := STB_LOCAL
+			if Flag_dso != 0 {
+				bind = STB_GLOBAL
+			}
+			putelfsyment(putelfstr(s.Name), 0, s.Size, bind<<4|STT_TLS, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
 		}
 
 		s.Elfsym = int32(numelfsym)
@@ -208,6 +212,9 @@ func Asmelfsym() {
 
 	elfbind = STB_GLOBAL
 	elfglobalsymndx = numelfsym
+	if Flag_dso != 0 {
+		elfglobalsymndx--
+	}
 	genasmsym(putelfsym)
 
 	var name string
