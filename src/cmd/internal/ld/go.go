@@ -637,6 +637,8 @@ var markextra = []string{
 	"_divu",
 	"_mod",
 	"_modu",
+	"main.main",
+	"main.init",
 }
 
 func deadcode() {
@@ -646,7 +648,7 @@ func deadcode() {
 
 	mark(Linklookup(Ctxt, INITENTRY, 0))
 	for i := 0; i < len(markextra); i++ {
-		mark(Linklookup(Ctxt, markextra[i], 0))
+		mark(Linkrlookup(Ctxt, markextra[i], 0))
 	}
 
 	for i := 0; i < len(dynexp); i++ {
