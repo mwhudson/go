@@ -303,7 +303,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case ld.R_CALL:
 		if r.Siz == 4 {
 			if r.Xsym.Type == ld.SDYNIMPORT {
-				ld.Thearch.Vput(ld.R_X86_64_GOTPCREL | uint64(elfsym)<<32)
+				ld.Thearch.Vput(ld.R_X86_64_PLT32 | uint64(elfsym)<<32)
 			} else {
 				ld.Thearch.Vput(ld.R_X86_64_PC32 | uint64(elfsym)<<32)
 			}
