@@ -335,11 +335,12 @@ func relocsym(s *LSym) {
 					r.Sym.Type = SDYNIMPORT
 				default:
 					Diag("%s: not defined", r.Sym.Name)
+					continue
 				}
 			} else {
 				Diag("%s: not defined", r.Sym.Name)
+				continue
 			}
-			continue
 		}
 
 		if r.Type >= 256 {
@@ -472,8 +473,7 @@ func relocsym(s *LSym) {
 			}
 
 			// r->sym can be null when CALL $(constant) is transformed from absolute PC to relative PC call.
-		case R_CALL,
-			R_PCREL:
+		case R_CALL, R_PCREL:
 			if Linkmode == LinkExternal && r.Sym != nil && r.Sym.Type != SCONST && r.Sym.Sect != Ctxt.Cursym.Sect {
 				r.Done = 0
 
