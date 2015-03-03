@@ -350,7 +350,7 @@ func relocsym(s *LSym) {
 		}
 
 		// Solaris needs the ability to reference dynimport symbols.
-		if HEADTYPE != Hsolaris && r.Sym != nil && r.Sym.Type == SDYNIMPORT {
+		if HEADTYPE != Hsolaris && r.Sym != nil && r.Sym.Type == SDYNIMPORT && Flag_dso == 0 {
 			Diag("unhandled relocation for %s (type %d rtype %d)", r.Sym.Name, r.Sym.Type, r.Type)
 		}
 		if r.Sym != nil && r.Sym.Type != STLSBSS && !r.Sym.Reachable {
