@@ -647,7 +647,7 @@ func deadcode() {
 	}
 
 	if Flag_dso != 0 && Flag_shared != 0 {
-		for s = Ctxt.Textp; s != nil; s = s.Next {
+		for s := Ctxt.Textp; s != nil; s = s.Next {
 			if strings.Contains(s.Name, "sync/atomic") {
 				continue
 			}
