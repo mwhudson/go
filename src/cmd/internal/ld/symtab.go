@@ -189,7 +189,12 @@ func Asmelfsym() {
 
 	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd {
 		s := Linklookup(Ctxt, "runtime.tlsg", 0)
-		if s.Sect == nil {
+		var shndx int
+		if s.Sect != nil {
+			shndx = ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum
+		} else if s.Type == SDYNIMPORT {
+			shndx = SHN_UNDEF
+		} else {
 			Ctxt.Cursym = nil
 			Diag("missing section for %s", s.Name)
 			Errorexit()
@@ -197,13 +202,21 @@ func Asmelfsym() {
 
 		if goos == "android" {
 			// Android emulates runtime.tlsg as a regular variable.
-			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_LOCAL<<4|STT_OBJECT, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
+			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_LOCAL<<4|STT_OBJECT, shndx, 0)
 		} else {
 			bind := STB_LOCAL
 			if Flag_dso != 0 {
 				bind = STB_GLOBAL
 			}
-			putelfsyment(putelfstr(s.Name), 0, s.Size, bind<<4|STT_TLS, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
+			putelfsyment(putelfstr(s.Name), 0, s.Size, bind<<4|STT_TLS, shndx, 0)
+			if bind == STB_GLOBAL && exportb != nil {
+				_, err := exportb.WriteString(s.Name + "\n")
+				if err != nil {
+					Diag("cannot create write to exportb: %v", err)
+					Errorexit()
+				}
+			}
+
 		}
 
 		s.Elfsym = int32(numelfsym)
@@ -220,6 +233,9 @@ func Asmelfsym() {
 	var name string
 	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 		if s.Type != SHOSTOBJ && (s.Type != SDYNIMPORT || !s.Reachable) {
+			continue
+		}
+		if s == Ctxt.Tlsg {
 			continue
 		}
 		if s.Type == SDYNIMPORT {
