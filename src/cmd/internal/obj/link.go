@@ -398,6 +398,7 @@ const (
 	NAME_STATIC
 	NAME_AUTO
 	NAME_PARAM
+	NAME_GOTREF
 )
 
 const (

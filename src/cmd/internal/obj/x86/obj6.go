@@ -273,6 +273,15 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			p.From.Offset = 0
 		}
 	}
+
+	if ctxt.Flag_shared != 0 {
+		if p.From.Name == obj.NAME_EXTERN {
+			if p.From.Type == obj.TYPE_ADDR {
+				p.From.Type = obj.TYPE_MEM
+				p.From.Name = obj.NAME_GOTREF
+			}
+		}
+	}
 }
 
 func nacladdr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) {
