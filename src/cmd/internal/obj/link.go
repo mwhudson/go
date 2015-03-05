@@ -516,6 +516,7 @@ const (
 	R_PLT2
 	R_USEFIELD
 	R_POWER_TOC
+	R_GOTPCREL
 )
 
 // Reloc.variant

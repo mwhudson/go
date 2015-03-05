@@ -1950,7 +1950,8 @@ func oclass(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 	case obj.TYPE_ADDR:
 		switch a.Name {
 		case obj.NAME_EXTERN,
-			obj.NAME_STATIC:
+			obj.NAME_STATIC,
+			obj.NAME_GOTREF:
 			if a.Sym != nil && isextern(a.Sym) {
 				return Yi32
 			}
@@ -2348,14 +2349,18 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 
 	switch a.Name {
 	case obj.NAME_STATIC,
-		obj.NAME_EXTERN:
+		obj.NAME_EXTERN,
+		obj.NAME_GOTREF:
 		s := a.Sym
 		if r == nil {
 			ctxt.Diag("need reloc for %v", obj.Dconv(p, a))
 			log.Fatalf("reloc")
 		}
 
-		if isextern(s) {
+		if a.Name == obj.NAME_GOTREF {
+			r.Siz = 4
+			r.Type = obj.R_GOTPCREL
+		} else if isextern(s) {
 			r.Siz = 4
 			r.Type = obj.R_ADDR
 		} else {
@@ -2430,7 +2435,8 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		base := int(a.Reg)
 		switch a.Name {
 		case obj.NAME_EXTERN,
-			obj.NAME_STATIC:
+			obj.NAME_STATIC,
+			obj.NAME_GOTREF:
 			if !isextern(a.Sym) {
 				goto bad
 			}
@@ -2475,6 +2481,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 	base = int(a.Reg)
 	switch a.Name {
 	case obj.NAME_STATIC,
+		obj.NAME_GOTREF,
 		obj.NAME_EXTERN:
 		if a.Sym == nil {
 			ctxt.Diag("bad addr: %v", p)
@@ -2494,6 +2501,9 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 	ctxt.Rexflag |= regrex[base]&Rxb | rex
 	if base == REG_NONE || (REG_CS <= base && base <= REG_GS) || base == REG_TLS {
 		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN) || ctxt.Asmode != 64 {
+			if a.Name == obj.NAME_GOTREF {
+				ctxt.Diag("XXX")
+			}
 			ctxt.Andptr[0] = byte(0<<6 | 5<<0 | r<<3)
 			ctxt.Andptr = ctxt.Andptr[1:]
 			goto putrelv

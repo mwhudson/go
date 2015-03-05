@@ -809,8 +809,9 @@ func hostlink() {
 		if Flag_dso != 0 {
 			argv = append(argv, "-Wl,-Bsymbolic-functions")
 		} else {
-			argv = append(argv, "-shared")
+			argv = append(argv, "-Wl,-Bsymbolic")
 		}
+		argv = append(argv, "-shared")
 	}
 
 	argv = append(argv, "-o")

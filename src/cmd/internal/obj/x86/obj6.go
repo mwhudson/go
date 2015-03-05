@@ -275,10 +275,26 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 	}
 
 	if ctxt.Flag_shared != 0 {
-		if p.From.Name == obj.NAME_EXTERN {
+		if p.From.Name == obj.NAME_EXTERN && p.From.Sym.Type != obj.STEXT {
 			if p.From.Type == obj.TYPE_ADDR {
 				p.From.Type = obj.TYPE_MEM
 				p.From.Name = obj.NAME_GOTREF
+			}
+			if p.From.Type != obj.TYPE_MEM {
+				ctxt.Diag("Do not know how to handle type %d here", p.From.Type)
+				return
+			}
+			if p.To.Type != obj.TYPE_REG {
+				fmt.Printf("%v\n", p)
+				ctxt.Diag("Do not know how to handle type %d here", p.From.Type)
+				return
+			}
+			if p.As == ALEAQ {
+				p.As = AMOVQ
+				p.From.Type = obj.TYPE_MEM
+				p.From.Name = obj.NAME_GOTREF
+			} else if p.As == AMOVL {
+
 			}
 		}
 	}
