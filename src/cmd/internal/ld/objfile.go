@@ -38,16 +38,16 @@ func ldobjfile(ctxt *Link, f *Biobuf, pkg string, length int64, pn string) {
 		if Flag_dso == 0 {
 			addlib(ctxt, pkg, pn, lib)
 		} else {
-			found := false
-			for _, l := range ctxt.Library {
-				if lib == l.Pkg {
-					found = true
-					break
-				}
-			}
-			if !found {
-				log.Fatalf("package %s not found", lib)
-			}
+			//found := false
+			//for _, l := range ctxt.Library {
+			//	if pkg == l.Pkg {
+			//		found = true
+			//		break
+			//	}
+			//}
+			//if !found {
+			//	log.Fatalf("package %s not found", lib)
+			//}
 		}
 	}
 
