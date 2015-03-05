@@ -345,6 +345,10 @@ func (r *StackRecord) Stack() []uintptr {
 // at the beginning of main).
 var MemProfileRate int = 512 * 1024
 
+func PrintMemProfileRate() {
+	println("runtime sees MemProfileRate as", MemProfileRate)
+}
+
 // A MemProfileRecord describes the live objects allocated
 // by a particular call sequence (stack trace).
 type MemProfileRecord struct {
