@@ -276,7 +276,7 @@ func markautoused(p *obj.Prog) {
 	}
 }
 
-func Naddr(n *Node, canemitcode int) (a obj.Addr) {
+func Naddr(n *Node) (a obj.Addr) {
 	if n == nil {
 		return
 	}
@@ -340,7 +340,7 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 		a.Offset = n.Xoffset
 
 	case OCFUNC:
-		a = Naddr(n.Left, canemitcode)
+		a = Naddr(n.Left)
 		a.Sym = Linksym(n.Left.Sym)
 
 	case ONAME:
@@ -424,7 +424,7 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 		}
 
 	case OADDR:
-		a = Naddr(n.Left, canemitcode)
+		a = Naddr(n.Left)
 		a.Etype = uint8(Tptr)
 		if Thearch.Thechar != '5' && Thearch.Thechar != '9' { // TODO(rsc): Do this even for arm, ppc64.
 			a.Width = int64(Widthptr)
@@ -437,7 +437,7 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 
 		// itable of interface value
 	case OITAB:
-		a = Naddr(n.Left, canemitcode)
+		a = Naddr(n.Left)
 
 		if a.Type == obj.TYPE_CONST && a.Offset == 0 {
 			break // itab(nil)
@@ -447,7 +447,7 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 
 		// pointer in a string or slice
 	case OSPTR:
-		a = Naddr(n.Left, canemitcode)
+		a = Naddr(n.Left)
 
 		if a.Type == obj.TYPE_CONST && a.Offset == 0 {
 			break // ptr(nil)
@@ -458,7 +458,7 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 
 		// len of string or slice
 	case OLEN:
-		a = Naddr(n.Left, canemitcode)
+		a = Naddr(n.Left)
 
 		if a.Type == obj.TYPE_CONST && a.Offset == 0 {
 			break // len(nil)
@@ -474,7 +474,7 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 
 		// cap of string or slice
 	case OCAP:
-		a = Naddr(n.Left, canemitcode)
+		a = Naddr(n.Left)
 
 		if a.Type == obj.TYPE_CONST && a.Offset == 0 {
 			break // cap(nil)
