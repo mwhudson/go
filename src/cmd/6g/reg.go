@@ -81,7 +81,11 @@ func regnames(n *int) []string {
 }
 
 func excludedregs() uint64 {
-	return RtoB(x86.REG_SP)
+	exclude := RtoB(x86.REG_SP)
+	if gc.Ctxt.Flag_shared != 0 {
+		exclude |= RtoB(x86.REG_R13)
+	}
+	return exclude
 }
 
 func doregbits(r int) uint64 {

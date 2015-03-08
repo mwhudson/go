@@ -146,13 +146,13 @@ func regalloc(n *gc.Node, t *gc.Type, o *gc.Node) {
 		gc.TBOOL:
 		if o != nil && o.Op == gc.OREGISTER {
 			i = int(o.Val.U.Reg)
-			if i >= x86.REG_AX && i <= x86.REG_R15 {
+			if i >= x86.REG_AX && i <= x86.REG_R15 && (gc.Ctxt.Flag_shared == 0 || i != x86.REG_R13) {
 				goto out
 			}
 		}
 
 		for i = x86.REG_AX; i <= x86.REG_R15; i++ {
-			if reg[i] == 0 {
+			if reg[i] == 0 && (gc.Ctxt.Flag_shared == 0 || i != x86.REG_R13) {
 				regpc[i-x86.REG_AX] = uint32(obj.Getcallerpc(&n))
 				goto out
 			}
