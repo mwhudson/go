@@ -22,8 +22,6 @@ import (
 	"unicode/utf8"
 )
 
-var yychar_lex int
-
 var yyprev int
 
 var yylast int
@@ -2894,6 +2892,8 @@ func lexname(lex int) string {
 	return lexname_buf
 }
 
+// TODO: This table is currently unused but when https://golang.org/issue/9968
+// is fixed it will probably become useful again.
 var yytfix = []struct {
 	have string
 	want string

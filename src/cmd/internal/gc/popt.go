@@ -129,11 +129,7 @@ const (
 // Registers are allocated to regions greedily in order of descending
 // cost.
 
-var zreg Reg
-
 var region [NRGN]Rgn
-
-var rgp *Rgn
 
 var nregion int
 
@@ -154,8 +150,6 @@ var ivar Bits
 var ovar Bits
 
 var change int
-
-var maxnr int32
 
 type OptStats struct {
 	Ncvtreg int32
