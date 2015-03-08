@@ -1466,13 +1466,3 @@ func sudoaddable(as int, n *gc.Node, a *obj.Addr) bool {
 
 	return false
 }
-
-func insgotref(n *gc.Node) obj.Addr {
-	var n1 gc.Node
-	println(n.Sym.Pkg.Prefix, n.Sym.Name)
-	n.Class = gc.PGOTREF
-	regalloc(&n1, gc.Types[gc.Tptr], nil)
-	p := gins(x86.AMOVQ, n, &n1)
-	regfree(&n1)
-	return p.To
-}
