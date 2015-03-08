@@ -576,6 +576,7 @@ const (
 	PPARAMREF
 	PFUNC
 	PDISCARD
+	PGOTREF
 	PHEAP = 1 << 7
 )
 
@@ -1134,6 +1135,7 @@ type Arch struct {
 	Optoas         func(int, *Type) int
 	Doregbits      func(int) uint64
 	Regnames       func(*int) []string
+	Insgotref      func(*Node) obj.Addr
 }
 
 var pcloc int32

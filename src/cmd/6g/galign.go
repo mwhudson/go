@@ -104,6 +104,7 @@ func main() {
 	gc.Thearch.Optoas = optoas
 	gc.Thearch.Doregbits = doregbits
 	gc.Thearch.Regnames = regnames
+	gc.Thearch.Insgotref = insgotref
 
 	gc.Main()
 	gc.Exit(0)

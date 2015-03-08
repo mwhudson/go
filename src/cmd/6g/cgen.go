@@ -894,13 +894,19 @@ func agen(n *gc.Node, res *gc.Node) {
 
 	if n.Addable != 0 {
 		var n1 gc.Node
+		var as int
+		if gc.Ctxt.Flag_shared != 0 && n.Op == gc.ONAME && n.Class == gc.PEXTERN {
+			n.Class = gc.PGOTREF
+			as = x86.AMOVQ
+		} else {
+			as = x86.ALEAQ
+		}
 		regalloc(&n1, gc.Types[gc.Tptr], res)
-		p := gins(x86.ALEAQ, n, &n1)
+		gins(as, n, &n1)
 		gmove(&n1, res)
 		regfree(&n1)
-		if gc.Ctxt.Flag_shared != 0 && n.Op == gc.ONAME && n.Class == gc.PEXTERN {
-			p.As = x86.AMOVQ
-			p.From.Name = obj.NAME_GOTREF
+		if n.Class == gc.PGOTREF {
+			n.Class = gc.PEXTERN
 		}
 		return
 	}

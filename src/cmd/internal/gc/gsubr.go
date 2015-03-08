@@ -342,6 +342,10 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 		a.Sym = Linksym(n.Left.Sym)
 
 	case ONAME:
+		if Ctxt.Flag_shared != 0 && n.Class == PEXTERN && n.Sym.Pkg.Prefix != "\"\"" {
+			a = Thearch.Insgotref(n)
+			break
+		}
 		a.Etype = 0
 		if n.Type != nil {
 			a.Etype = Simtype[n.Type.Etype]
@@ -372,6 +376,9 @@ func Naddr(n *Node, canemitcode int) (a obj.Addr) {
 
 		case PEXTERN:
 			a.Name = obj.NAME_EXTERN
+
+		case PGOTREF:
+			a.Name = obj.NAME_GOTREF
 
 		case PAUTO:
 			a.Name = obj.NAME_AUTO
