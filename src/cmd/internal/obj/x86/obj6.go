@@ -274,30 +274,78 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		}
 	}
 
-	// if ctxt.Flag_shared != 0 {
-	// 	if p.From.Name == obj.NAME_EXTERN && p.From.Sym.Type != obj.STEXT {
-	// 		if p.From.Type == obj.TYPE_ADDR {
-	// 			p.From.Type = obj.TYPE_MEM
-	// 			p.From.Name = obj.NAME_GOTREF
-	// 		}
-	// 		if p.From.Type != obj.TYPE_MEM {
-	// 			ctxt.Diag("Do not know how to handle type %d here", p.From.Type)
-	// 			return
-	// 		}
-	// 		if p.To.Type != obj.TYPE_REG {
-	// 			fmt.Printf("%v\n", p)
-	// 			ctxt.Diag("Do not know how to handle type %d here", p.From.Type)
-	// 			return
-	// 		}
-	// 		if p.As == ALEAQ {
-	// 			p.As = AMOVQ
-	// 			p.From.Type = obj.TYPE_MEM
-	// 			p.From.Name = obj.NAME_GOTREF
-	// 		} else if p.As == AMOVL {
+	if ctxt.Flag_shared != 0 {
+		mayberewriteglobalreftousegot(ctxt, p, false)
+		mayberewriteglobalreftousegot(ctxt, p, true)
+	}
+}
 
-	// 		}
-	// 	}
-	// }
+func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
+	var a *obj.Addr
+	if from {
+		a = &p.From
+	} else {
+		a = &p.To
+	}
+	if a.Name != obj.NAME_EXTERN {
+		return
+	}
+	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL {
+		return
+	}
+	if p.As == ALEAQ {
+		p.As = AMOVQ
+		p.From.Type = obj.TYPE_MEM
+		p.From.Name = obj.NAME_GOTREF
+		return
+	}
+	//	if strings.HasPrefix(a.Sym.Name, "\"\"") {
+	//		return
+	//	}
+	if a.Type == obj.TYPE_ADDR {
+		a.Type = obj.TYPE_MEM
+		a.Name = obj.NAME_GOTREF
+		if p.From.Type == obj.TYPE_MEM && p.To.Type == obj.TYPE_MEM {
+			ctxt.Diag("Cannot handle memory-to-memory", p.From.Type)
+			return
+		}
+		return
+	}
+	// TODO(mwhudson): need to handle TYPE_BRANCH somehow, because
+	// of wrapper methods.
+	if a.Type != obj.TYPE_MEM {
+		ctxt.Diag("Do not know how to handle type %d here:\n%v", a.Type, p)
+		return
+	}
+	if p.From.Type == obj.TYPE_MEM && p.To.Type == obj.TYPE_MEM {
+		ctxt.Diag("Cannot handle memory-to-memory")
+		return
+	}
+	fmt.Printf("------- %v\n", p)
+	oldp := *p
+
+	q := obj.Appendp(ctxt, p)
+
+	p.As = AMOVQ
+	p.From = *a
+	p.From.Name = obj.NAME_GOTREF
+	p.To = obj.Addr{}
+	p.To.Type = obj.TYPE_REG
+	p.To.Reg = REG_R13
+
+	q.As = oldp.As
+	if from {
+		q.From.Type = obj.TYPE_MEM
+		q.From.Reg = REG_R13
+		q.To = oldp.To
+	} else {
+		q.From = oldp.From
+		q.To.Type = obj.TYPE_MEM
+		q.To.Reg = REG_R13
+	}
+
+	fmt.Printf("     >> %v\n", p)
+	fmt.Printf("     >> %v\n", q)
 }
 
 func nacladdr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) {
