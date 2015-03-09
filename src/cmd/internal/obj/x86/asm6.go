@@ -2500,10 +2500,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 
 	ctxt.Rexflag |= regrex[base]&Rxb | rex
 	if base == REG_NONE || (REG_CS <= base && base <= REG_GS) || base == REG_TLS {
-		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN) || ctxt.Asmode != 64 {
-			if a.Name == obj.NAME_GOTREF {
-				ctxt.Diag("XXX")
-			}
+		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_GOTREF) || ctxt.Asmode != 64 {
 			ctxt.Andptr[0] = byte(0<<6 | 5<<0 | r<<3)
 			ctxt.Andptr = ctxt.Andptr[1:]
 			goto putrelv
