@@ -281,6 +281,9 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 }
 
 func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
+	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
+		return
+	}
 	var a *obj.Addr
 	if from {
 		a = &p.From
@@ -288,9 +291,6 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 		a = &p.To
 	}
 	if a.Name != obj.NAME_EXTERN {
-		return
-	}
-	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL {
 		return
 	}
 	if p.As == ALEAQ {
@@ -311,8 +311,6 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 		}
 		return
 	}
-	// TODO(mwhudson): need to handle TYPE_BRANCH somehow, because
-	// of wrapper methods.
 	if a.Type != obj.TYPE_MEM {
 		ctxt.Diag("Do not know how to handle type %d here:\n%v", a.Type, p)
 		return
