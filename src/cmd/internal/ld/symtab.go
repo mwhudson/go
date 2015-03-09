@@ -421,6 +421,10 @@ func symtab() {
 		if !s.Reachable || s.Special != 0 || s.Type != SRODATA {
 			continue
 		}
+		if Flag_dso != 0 {
+			s.Name = strings.Replace(s.Name, "@", "AT-SIGN", -1)
+			continue
+		}
 		if strings.HasPrefix(s.Name, "type.") {
 			s.Type = STYPE
 			s.Hide = 1
