@@ -321,11 +321,13 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 	}
 	fmt.Printf("------- %v\n", p)
 	oldp := *p
+	off := a.Offset
 
 	q := obj.Appendp(ctxt, p)
 
 	p.As = AMOVQ
 	p.From = *a
+	p.From.Offset = 0
 	p.From.Name = obj.NAME_GOTREF
 	p.To = obj.Addr{}
 	p.To.Type = obj.TYPE_REG
@@ -335,11 +337,13 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 	if from {
 		q.From.Type = obj.TYPE_MEM
 		q.From.Reg = REG_R13
+		q.From.Offset = off
 		q.To = oldp.To
 	} else {
 		q.From = oldp.From
 		q.To.Type = obj.TYPE_MEM
 		q.To.Reg = REG_R13
+		q.To.Offset = off
 	}
 
 	fmt.Printf("     >> %v\n", p)
