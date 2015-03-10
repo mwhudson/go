@@ -137,7 +137,29 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 		case "go.string.*",
 			"runtime.findfunctab",
 			"runtime.pclntab",
-			"runtime.epclntab":
+			"runtime.epclntab",
+			"runtime.noptrbss",
+			"runtime.enoptrbss",
+			"runtime.data",
+			"runtime.edata",
+			"runtime.noptrdata",
+			"runtime.enoptrdata",
+			"runtime.gcdata",
+			"runtime.egcdata",
+			"runtime.gcbss",
+			"runtime.egcbss",
+			"runtime.text",
+			"runtime.etext",
+			"runtime.rodata",
+			"runtime.erodata",
+			"runtime.bss",
+			"runtime.symtab",
+			"runtime.esymtab",
+			"runtime.ebss",
+			"runtime.end",
+			"runtime.typelink",
+			"runtime.etypelink":
+
 			bind = STB_LOCAL
 		}
 	}
