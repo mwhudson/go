@@ -80,6 +80,8 @@ func main() {
 		}
 	}
 
+	println("nheapsegments", nheapsegments)
+
 	main_init()
 
 	needUnlock = false
