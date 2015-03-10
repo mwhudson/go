@@ -293,22 +293,46 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 	if a.Name != obj.NAME_EXTERN {
 		return
 	}
+	if a.Index != 0 {
+		ctxt.Diag("index == %d!", a.Index)
+	}
 	if p.As == ALEAQ {
+		fmt.Printf("------- %v\n", p)
 		p.As = AMOVQ
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_GOTREF
+		var q *obj.Prog
+		if p.From.Offset != 0 {
+			off := p.From.Offset
+			p.From.Offset = 0
+			q = obj.Appendp(ctxt, p)
+			q.As = AADDQ
+			q.To = p.To
+			q.From.Type = obj.TYPE_CONST
+			q.From.Offset = off
+		}
+		fmt.Printf("     >> %v\n", p)
+		if q != nil {
+			fmt.Printf("     >> %v\n", q)
+		}
 		return
 	}
 	//	if strings.HasPrefix(a.Sym.Name, "\"\"") {
 	//		return
 	//	}
 	if a.Type == obj.TYPE_ADDR {
+		fmt.Printf("------- %v\n", p)
 		a.Type = obj.TYPE_MEM
 		a.Name = obj.NAME_GOTREF
+		if a.Offset != 0 {
+			ctxt.Diag("non-zero off %v", p)
+			return
+		}
 		if p.From.Type == obj.TYPE_MEM && p.To.Type == obj.TYPE_MEM {
 			ctxt.Diag("Cannot handle memory-to-memory", p.From.Type)
 			return
 		}
+		fmt.Printf("     >> %v\n", p)
 		return
 	}
 	if a.Type != obj.TYPE_MEM {
