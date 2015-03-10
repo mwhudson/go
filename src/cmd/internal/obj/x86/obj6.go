@@ -302,6 +302,9 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_GOTREF
 		var q *obj.Prog
+		if p.From.Scale != 0 {
+			ctxt.Diag("%v has scale!", p)
+		}
 		if p.From.Offset != 0 {
 			off := p.From.Offset
 			p.From.Offset = 0
@@ -324,6 +327,9 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 		fmt.Printf("------- %v\n", p)
 		a.Type = obj.TYPE_MEM
 		a.Name = obj.NAME_GOTREF
+		if a.Scale != 0 {
+			ctxt.Diag("%v has scale!", p)
+		}
 		if a.Offset != 0 {
 			ctxt.Diag("non-zero off %v", p)
 			return
@@ -346,6 +352,9 @@ func mayberewriteglobalreftousegot(ctxt *obj.Link, p *obj.Prog, from bool) {
 	fmt.Printf("------- %v\n", p)
 	oldp := *p
 	off := a.Offset
+	if a.Scale != 0 {
+		ctxt.Diag("%v has scale!", p)
+	}
 
 	q := obj.Appendp(ctxt, p)
 
