@@ -135,6 +135,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	if Flag_dso != 0 {
 		switch x.Name {
 		case "go.string.*",
+			"magic.heapsegment",
 			"runtime.findfunctab", // obv
 			"runtime.pclntab",     // obv
 			"runtime.epclntab",    // obv
@@ -398,6 +399,17 @@ func symtab() {
 	xdefine("runtime.end", SBSS, 0)
 	xdefine("runtime.epclntab", SRODATA, 0)
 	xdefine("runtime.esymtab", SRODATA, 0)
+
+	if Flag_dso != 0 && Flag_shared == 0 {
+		x := Linklookup(Ctxt, "magic.heapsegment", 0)
+		x.Type = SNOPTRDATA
+		x.Reachable = true
+		Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.pclntab", 0))
+		Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.epclntab", 0))
+		Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.findfunctab", 0))
+		x.Size += 3*3*8 + 3*8
+		Symgrow(Ctxt, x, x.Size)
+	}
 
 	// garbage collection symbols
 	s := Linklookup(Ctxt, "runtime.gcdata", 0)
