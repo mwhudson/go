@@ -135,29 +135,29 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	if Flag_dso != 0 {
 		switch x.Name {
 		case "go.string.*",
-			"runtime.findfunctab",
-			"runtime.pclntab",
-			"runtime.epclntab",
-			"runtime.noptrbss",
+			"runtime.findfunctab", // obv
+			"runtime.pclntab",     // obv
+			"runtime.epclntab",    // obv
+			"runtime.noptrbss",    // wbshadowinit -- oh crap, finalizer checks, race -- also oh crap, but less pressing
 			"runtime.enoptrbss",
-			"runtime.data",
-			"runtime.edata",
 			"runtime.noptrdata",
 			"runtime.enoptrdata",
+			"runtime.data", // above + heapdumping + gcunrolling, something solaris, scanning roots, getgcmask (for testing only?)
+			"runtime.edata",
 			"runtime.gcdata",
 			"runtime.egcdata",
 			"runtime.gcbss",
 			"runtime.egcbss",
 			"runtime.text",
 			"runtime.etext",
-			"runtime.rodata",
-			"runtime.erodata",
 			"runtime.bss",
-			"runtime.symtab",
-			"runtime.esymtab",
 			"runtime.ebss",
-			"runtime.end",
-			"runtime.typelink",
+			"runtime.rodata",   // not used?
+			"runtime.erodata",  // not used?
+			"runtime.symtab",   // not used?
+			"runtime.esymtab",  // not used?
+			"runtime.end",      // locating heap on 32 bit systems
+			"runtime.typelink", // reflection stuff
 			"runtime.etypelink":
 
 			bind = STB_LOCAL
