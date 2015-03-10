@@ -132,9 +132,14 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 && Flag_dso == 0 {
 		bind = STB_LOCAL
 	}
-	if Flag_dso != 0 && x.Name == "go.string.*" {
-		// println("hellooooooooooo", x.Type)
-		bind = STB_LOCAL
+	if Flag_dso != 0 {
+		switch x.Name {
+		case "go.string.*",
+			"runtime.findfunctab",
+			"runtime.pclntab",
+			"runtime.epclntab":
+			bind = STB_LOCAL
+		}
 	}
 
 	if bind != elfbind {
