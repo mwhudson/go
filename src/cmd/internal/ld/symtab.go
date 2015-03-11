@@ -135,7 +135,9 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	if Flag_dso != 0 {
 		switch x.Name {
 		case "go.string.*",
-			"magic.heapsegment",
+			"local.heapsegment",
+			"runtime.heapsegmentp",
+			"runtime.eheapsegmentp",
 			"runtime.findfunctab", // obv
 			"runtime.pclntab",     // obv
 			"runtime.epclntab",    // obv
@@ -399,9 +401,11 @@ func symtab() {
 	xdefine("runtime.end", SBSS, 0)
 	xdefine("runtime.epclntab", SRODATA, 0)
 	xdefine("runtime.esymtab", SRODATA, 0)
+	xdefine("runtime.heapsegmentp", SDATA, 0)
+	xdefine("runtime.eheapsegmentp", SDATA, 0)
 
-	if Flag_dso != 0 && Flag_shared == 0 {
-		x := Linklookup(Ctxt, "magic.heapsegment", 0)
+	if true || (Flag_dso != 0 && Flag_shared == 0) {
+		x := Linklookup(Ctxt, "local.heapsegment", 0)
 		x.Type = SNOPTRDATA
 		x.Reachable = true
 		Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.pclntab", 0))
