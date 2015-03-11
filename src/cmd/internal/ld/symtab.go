@@ -416,4 +416,40 @@ func symtab() {
 			liveness += (s.Size + int64(s.Align) - 1) &^ (int64(s.Align) - 1)
 		}
 	}
+
+	objfiledata := Linklookup(Ctxt, "local.objectfiledata", 0)
+	objfiledata.Type = SNOPTRDATA
+	objfiledata.Reachable = true
+	// See runtime/symtab.go
+	// Three slices (pclntable, ftab, filetab), uninitalized
+	objfiledata.Size += int64((3 * 3 * Thearch.Ptrsize))
+	Symgrow(Ctxt, objfiledata, objfiledata.Size)
+	// Three uintptrs, initialized
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.pclntab", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.epclntab", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.findfunctab", 0))
+	// 2 more uintptrs (minpc, maxpc), uninitalized
+	objfiledata.Size += int64(2 * Thearch.Ptrsize)
+	Symgrow(Ctxt, objfiledata, objfiledata.Size)
+	// more initialized uintptrs
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.text", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.etext", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.noptrdata", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.enoptrdata", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.data", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.edata", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.bss", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.ebss", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.noptrbss", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.enoptrbss", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.end", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.gcdata", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.gcbss", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.typelink", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.etypelink", 0))
+
+	objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
+	objfiledatap.Type = SNOPTRDATA
+	objfiledatap.Size = 0 // overwrite existing value
+	Addaddr(Ctxt, objfiledatap, objfiledata)
 }

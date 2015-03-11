@@ -130,9 +130,6 @@ const (
 	_RootCount       = 5
 )
 
-// linker-provided
-var data, edata, bss, ebss, gcdata, gcbss, noptrdata, enoptrdata, noptrbss, enoptrbss, end struct{}
-
 //go:linkname weak_cgo_allocate go.weak.runtime._cgo_allocate_internal
 var weak_cgo_allocate byte
 
@@ -171,8 +168,8 @@ func gcinit() {
 
 	work.markfor = parforalloc(_MaxGcproc)
 	gcpercent = readgogc()
-	gcdatamask = unrollglobgcprog((*byte)(unsafe.Pointer(&gcdata)), uintptr(unsafe.Pointer(&edata))-uintptr(unsafe.Pointer(&data)))
-	gcbssmask = unrollglobgcprog((*byte)(unsafe.Pointer(&gcbss)), uintptr(unsafe.Pointer(&ebss))-uintptr(unsafe.Pointer(&bss)))
+	gcdatamask = unrollglobgcprog((*byte)(unsafe.Pointer(objectfiledatap.gcdata)), objectfiledatap.edata-objectfiledatap.data)
+	gcbssmask = unrollglobgcprog((*byte)(unsafe.Pointer(objectfiledatap.gcbss)), objectfiledatap.ebss-objectfiledatap.bss)
 	memstats.next_gc = heapminimum
 }
 

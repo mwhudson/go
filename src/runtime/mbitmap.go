@@ -747,12 +747,12 @@ func getgcmask(p unsafe.Pointer, t *_type, mask **byte, len *uintptr) {
 	const typeBitsPerByte = 8 / typeBitsWidth
 
 	// data
-	if uintptr(unsafe.Pointer(&data)) <= uintptr(p) && uintptr(p) < uintptr(unsafe.Pointer(&edata)) {
+	if objectfiledatap.data <= uintptr(p) && uintptr(p) < objectfiledatap.edata {
 		n := (*ptrtype)(unsafe.Pointer(t)).elem.size
 		*len = n / ptrSize
 		*mask = &make([]byte, *len)[0]
 		for i := uintptr(0); i < n; i += ptrSize {
-			off := (uintptr(p) + i - uintptr(unsafe.Pointer(&data))) / ptrSize
+			off := (uintptr(p) + i - objectfiledatap.data) / ptrSize
 			bits := (*(*byte)(add(unsafe.Pointer(gcdatamask.bytedata), off/typeBitsPerByte)) >> ((off % typeBitsPerByte) * typeBitsWidth)) & typeMask
 			*(*byte)(add(unsafe.Pointer(*mask), i/ptrSize)) = bits
 		}
@@ -760,12 +760,12 @@ func getgcmask(p unsafe.Pointer, t *_type, mask **byte, len *uintptr) {
 	}
 
 	// bss
-	if uintptr(unsafe.Pointer(&bss)) <= uintptr(p) && uintptr(p) < uintptr(unsafe.Pointer(&ebss)) {
+	if objectfiledatap.bss <= uintptr(p) && uintptr(p) < objectfiledatap.ebss {
 		n := (*ptrtype)(unsafe.Pointer(t)).elem.size
 		*len = n / ptrSize
 		*mask = &make([]byte, *len)[0]
 		for i := uintptr(0); i < n; i += ptrSize {
-			off := (uintptr(p) + i - uintptr(unsafe.Pointer(&bss))) / ptrSize
+			off := (uintptr(p) + i - objectfiledatap.bss) / ptrSize
 			bits := (*(*byte)(add(unsafe.Pointer(gcbssmask.bytedata), off/typeBitsPerByte)) >> ((off % typeBitsPerByte) * typeBitsWidth)) & typeMask
 			*(*byte)(add(unsafe.Pointer(*mask), i/ptrSize)) = bits
 		}
