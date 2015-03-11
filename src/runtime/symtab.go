@@ -75,11 +75,14 @@ var heapsegmentp, eheapsegmentp uintptr // linker symbols
 
 var nheapsegments int = 0
 
+var initedheapsegment uintptr
+
 //go:nosplit
 func pushheapsegment(segment uintptr) {
 	nheapsegments++
-	(*heapsegment)(unsafe.Pointer(eheapsegmentp)).next = segment
-	eheapsegmentp = segment
+	initedheapsegment = segment
+	//	(*heapsegment)(unsafe.Pointer(eheapsegmentp)).next = segment
+	//	eheapsegmentp = segment
 }
 
 func symtabinit_seg(segp uintptr) {

@@ -80,8 +80,8 @@ func main() {
 		}
 	}
 
-	// println("nheapsegments", nheapsegments)
-	// println("heapsegmentp", heapsegmentp)
+	println("nheapsegments", nheapsegments)
+	println("initedheapsegment", initedheapsegment)
 	// println("eheapsegmentp", eheapsegmentp)
 
 	main_init()
