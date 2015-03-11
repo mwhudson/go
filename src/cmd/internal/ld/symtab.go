@@ -416,4 +416,23 @@ func symtab() {
 			liveness += (s.Size + int64(s.Align) - 1) &^ (int64(s.Align) - 1)
 		}
 	}
+
+	objfiledata := Linklookup(Ctxt, "local.objectfiledata", 0)
+	objfiledata.Type = SNOPTRDATA
+	objfiledata.Reachable = true
+	// See runtime/symtab.go
+	// Three slices (pclntable, ftab, filetab), uninitalized
+	objfiledata.Size += int64((3 * 3 * Thearch.Ptrsize))
+	Symgrow(Ctxt, objfiledata, objfiledata.Size)
+	// Three uintptrs, initialized
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.pclntab", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.epclntab", 0))
+	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.findfunctab", 0))
+	// 2 more uintptrs (minpc, maxpc), uninitalized
+	objfiledata.Size += int64(2 * Thearch.Ptrsize)
+	Symgrow(Ctxt, objfiledata, objfiledata.Size)
+	objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
+	objfiledatap.Type = SNOPTRDATA
+	objfiledatap.Size = 0 // overwrite existing value
+	Addaddr(Ctxt, objfiledatap, objfiledata)
 }
