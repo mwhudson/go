@@ -401,8 +401,8 @@ func symtab() {
 	xdefine("runtime.end", SBSS, 0)
 	xdefine("runtime.epclntab", SRODATA, 0)
 	xdefine("runtime.esymtab", SRODATA, 0)
-	xdefine("runtime.heapsegmentp", SDATA, 0)
-	xdefine("runtime.eheapsegmentp", SDATA, 0)
+	//	xdefine("runtime.heapsegmentp", SDATA, 0)
+	//	xdefine("runtime.eheapsegmentp", SDATA, 0)
 
 	if true || (Flag_dso != 0 && Flag_shared == 0) {
 		x := Linklookup(Ctxt, "local.heapsegment", 0)
@@ -413,6 +413,12 @@ func symtab() {
 		Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.findfunctab", 0))
 		x.Size += 3*3*8 + 3*8
 		Symgrow(Ctxt, x, x.Size)
+		for _, n := range []string{"runtime.heapsegmentp", "runtime.eheapsegmentp"} {
+			y := Linklookup(Ctxt, n, 0)
+			y.Type = SNOPTRDATA
+			y.Reachable = true
+			Addaddr(Ctxt, y, x)
+		}
 	}
 
 	// garbage collection symbols

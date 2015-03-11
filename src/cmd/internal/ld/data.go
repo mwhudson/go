@@ -1299,6 +1299,8 @@ func dodata() {
 	sect.Vaddr = uint64(datsize)
 	Linklookup(Ctxt, "runtime.noptrdata", 0).Sect = sect
 	Linklookup(Ctxt, "runtime.enoptrdata", 0).Sect = sect
+	//	Linklookup(Ctxt, "runtime.heapsegmentp", 0).Sect = sect
+	//	Linklookup(Ctxt, "runtime.eheapsegmentp", 0).Sect = sect
 	for ; s != nil && s.Type < SINITARR; s = s.Next {
 		datsize = aligndatsize(datsize, s)
 		s.Sect = sect
@@ -1333,8 +1335,6 @@ func dodata() {
 	sect.Vaddr = uint64(datsize)
 	Linklookup(Ctxt, "runtime.data", 0).Sect = sect
 	Linklookup(Ctxt, "runtime.edata", 0).Sect = sect
-	Linklookup(Ctxt, "runtime.heapsegmentp", 0).Sect = sect
-	Linklookup(Ctxt, "runtime.eheapsegmentp", 0).Sect = sect
 	gcdata := Linklookup(Ctxt, "runtime.gcdata", 0)
 	var gen ProgGen
 	proggeninit(&gen, gcdata)
@@ -1735,8 +1735,9 @@ func address() {
 	xdefine("runtime.ebss", SBSS, int64(bss.Vaddr+bss.Length))
 	xdefine("runtime.data", SDATA, int64(data.Vaddr))
 	xdefine("runtime.edata", SDATA, int64(data.Vaddr+data.Length))
-	xdefine("runtime.heapsegmentp", SDATA, int64(Linklookup(Ctxt, "runtime.heapsegment", 0).Value))
-	xdefine("runtime.eheapsegmentp", SDATA, int64(Linklookup(Ctxt, "runtime.heapsegment", 0).Value))
+	//	lh := Linklookup(Ctxt, "local.heapsegment", 0)
+	//	xdefine("runtime.heapsegmentp", SNOPTRDATA, lh.Value)
+	//	xdefine("runtime.eheapsegmentp", SNOPTRDATA, lh.Value)
 	xdefine("runtime.noptrbss", SNOPTRBSS, int64(noptrbss.Vaddr))
 	xdefine("runtime.enoptrbss", SNOPTRBSS, int64(noptrbss.Vaddr+noptrbss.Length))
 	xdefine("runtime.end", SBSS, int64(Segdata.Vaddr+Segdata.Length))

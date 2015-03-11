@@ -71,8 +71,8 @@ type heapsegment struct {
 	next         uintptr
 }
 
-var heapsegmentp uintptr
-var eheapsegmentp uintptr
+var heapsegmentp, eheapsegmentp uintptr // linker symbols
+
 var nheapsegments int = 0
 
 //go:nosplit
@@ -95,7 +95,7 @@ func symtabinit_seg(segp uintptr) {
 	}
 
 	// pclntable is all bytes of pclntab symbol.
-	sp := (*sliceStruct)(unsafe.Pointer(seg.pclntable))
+	sp := (*sliceStruct)(unsafe.Pointer(&seg.pclntable))
 	sp.array = unsafe.Pointer(seg.pclntab)
 	sp.len = int(uintptr(unsafe.Pointer(seg.epclntab)) - uintptr(unsafe.Pointer(seg.pclntab)))
 	sp.cap = sp.len
@@ -103,22 +103,22 @@ func symtabinit_seg(segp uintptr) {
 	// ftab is lookup table for function by program counter.
 	nftab := int(*(*uintptr)(add(unsafe.Pointer(pcln), 8)))
 	p := add(unsafe.Pointer(pcln), 8+ptrSize)
-	sp = (*sliceStruct)(unsafe.Pointer(seg.ftab))
+	sp = (*sliceStruct)(unsafe.Pointer(&seg.ftab))
 	sp.array = p
 	sp.len = nftab + 1
 	sp.cap = sp.len
 	for i := 0; i < nftab; i++ {
 		// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
 		if seg.ftab[i].entry > seg.ftab[i+1].entry {
-			f1 := (*_func)(unsafe.Pointer(seg.pclntable[seg.ftab[i].funcoff]))
-			f2 := (*_func)(unsafe.Pointer(seg.pclntable[seg.ftab[i+1].funcoff]))
+			f1 := (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[i].funcoff]))
+			f2 := (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[i+1].funcoff]))
 			f2name := "end"
 			if i+1 < nftab {
 				f2name = funcname(f2)
 			}
 			println("function symbol table not sorted by program counter:", hex(seg.ftab[i].entry), funcname(f1), ">", hex(seg.ftab[i+1].entry), f2name)
 			for j := 0; j <= i; j++ {
-				print("\t", hex(seg.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(seg.pclntable[seg.ftab[j].funcoff]))), "\n")
+				print("\t", hex(seg.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[j].funcoff]))), "\n")
 			}
 			throw("invalid runtime symbol table")
 		}
@@ -127,10 +127,10 @@ func symtabinit_seg(segp uintptr) {
 	// The ftab ends with a half functab consisting only of
 	// 'entry', followed by a uint32 giving the pcln-relative
 	// offset of the file table.
-	sp = (*sliceStruct)(unsafe.Pointer(seg.filetab))
+	sp = (*sliceStruct)(unsafe.Pointer(&seg.filetab))
 	end := unsafe.Pointer(seg.ftab[nftab].funcoff) // just beyond ftab
 	fileoffset := *(*uint32)(end)
-	sp.array = unsafe.Pointer(seg.pclntable[fileoffset])
+	sp.array = unsafe.Pointer(&seg.pclntable[fileoffset])
 	// length is in first element of array.
 	// set len to 1 so we can get first element.
 	sp.len = 1
@@ -199,11 +199,12 @@ func symtabinit() {
 
 	minpc = ftab[0].entry
 	maxpc = ftab[nftab].entry
-	//	seg := heapsegmentp
-	//	for seg != 0 {
-	//		symtabinit_seg(seg)
-	//		seg = (*heapsegment)(unsafe.Pointer(seg)).next
-	//	}
+	seg := heapsegmentp
+	for seg != 0 {
+		nheapsegments++
+		symtabinit_seg(seg)
+		seg = (*heapsegment)(unsafe.Pointer(seg)).next
+	}
 }
 
 // FuncForPC returns a *Func describing the function that contains the
