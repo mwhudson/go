@@ -138,6 +138,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 			"local.heapsegment",
 			"runtime.heapsegmentp",
 			"runtime.eheapsegmentp",
+			"local.dso_init",
 			"runtime.findfunctab", // obv
 			"runtime.pclntab",     // obv
 			"runtime.epclntab",    // obv

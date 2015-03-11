@@ -76,6 +76,13 @@ func Addcall(ctxt *ld.Link, s *ld.LSym, t *ld.LSym) int64 {
 
 func gentext() {
 	if ld.Flag_dso != 0 {
+		pushheapsegment := ld.Linklookup(ld.Ctxt, "runtime.pushheapsegment", 0)
+		if pushheapsegment.Type == ld.STEXT {
+			// we're linking an object containing the runtime -> no need for
+			// an init function
+			return
+		}
+		pushheapsegment.Reachable = true
 		initfunc := ld.Linklookup(ld.Ctxt, "local.dso_init", 0)
 		initfunc.Type = ld.STEXT
 		initfunc.Reachable = true
@@ -90,9 +97,7 @@ func gentext() {
 		ld.Adduint8(ld.Ctxt, initfunc, 0x35)
 		ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "local.heapsegment", 0), 0)
 		ld.Adduint8(ld.Ctxt, initfunc, 0xe8)
-		p := ld.Linklookup(ld.Ctxt, "runtime.pushheapsegment", 0)
-		p.Reachable = true
-		Addcall(ld.Ctxt, initfunc, p)
+		Addcall(ld.Ctxt, initfunc, pushheapsegment)
 		ld.Adduint8(ld.Ctxt, initfunc, 0x48)
 		ld.Adduint8(ld.Ctxt, initfunc, 0x83)
 		ld.Adduint8(ld.Ctxt, initfunc, 0xc4)
