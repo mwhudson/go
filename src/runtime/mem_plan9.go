@@ -116,7 +116,7 @@ func memRound(p uintptr) uintptr {
 }
 
 func initBloc() {
-	bloc = memRound(uintptr(unsafe.Pointer(&end)))
+	bloc = memRound(objectfiledatap.end)
 }
 
 func sbrk(n uintptr) unsafe.Pointer {

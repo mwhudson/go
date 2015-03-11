@@ -432,17 +432,17 @@ func finq_callback(fn *funcval, obj unsafe.Pointer, nret uintptr, fint *_type, o
 
 func dumproots() {
 	// data segment
-	dumpbvtypes(&gcdatamask, unsafe.Pointer(&data))
+	dumpbvtypes(&gcdatamask, unsafe.Pointer(objectfiledatap.data))
 	dumpint(tagData)
-	dumpint(uint64(uintptr(unsafe.Pointer(&data))))
-	dumpmemrange(unsafe.Pointer(&data), uintptr(unsafe.Pointer(&edata))-uintptr(unsafe.Pointer(&data)))
+	dumpint(uint64(objectfiledatap.data))
+	dumpmemrange(unsafe.Pointer(objectfiledatap.data), objectfiledatap.edata-objectfiledatap.data)
 	dumpfields(gcdatamask)
 
 	// bss segment
-	dumpbvtypes(&gcbssmask, unsafe.Pointer(&bss))
+	dumpbvtypes(&gcbssmask, unsafe.Pointer(objectfiledatap.bss))
 	dumpint(tagBSS)
-	dumpint(uint64(uintptr(unsafe.Pointer(&bss))))
-	dumpmemrange(unsafe.Pointer(&bss), uintptr(unsafe.Pointer(&ebss))-uintptr(unsafe.Pointer(&bss)))
+	dumpint(uint64(objectfiledatap.bss))
+	dumpmemrange(unsafe.Pointer(objectfiledatap.bss), objectfiledatap.ebss-objectfiledatap.bss)
 	dumpfields(gcbssmask)
 
 	// MSpan.types
