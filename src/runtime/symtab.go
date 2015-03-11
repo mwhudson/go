@@ -199,11 +199,11 @@ func symtabinit() {
 
 	minpc = ftab[0].entry
 	maxpc = ftab[nftab].entry
-	seg := heapsegmentp
-	for seg != 0 {
-		symtabinit_seg(seg)
-		seg = (*heapsegment)(unsafe.Pointer(seg)).next
-	}
+	//	seg := heapsegmentp
+	//	for seg != 0 {
+	//		symtabinit_seg(seg)
+	//		seg = (*heapsegment)(unsafe.Pointer(seg)).next
+	//	}
 }
 
 // FuncForPC returns a *Func describing the function that contains the
