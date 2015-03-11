@@ -86,34 +86,35 @@ func gentext() {
 		initfunc := ld.Linklookup(ld.Ctxt, "local.dso_init", 0)
 		initfunc.Type = ld.STEXT
 		initfunc.Reachable = true
+		o := func(op ...uint8) {
+			for _, op1 := range op {
+				ld.Adduint8(ld.Ctxt, initfunc, op1)
+			}
+		}
 		// 0000000000000000 <local.dso_init>:
 		//    0:	53                   	push   %rbx
 		//    1:	41 55                	push   %r13
-
-		//    0:	ff 35 00 00 00 00    	pushq  0x0(%rip)
-		// 			2: R_X86_64_PC32	local.heapsegment-0x4
-		//    6:	e8 00 00 00 00       	callq   b
-		// 			7: R_X86_64_PLT32	runtime.pushheapsegment-0x4
-		//    b:	48 83 c4 08          	add    $0x8,%rsp
-		//   12:	41 5d                	pop    %r13
-		//   14:	5b                   	pop    %rbx
-		//    f:	c3                   	retq
-		ld.Adduint8(ld.Ctxt, initfunc, 0x53)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x41)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x55)
-		ld.Adduint8(ld.Ctxt, initfunc, 0xff)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x35)
+		//    3:	48 8d 1d 00 00 00 00 	lea    0x0(%rip),%rbx        # a <local.dso_init+0xa>
+		// 			6: R_X86_64_PC32	local.heapsegment-0x4
+		//    a:	53                   	push   %rbx
+		//    b:	e8 00 00 00 00       	callq  10 <local.dso_init+0x10>
+		// 			c: R_X86_64_PLT32	runtime.pushheapsegment-0x4
+		//   10:	48 83 c4 08          	add    $0x8,%rsp
+		//   14:	41 5d                	pop    %r13
+		//   16:	5b                   	pop    %rbx
+		//   17:	c3                   	retq
+		//
+		o(0x53)
+		o(0x41, 0x55)
+		o(0x48, 0x8d, 0x1d)
 		ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "local.heapsegment", 0), 0)
-		ld.Adduint8(ld.Ctxt, initfunc, 0xe8)
+		o(0x53)
+		o(0xe8)
 		Addcall(ld.Ctxt, initfunc, pushheapsegment)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x48)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x83)
-		ld.Adduint8(ld.Ctxt, initfunc, 0xc4)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x08)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x41)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x5d)
-		ld.Adduint8(ld.Ctxt, initfunc, 0x5b)
-		ld.Adduint8(ld.Ctxt, initfunc, 0xc3)
+		o(0x48, 0x83, 0xc4, 0x08)
+		o(0x41, 0x5d)
+		o(0x5b)
+		o(0xc3)
 		if ld.Ctxt.Etextp != nil {
 			ld.Ctxt.Etextp.Next = initfunc
 		} else {
