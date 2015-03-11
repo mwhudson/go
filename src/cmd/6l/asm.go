@@ -61,7 +61,50 @@ func needlib(name string) int {
 	return 0
 }
 
+func Addcall(ctxt *ld.Link, s *ld.LSym, t *ld.LSym) int64 {
+	s.Reachable = true
+	i := s.Size
+	s.Size += 4
+	ld.Symgrow(ctxt, s, s.Size)
+	r := ld.Addrel(s)
+	r.Sym = t
+	r.Off = int32(i)
+	r.Type = ld.R_CALL
+	r.Siz = 4
+	return i + int64(r.Siz)
+}
+
 func gentext() {
+	if ld.Flag_dso != 0 {
+		initfunc := ld.Linklookup(ld.Ctxt, "local.dso_init", 0)
+		initfunc.Type = ld.STEXT
+		initfunc.Reachable = true
+		// 0000000000000000 <local.dso_init>:
+		//    0:	ff 35 00 00 00 00    	pushq  0x0(%rip)
+		// 			2: R_X86_64_PC32	local.heapsegment-0x4
+		//    6:	e8 00 00 00 00       	callq   b
+		// 			7: R_X86_64_PLT32	runtime.pushheapsegment-0x4
+		//    b:	48 83 c4 08          	add    $0x8,%rsp
+		//    f:	c3                   	retq
+		ld.Adduint8(ld.Ctxt, initfunc, 0xff)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x35)
+		ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "local.heapsegment", 0), 0)
+		ld.Adduint8(ld.Ctxt, initfunc, 0xe8)
+		p := ld.Linklookup(ld.Ctxt, "runtime.pushheapsegment", 0)
+		p.Reachable = true
+		Addcall(ld.Ctxt, initfunc, p)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x48)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x83)
+		ld.Adduint8(ld.Ctxt, initfunc, 0xc4)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x08)
+		ld.Adduint8(ld.Ctxt, initfunc, 0xc3)
+		if ld.Ctxt.Etextp != nil {
+			ld.Ctxt.Etextp.Next = initfunc
+		} else {
+			ld.Ctxt.Textp = initfunc
+		}
+		ld.Ctxt.Etextp = initfunc
+	}
 }
 
 func adddynrela(rela *ld.LSym, s *ld.LSym, r *ld.Reloc) {
