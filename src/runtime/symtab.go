@@ -29,15 +29,17 @@ const (
 	_ArgsSizeUnknown            = -0x80000000
 )
 
-var (
+type heapsegment struct {
 	pclntable []byte
 	ftab      []functab
 	filetab   []uint32
 
-	pclntab, epclntab, findfunctab struct{} // linker symbols
+	pclntab, epclntab, findfunctab uintptr
 
 	minpc, maxpc uintptr
-)
+}
+
+var heapsegmentp uintptr // linker symbol
 
 type functab struct {
 	entry   uintptr
@@ -61,41 +63,42 @@ type findfuncbucket struct {
 }
 
 func symtabinit() {
+	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
 	// See golang.org/s/go12symtab for header: 0xfffffffb,
 	// two zero bytes, a byte giving the PC quantum,
 	// and a byte giving the pointer width in bytes.
-	pcln := (*[8]byte)(unsafe.Pointer(&pclntab))
-	pcln32 := (*[2]uint32)(unsafe.Pointer(&pclntab))
+	pcln := (*[8]byte)(unsafe.Pointer(seg.pclntab))
+	pcln32 := (*[2]uint32)(unsafe.Pointer(seg.pclntab))
 	if pcln32[0] != 0xfffffffb || pcln[4] != 0 || pcln[5] != 0 || pcln[6] != _PCQuantum || pcln[7] != ptrSize {
 		println("runtime: function symbol table header:", hex(pcln32[0]), hex(pcln[4]), hex(pcln[5]), hex(pcln[6]), hex(pcln[7]))
 		throw("invalid function symbol table\n")
 	}
 
 	// pclntable is all bytes of pclntab symbol.
-	sp := (*sliceStruct)(unsafe.Pointer(&pclntable))
-	sp.array = unsafe.Pointer(&pclntab)
-	sp.len = int(uintptr(unsafe.Pointer(&epclntab)) - uintptr(unsafe.Pointer(&pclntab)))
+	sp := (*sliceStruct)(unsafe.Pointer(&seg.pclntable))
+	sp.array = unsafe.Pointer(seg.pclntab)
+	sp.len = int(uintptr(unsafe.Pointer(seg.epclntab)) - uintptr(unsafe.Pointer(seg.pclntab)))
 	sp.cap = sp.len
 
 	// ftab is lookup table for function by program counter.
 	nftab := int(*(*uintptr)(add(unsafe.Pointer(pcln), 8)))
 	p := add(unsafe.Pointer(pcln), 8+ptrSize)
-	sp = (*sliceStruct)(unsafe.Pointer(&ftab))
+	sp = (*sliceStruct)(unsafe.Pointer(&seg.ftab))
 	sp.array = p
 	sp.len = nftab + 1
 	sp.cap = sp.len
 	for i := 0; i < nftab; i++ {
 		// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
-		if ftab[i].entry > ftab[i+1].entry {
-			f1 := (*_func)(unsafe.Pointer(&pclntable[ftab[i].funcoff]))
-			f2 := (*_func)(unsafe.Pointer(&pclntable[ftab[i+1].funcoff]))
+		if seg.ftab[i].entry > seg.ftab[i+1].entry {
+			f1 := (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[i].funcoff]))
+			f2 := (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[i+1].funcoff]))
 			f2name := "end"
 			if i+1 < nftab {
 				f2name = funcname(f2)
 			}
-			println("function symbol table not sorted by program counter:", hex(ftab[i].entry), funcname(f1), ">", hex(ftab[i+1].entry), f2name)
+			println("function symbol table not sorted by program counter:", hex(seg.ftab[i].entry), funcname(f1), ">", hex(seg.ftab[i+1].entry), f2name)
 			for j := 0; j <= i; j++ {
-				print("\t", hex(ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&pclntable[ftab[j].funcoff]))), "\n")
+				print("\t", hex(seg.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[j].funcoff]))), "\n")
 			}
 			throw("invalid runtime symbol table")
 		}
@@ -104,19 +107,19 @@ func symtabinit() {
 	// The ftab ends with a half functab consisting only of
 	// 'entry', followed by a uint32 giving the pcln-relative
 	// offset of the file table.
-	sp = (*sliceStruct)(unsafe.Pointer(&filetab))
-	end := unsafe.Pointer(&ftab[nftab].funcoff) // just beyond ftab
+	sp = (*sliceStruct)(unsafe.Pointer(&seg.filetab))
+	end := unsafe.Pointer(&seg.ftab[nftab].funcoff) // just beyond ftab
 	fileoffset := *(*uint32)(end)
-	sp.array = unsafe.Pointer(&pclntable[fileoffset])
+	sp.array = unsafe.Pointer(&seg.pclntable[fileoffset])
 	// length is in first element of array.
 	// set len to 1 so we can get first element.
 	sp.len = 1
 	sp.cap = 1
-	sp.len = int(filetab[0])
+	sp.len = int(seg.filetab[0])
 	sp.cap = sp.len
 
-	minpc = ftab[0].entry
-	maxpc = ftab[nftab].entry
+	seg.minpc = seg.ftab[0].entry
+	seg.maxpc = seg.ftab[nftab].entry
 }
 
 // FuncForPC returns a *Func describing the function that contains the
@@ -147,33 +150,35 @@ func (f *Func) FileLine(pc uintptr) (file string, line int) {
 }
 
 func findfunc(pc uintptr) *_func {
-	if pc < minpc || pc >= maxpc {
+	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	if pc < seg.minpc || pc >= seg.maxpc {
 		return nil
 	}
 	const nsub = uintptr(len(findfuncbucket{}.subbuckets))
 
-	x := pc - minpc
+	x := pc - seg.minpc
 	b := x / pcbucketsize
 	i := x % pcbucketsize / (pcbucketsize / nsub)
 
-	ffb := (*findfuncbucket)(add(unsafe.Pointer(&findfunctab), b*unsafe.Sizeof(findfuncbucket{})))
+	ffb := (*findfuncbucket)(add(unsafe.Pointer(seg.findfunctab), b*unsafe.Sizeof(findfuncbucket{})))
 	idx := ffb.idx + uint32(ffb.subbuckets[i])
-	if pc < ftab[idx].entry {
+	if pc < seg.ftab[idx].entry {
 		throw("findfunc: bad findfunctab entry")
 	}
 
 	// linear search to find func with pc >= entry.
-	for ftab[idx+1].entry <= pc {
+	for seg.ftab[idx+1].entry <= pc {
 		idx++
 	}
-	return (*_func)(unsafe.Pointer(&pclntable[ftab[idx].funcoff]))
+	return (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[idx].funcoff]))
 }
 
 func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
+	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
 	if off == 0 {
 		return -1
 	}
-	p := pclntable[off:]
+	p := seg.pclntable[off:]
 	pc := f.entry
 	val := int32(-1)
 	for {
@@ -195,7 +200,7 @@ func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
 
 	print("runtime: invalid pc-encoded table f=", funcname(f), " pc=", hex(pc), " targetpc=", hex(targetpc), " tab=", p, "\n")
 
-	p = pclntable[off:]
+	p = seg.pclntable[off:]
 	pc = f.entry
 	val = -1
 	for {
@@ -212,10 +217,11 @@ func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
 }
 
 func cfuncname(f *_func) *byte {
+	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
 	if f == nil || f.nameoff == 0 {
 		return nil
 	}
-	return (*byte)(unsafe.Pointer(&pclntable[f.nameoff]))
+	return (*byte)(unsafe.Pointer(&seg.pclntable[f.nameoff]))
 }
 
 func funcname(f *_func) string {
@@ -223,13 +229,14 @@ func funcname(f *_func) string {
 }
 
 func funcline1(f *_func, targetpc uintptr, strict bool) (file string, line int32) {
+	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
 	fileno := int(pcvalue(f, f.pcfile, targetpc, strict))
 	line = pcvalue(f, f.pcln, targetpc, strict)
-	if fileno == -1 || line == -1 || fileno >= len(filetab) {
+	if fileno == -1 || line == -1 || fileno >= len(seg.filetab) {
 		// print("looking for ", hex(targetpc), " in ", funcname(f), " got file=", fileno, " line=", lineno, "\n")
 		return "?", 0
 	}
-	file = gostringnocopy(&pclntable[filetab[fileno]])
+	file = gostringnocopy(&seg.pclntable[seg.filetab[fileno]])
 	return
 }
 
