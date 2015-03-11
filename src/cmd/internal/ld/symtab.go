@@ -417,6 +417,7 @@ func symtab() {
 			y := Linklookup(Ctxt, n, 0)
 			y.Type = SNOPTRDATA
 			y.Reachable = true
+			y.Size = 0 // overwrite existing value
 			Addaddr(Ctxt, y, x)
 		}
 	}
