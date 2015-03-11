@@ -128,7 +128,7 @@ func symtabinit_seg(segp uintptr) {
 	// 'entry', followed by a uint32 giving the pcln-relative
 	// offset of the file table.
 	sp = (*sliceStruct)(unsafe.Pointer(&seg.filetab))
-	end := unsafe.Pointer(seg.ftab[nftab].funcoff) // just beyond ftab
+	end := unsafe.Pointer(&seg.ftab[nftab].funcoff) // just beyond ftab
 	fileoffset := *(*uint32)(end)
 	sp.array = unsafe.Pointer(&seg.pclntable[fileoffset])
 	// length is in first element of array.
