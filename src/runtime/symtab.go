@@ -37,9 +37,15 @@ type heapsegment struct {
 	pclntab, epclntab, findfunctab uintptr
 
 	minpc, maxpc uintptr
+	next         uintptr
 }
 
-var heapsegmentp uintptr // linker symbol
+var heapsegmentp, eheapsegmentp uintptr // linker symbols
+
+func pushheapsegment(segment uintptr) {
+	(*heapsegment)(unsafe.Pointer(eheapsegmentp)).next = segment
+	eheapsegmentp = segment
+}
 
 type functab struct {
 	entry   uintptr
@@ -62,8 +68,7 @@ type findfuncbucket struct {
 	subbuckets [16]byte
 }
 
-func symtabinit() {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+func symtabinit_seg(seg *heapsegment) {
 	// See golang.org/s/go12symtab for header: 0xfffffffb,
 	// two zero bytes, a byte giving the PC quantum,
 	// and a byte giving the pointer width in bytes.
@@ -122,6 +127,15 @@ func symtabinit() {
 	seg.maxpc = seg.ftab[nftab].entry
 }
 
+func symtabinit() {
+	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	for seg != nil {
+		symtabinit_seg(seg)
+		seg = (*heapsegment)(unsafe.Pointer(seg.next))
+	}
+
+}
+
 // FuncForPC returns a *Func describing the function that contains the
 // given program counter address, or else nil.
 func FuncForPC(pc uintptr) *Func {
@@ -149,9 +163,20 @@ func (f *Func) FileLine(pc uintptr) (file string, line int) {
 	return file, int(line32)
 }
 
-func findfunc(pc uintptr) *_func {
+func findseg(pc uintptr) *heapsegment {
 	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
-	if pc < seg.minpc || pc >= seg.maxpc {
+	for seg != nil {
+		if seg.minpc <= pc && pc <= seg.maxpc {
+			return seg
+		}
+		seg = (*heapsegment)(unsafe.Pointer(seg.next))
+	}
+	return nil
+}
+
+func findfunc(pc uintptr) *_func {
+	seg := findseg(pc)
+	if seg == nil {
 		return nil
 	}
 	const nsub = uintptr(len(findfuncbucket{}.subbuckets))
@@ -174,7 +199,7 @@ func findfunc(pc uintptr) *_func {
 }
 
 func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	seg := findseg(f.entry) // inefficient
 	if off == 0 {
 		return -1
 	}
@@ -217,7 +242,7 @@ func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
 }
 
 func cfuncname(f *_func) *byte {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	seg := findseg(f.entry) // inefficient
 	if f == nil || f.nameoff == 0 {
 		return nil
 	}
@@ -229,7 +254,7 @@ func funcname(f *_func) string {
 }
 
 func funcline1(f *_func, targetpc uintptr, strict bool) (file string, line int32) {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	seg := findseg(f.entry) // inefficient
 	fileno := int(pcvalue(f, f.pcfile, targetpc, strict))
 	line = pcvalue(f, f.pcln, targetpc, strict)
 	if fileno == -1 || line == -1 || fileno >= len(seg.filetab) {

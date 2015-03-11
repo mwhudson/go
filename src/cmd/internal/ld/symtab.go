@@ -348,14 +348,20 @@ func symtab() {
 	Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.pclntab", 0))
 	Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.epclntab", 0))
 	Addaddr(Ctxt, x, Linklookup(Ctxt, "runtime.findfunctab", 0))
-	// 2 more uintptrs, uninitalized
-	x.Size += int64(2 * Thearch.Ptrsize)
+	// 3 more uintptrs, uninitalized
+	x.Size += int64(3 * Thearch.Ptrsize)
 	Symgrow(Ctxt, x, x.Size)
+
 	y := Linklookup(Ctxt, "runtime.heapsegmentp", 0)
 	y.Type = SNOPTRDATA
 	y.Reachable = true
 	y.Size = 0 // overwrite existing value
 	Addaddr(Ctxt, y, x)
+	z := Linklookup(Ctxt, "runtime.eheapsegmentp", 0)
+	z.Type = SNOPTRDATA
+	z.Reachable = true
+	z.Size = 0 // overwrite existing value
+	Addaddr(Ctxt, z, x)
 
 	// garbage collection symbols
 	s := Linklookup(Ctxt, "runtime.gcdata", 0)
