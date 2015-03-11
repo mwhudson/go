@@ -120,6 +120,10 @@ func gentext() {
 			ld.Ctxt.Textp = initfunc
 		}
 		ld.Ctxt.Etextp = initfunc
+		initarray_entry := ld.Linklookup(ld.Ctxt, "local.dso_init.init", 0)
+		initarray_entry.Reachable = true
+		initarray_entry.Type = ld.SINITARR
+		ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
 	}
 }
 
