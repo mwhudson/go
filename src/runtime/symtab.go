@@ -87,38 +87,38 @@ func symtabinit_seg(segp uintptr) {
 	// See golang.org/s/go12symtab for header: 0xfffffffb,
 	// two zero bytes, a byte giving the PC quantum,
 	// and a byte giving the pointer width in bytes.
-	pcln := (*[8]byte)(unsafe.Pointer(&seg.pclntab))
-	pcln32 := (*[2]uint32)(unsafe.Pointer(&seg.pclntab))
+	pcln := (*[8]byte)(unsafe.Pointer(seg.pclntab))
+	pcln32 := (*[2]uint32)(unsafe.Pointer(seg.pclntab))
 	if pcln32[0] != 0xfffffffb || pcln[4] != 0 || pcln[5] != 0 || pcln[6] != _PCQuantum || pcln[7] != ptrSize {
 		println("runtime: function symbol table header:", hex(pcln32[0]), hex(pcln[4]), hex(pcln[5]), hex(pcln[6]), hex(pcln[7]))
 		throw("invalid function symbol table\n")
 	}
 
 	// pclntable is all bytes of pclntab symbol.
-	sp := (*sliceStruct)(unsafe.Pointer(&seg.pclntable))
-	sp.array = unsafe.Pointer(&seg.pclntab)
-	sp.len = int(uintptr(unsafe.Pointer(&seg.epclntab)) - uintptr(unsafe.Pointer(&seg.pclntab)))
+	sp := (*sliceStruct)(unsafe.Pointer(seg.pclntable))
+	sp.array = unsafe.Pointer(seg.pclntab)
+	sp.len = int(uintptr(unsafe.Pointer(seg.epclntab)) - uintptr(unsafe.Pointer(seg.pclntab)))
 	sp.cap = sp.len
 
 	// ftab is lookup table for function by program counter.
 	nftab := int(*(*uintptr)(add(unsafe.Pointer(pcln), 8)))
 	p := add(unsafe.Pointer(pcln), 8+ptrSize)
-	sp = (*sliceStruct)(unsafe.Pointer(&seg.ftab))
+	sp = (*sliceStruct)(unsafe.Pointer(seg.ftab))
 	sp.array = p
 	sp.len = nftab + 1
 	sp.cap = sp.len
 	for i := 0; i < nftab; i++ {
 		// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
 		if seg.ftab[i].entry > seg.ftab[i+1].entry {
-			f1 := (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[i].funcoff]))
-			f2 := (*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[i+1].funcoff]))
+			f1 := (*_func)(unsafe.Pointer(seg.pclntable[seg.ftab[i].funcoff]))
+			f2 := (*_func)(unsafe.Pointer(seg.pclntable[seg.ftab[i+1].funcoff]))
 			f2name := "end"
 			if i+1 < nftab {
 				f2name = funcname(f2)
 			}
 			println("function symbol table not sorted by program counter:", hex(seg.ftab[i].entry), funcname(f1), ">", hex(seg.ftab[i+1].entry), f2name)
 			for j := 0; j <= i; j++ {
-				print("\t", hex(seg.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&seg.pclntable[seg.ftab[j].funcoff]))), "\n")
+				print("\t", hex(seg.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(seg.pclntable[seg.ftab[j].funcoff]))), "\n")
 			}
 			throw("invalid runtime symbol table")
 		}
@@ -127,10 +127,10 @@ func symtabinit_seg(segp uintptr) {
 	// The ftab ends with a half functab consisting only of
 	// 'entry', followed by a uint32 giving the pcln-relative
 	// offset of the file table.
-	sp = (*sliceStruct)(unsafe.Pointer(&seg.filetab))
-	end := unsafe.Pointer(&seg.ftab[nftab].funcoff) // just beyond ftab
+	sp = (*sliceStruct)(unsafe.Pointer(seg.filetab))
+	end := unsafe.Pointer(seg.ftab[nftab].funcoff) // just beyond ftab
 	fileoffset := *(*uint32)(end)
-	sp.array = unsafe.Pointer(&seg.pclntable[fileoffset])
+	sp.array = unsafe.Pointer(seg.pclntable[fileoffset])
 	// length is in first element of array.
 	// set len to 1 so we can get first element.
 	sp.len = 1
