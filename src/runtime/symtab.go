@@ -80,9 +80,9 @@ var initedheapsegment uintptr
 //go:nosplit
 func pushheapsegment(segment uintptr) {
 	nheapsegments++
-	initedheapsegment = segment
-	//	(*heapsegment)(unsafe.Pointer(eheapsegmentp)).next = segment
-	//	eheapsegmentp = segment
+	//initedheapsegment = segment
+	(*heapsegment)(unsafe.Pointer(eheapsegmentp)).next = segment
+	eheapsegmentp = segment
 }
 
 func symtabinit_seg(segp uintptr) {
@@ -146,62 +146,6 @@ func symtabinit_seg(segp uintptr) {
 }
 
 func symtabinit() {
-	// // See golang.org/s/go12symtab for header: 0xfffffffb,
-	// // two zero bytes, a byte giving the PC quantum,
-	// // and a byte giving the pointer width in bytes.
-	// pcln := (*[8]byte)(unsafe.Pointer(&pclntab))
-	// pcln32 := (*[2]uint32)(unsafe.Pointer(&pclntab))
-	// if pcln32[0] != 0xfffffffb || pcln[4] != 0 || pcln[5] != 0 || pcln[6] != _PCQuantum || pcln[7] != ptrSize {
-	// 	println("runtime: function symbol table header:", hex(pcln32[0]), hex(pcln[4]), hex(pcln[5]), hex(pcln[6]), hex(pcln[7]))
-	// 	throw("invalid function symbol table\n")
-	// }
-
-	// // pclntable is all bytes of pclntab symbol.
-	// sp := (*sliceStruct)(unsafe.Pointer(&pclntable))
-	// sp.array = unsafe.Pointer(&pclntab)
-	// sp.len = int(uintptr(unsafe.Pointer(&epclntab)) - uintptr(unsafe.Pointer(&pclntab)))
-	// sp.cap = sp.len
-
-	// // ftab is lookup table for function by program counter.
-	// nftab := int(*(*uintptr)(add(unsafe.Pointer(pcln), 8)))
-	// p := add(unsafe.Pointer(pcln), 8+ptrSize)
-	// sp = (*sliceStruct)(unsafe.Pointer(&ftab))
-	// sp.array = p
-	// sp.len = nftab + 1
-	// sp.cap = sp.len
-	// for i := 0; i < nftab; i++ {
-	// 	// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
-	// 	if ftab[i].entry > ftab[i+1].entry {
-	// 		f1 := (*_func)(unsafe.Pointer(&pclntable[ftab[i].funcoff]))
-	// 		f2 := (*_func)(unsafe.Pointer(&pclntable[ftab[i+1].funcoff]))
-	// 		f2name := "end"
-	// 		if i+1 < nftab {
-	// 			f2name = funcname(f2)
-	// 		}
-	// 		println("function symbol table not sorted by program counter:", hex(ftab[i].entry), funcname(f1), ">", hex(ftab[i+1].entry), f2name)
-	// 		for j := 0; j <= i; j++ {
-	// 			print("\t", hex(ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&pclntable[ftab[j].funcoff]))), "\n")
-	// 		}
-	// 		throw("invalid runtime symbol table")
-	// 	}
-	// }
-
-	// // The ftab ends with a half functab consisting only of
-	// // 'entry', followed by a uint32 giving the pcln-relative
-	// // offset of the file table.
-	// sp = (*sliceStruct)(unsafe.Pointer(&filetab))
-	// end := unsafe.Pointer(&ftab[nftab].funcoff) // just beyond ftab
-	// fileoffset := *(*uint32)(end)
-	// sp.array = unsafe.Pointer(&pclntable[fileoffset])
-	// // length is in first element of array.
-	// // set len to 1 so we can get first element.
-	// sp.len = 1
-	// sp.cap = 1
-	// sp.len = int(filetab[0])
-	// sp.cap = sp.len
-
-	// minpc = ftab[0].entry
-	// maxpc = ftab[nftab].entry
 	seg := heapsegmentp
 	for seg != 0 {
 		nheapsegments++
@@ -237,9 +181,21 @@ func (f *Func) FileLine(pc uintptr) (file string, line int) {
 	return file, int(line32)
 }
 
-func findfunc(pc uintptr) *_func {
+func findseg(pc uintptr) *heapsegment {
 	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
-	if pc < seg.minpc || pc >= seg.maxpc {
+	for seg != nil {
+		if seg.minpc <= pc && pc <= seg.maxpc {
+			return seg
+		}
+		seg = (*heapsegment)(unsafe.Pointer(seg.next))
+	}
+	return nil
+
+}
+
+func findfunc(pc uintptr) *_func {
+	seg := findseg(pc)
+	if seg == nil {
 		return nil
 	}
 	const nsub = uintptr(len(findfuncbucket{}.subbuckets))
@@ -262,7 +218,7 @@ func findfunc(pc uintptr) *_func {
 }
 
 func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	seg := findseg(f.entry) // inefficient
 	if off == 0 {
 		return -1
 	}
@@ -305,7 +261,7 @@ func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
 }
 
 func cfuncname(f *_func) *byte {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	seg := findseg(f.entry) // inefficient
 	if f == nil || f.nameoff == 0 {
 		return nil
 	}
@@ -317,7 +273,7 @@ func funcname(f *_func) string {
 }
 
 func funcline1(f *_func, targetpc uintptr, strict bool) (file string, line int32) {
-	seg := (*heapsegment)(unsafe.Pointer(heapsegmentp))
+	seg := findseg(f.entry) // inefficient
 	fileno := int(pcvalue(f, f.pcfile, targetpc, strict))
 	line = pcvalue(f, f.pcln, targetpc, strict)
 	if fileno == -1 || line == -1 || fileno >= len(seg.filetab) {

@@ -91,6 +91,8 @@ func gentext() {
 				ld.Adduint8(ld.Ctxt, initfunc, op1)
 			}
 		}
+		// TODO(mwhudson): It's a total hack that we can get away with only saving %rbx and %r13
+
 		// 0000000000000000 <local.dso_init>:
 		//    0:	53                   	push   %rbx
 		//    1:	41 55                	push   %r13
