@@ -87,12 +87,20 @@ func gentext() {
 		initfunc.Type = ld.STEXT
 		initfunc.Reachable = true
 		// 0000000000000000 <local.dso_init>:
+		//    0:	53                   	push   %rbx
+		//    1:	41 55                	push   %r13
+
 		//    0:	ff 35 00 00 00 00    	pushq  0x0(%rip)
 		// 			2: R_X86_64_PC32	local.heapsegment-0x4
 		//    6:	e8 00 00 00 00       	callq   b
 		// 			7: R_X86_64_PLT32	runtime.pushheapsegment-0x4
 		//    b:	48 83 c4 08          	add    $0x8,%rsp
+		//   12:	41 5d                	pop    %r13
+		//   14:	5b                   	pop    %rbx
 		//    f:	c3                   	retq
+		ld.Adduint8(ld.Ctxt, initfunc, 0x53)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x41)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x55)
 		ld.Adduint8(ld.Ctxt, initfunc, 0xff)
 		ld.Adduint8(ld.Ctxt, initfunc, 0x35)
 		ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "local.heapsegment", 0), 0)
@@ -102,6 +110,9 @@ func gentext() {
 		ld.Adduint8(ld.Ctxt, initfunc, 0x83)
 		ld.Adduint8(ld.Ctxt, initfunc, 0xc4)
 		ld.Adduint8(ld.Ctxt, initfunc, 0x08)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x41)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x5d)
+		ld.Adduint8(ld.Ctxt, initfunc, 0x5b)
 		ld.Adduint8(ld.Ctxt, initfunc, 0xc3)
 		if ld.Ctxt.Etextp != nil {
 			ld.Ctxt.Etextp.Next = initfunc
