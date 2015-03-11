@@ -78,14 +78,8 @@ var nheapsegments int = 0
 //go:nosplit
 func pushheapsegment(segment uintptr) {
 	nheapsegments++
-	if heapsegmentp == 0 {
-		heapsegmentp = segment
-		eheapsegmentp = segment
-	} else {
-		e := (*heapsegment)(unsafe.Pointer(eheapsegmentp))
-		e.next = segment
-		eheapsegmentp = segment
-	}
+	(*heapsegment)(unsafe.Pointer(eheapsegmentp)).next = segment
+	eheapsegmentp = segment
 }
 
 func symtabinit_seg(segp uintptr) {
