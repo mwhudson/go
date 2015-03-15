@@ -35,6 +35,15 @@ type objectfiledata struct {
 	filetab                        []uint32
 	pclntab, epclntab, findfunctab uintptr
 	minpc, maxpc                   uintptr
+
+	text, etext           uintptr
+	noptrdata, enoptrdata uintptr
+	data, edata           uintptr
+	bss, ebss             uintptr
+	noptrbss, enoptrbss   uintptr
+	end, gcdata, gcbss    uintptr
+
+	typelink, etypelink uintptr
 }
 
 var objectfiledatap *objectfiledata // linker symbol

@@ -119,29 +119,29 @@ func raceinit() uintptr {
 	// Round data segment to page boundaries, because it's used in mmap().
 	start := ^uintptr(0)
 	end := uintptr(0)
-	if start > uintptr(unsafe.Pointer(&noptrdata)) {
-		start = uintptr(unsafe.Pointer(&noptrdata))
+	if start > objectfiledatap.noptrdata {
+		start = objectfiledatap.noptrdata
 	}
-	if start > uintptr(unsafe.Pointer(&data)) {
-		start = uintptr(unsafe.Pointer(&data))
+	if start > objectfiledatap.data {
+		start = objectfiledatap.data
 	}
-	if start > uintptr(unsafe.Pointer(&noptrbss)) {
-		start = uintptr(unsafe.Pointer(&noptrbss))
+	if start > objectfiledatap.noptrbss {
+		start = objectfiledatap.noptrbss
 	}
-	if start > uintptr(unsafe.Pointer(&bss)) {
-		start = uintptr(unsafe.Pointer(&bss))
+	if start > objectfiledatap.bss {
+		start = objectfiledatap.bss
 	}
-	if end < uintptr(unsafe.Pointer(&enoptrdata)) {
-		end = uintptr(unsafe.Pointer(&enoptrdata))
+	if end < objectfiledatap.enoptrdata {
+		end = objectfiledatap.enoptrdata
 	}
-	if end < uintptr(unsafe.Pointer(&edata)) {
-		end = uintptr(unsafe.Pointer(&edata))
+	if end < objectfiledatap.edata {
+		end = objectfiledatap.edata
 	}
-	if end < uintptr(unsafe.Pointer(&enoptrbss)) {
-		end = uintptr(unsafe.Pointer(&enoptrbss))
+	if end < objectfiledatap.enoptrbss {
+		end = objectfiledatap.enoptrbss
 	}
-	if end < uintptr(unsafe.Pointer(&ebss)) {
-		end = uintptr(unsafe.Pointer(&ebss))
+	if end < objectfiledatap.ebss {
+		end = objectfiledatap.ebss
 	}
 	size := round(end-start, _PageSize)
 	racecall(&__tsan_map_shadow, start, size, 0, 0)

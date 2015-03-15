@@ -284,10 +284,10 @@ func SetFinalizer(obj interface{}, finalizer interface{}) {
 		// The relevant segments are: noptrdata, data, bss, noptrbss.
 		// We cannot assume they are in any order or even contiguous,
 		// due to external linking.
-		if uintptr(unsafe.Pointer(&noptrdata)) <= uintptr(e.data) && uintptr(e.data) < uintptr(unsafe.Pointer(&enoptrdata)) ||
-			uintptr(unsafe.Pointer(&data)) <= uintptr(e.data) && uintptr(e.data) < uintptr(unsafe.Pointer(&edata)) ||
-			uintptr(unsafe.Pointer(&bss)) <= uintptr(e.data) && uintptr(e.data) < uintptr(unsafe.Pointer(&ebss)) ||
-			uintptr(unsafe.Pointer(&noptrbss)) <= uintptr(e.data) && uintptr(e.data) < uintptr(unsafe.Pointer(&enoptrbss)) {
+		if objectfiledatap.noptrdata <= uintptr(e.data) && uintptr(e.data) < objectfiledatap.enoptrdata ||
+			objectfiledatap.data <= uintptr(e.data) && uintptr(e.data) < objectfiledatap.edata ||
+			objectfiledatap.bss <= uintptr(e.data) && uintptr(e.data) < objectfiledatap.ebss ||
+			objectfiledatap.noptrbss <= uintptr(e.data) && uintptr(e.data) < objectfiledatap.enoptrbss {
 			return
 		}
 		throw("runtime.SetFinalizer: pointer not in allocated block")
