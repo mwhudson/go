@@ -30,11 +30,11 @@ const (
 )
 
 type objectfiledata struct {
-	pclntable                      []byte
-	ftab                           []functab
-	filetab                        []uint32
-	pclntab, epclntab, findfunctab uintptr
-	minpc, maxpc                   uintptr
+	pclntable    []byte
+	ftab         []functab
+	filetab      []uint32
+	findfunctab  uintptr
+	minpc, maxpc uintptr
 
 	text, etext           uintptr
 	noptrdata, enoptrdata uintptr
@@ -43,7 +43,7 @@ type objectfiledata struct {
 	noptrbss, enoptrbss   uintptr
 	end, gcdata, gcbss    uintptr
 
-	typelink, etypelink uintptr
+	typelinks []*_type
 }
 
 var objectfiledatap *objectfiledata // linker symbol
@@ -69,30 +69,19 @@ type findfuncbucket struct {
 	subbuckets [16]byte
 }
 
-func symtabinit() {
+func symtabverify() {
 	// See golang.org/s/go12symtab for header: 0xfffffffb,
 	// two zero bytes, a byte giving the PC quantum,
 	// and a byte giving the pointer width in bytes.
-	pcln := (*[8]byte)(unsafe.Pointer(objectfiledatap.pclntab))
-	pcln32 := (*[2]uint32)(unsafe.Pointer(objectfiledatap.pclntab))
+	pcln := *(**[8]byte)(unsafe.Pointer(&objectfiledatap.pclntable))
+	pcln32 := *(**[2]uint32)(unsafe.Pointer(&objectfiledatap.pclntable))
 	if pcln32[0] != 0xfffffffb || pcln[4] != 0 || pcln[5] != 0 || pcln[6] != _PCQuantum || pcln[7] != ptrSize {
 		println("runtime: function symbol table header:", hex(pcln32[0]), hex(pcln[4]), hex(pcln[5]), hex(pcln[6]), hex(pcln[7]))
 		throw("invalid function symbol table\n")
 	}
 
-	// pclntable is all bytes of pclntab symbol.
-	sp := (*sliceStruct)(unsafe.Pointer(&objectfiledatap.pclntable))
-	sp.array = unsafe.Pointer(objectfiledatap.pclntab)
-	sp.len = int(uintptr(unsafe.Pointer(objectfiledatap.epclntab)) - uintptr(unsafe.Pointer(objectfiledatap.pclntab)))
-	sp.cap = sp.len
-
 	// ftab is lookup table for function by program counter.
-	nftab := int(*(*uintptr)(add(unsafe.Pointer(pcln), 8)))
-	p := add(unsafe.Pointer(pcln), 8+ptrSize)
-	sp = (*sliceStruct)(unsafe.Pointer(&objectfiledatap.ftab))
-	sp.array = p
-	sp.len = nftab + 1
-	sp.cap = sp.len
+	nftab := len(objectfiledatap.ftab) - 1
 	for i := 0; i < nftab; i++ {
 		// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
 		if objectfiledatap.ftab[i].entry > objectfiledatap.ftab[i+1].entry {
@@ -110,22 +99,10 @@ func symtabinit() {
 		}
 	}
 
-	// The ftab ends with a half functab consisting only of
-	// 'entry', followed by a uint32 giving the pcln-relative
-	// offset of the file table.
-	sp = (*sliceStruct)(unsafe.Pointer(&objectfiledatap.filetab))
-	end := unsafe.Pointer(&objectfiledatap.ftab[nftab].funcoff) // just beyond ftab
-	fileoffset := *(*uint32)(end)
-	sp.array = unsafe.Pointer(&objectfiledatap.pclntable[fileoffset])
-	// length is in first element of array.
-	// set len to 1 so we can get first element.
-	sp.len = 1
-	sp.cap = 1
-	sp.len = int(objectfiledatap.filetab[0])
-	sp.cap = sp.len
-
-	objectfiledatap.minpc = objectfiledatap.ftab[0].entry
-	objectfiledatap.maxpc = objectfiledatap.ftab[nftab].entry
+	if objectfiledatap.minpc != objectfiledatap.ftab[0].entry ||
+		objectfiledatap.maxpc != objectfiledatap.ftab[nftab].entry {
+		throw("minpc or maxpc invalid")
+	}
 }
 
 // FuncForPC returns a *Func describing the function that contains the

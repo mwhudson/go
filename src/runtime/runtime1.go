@@ -425,12 +425,7 @@ func gomcache() *mcache {
 //go:linkname reflect_typelinks reflect.typelinks
 //go:nosplit
 func reflect_typelinks() []*_type {
-	var ret []*_type
-	sp := (*slice)(unsafe.Pointer(&ret))
-	sp.array = (*byte)(unsafe.Pointer(objectfiledatap.typelink))
-	sp.len = uint((objectfiledatap.etypelink - objectfiledatap.typelink) / unsafe.Sizeof(ret[0]))
-	sp.cap = sp.len
-	return ret
+	return objectfiledatap.typelinks
 }
 
 // TODO: move back into mgc.go
