@@ -470,8 +470,9 @@ func relocsym(s *LSym) {
 
 			// r->sym can be null when CALL $(constant) is transformed from absolute PC to relative PC call.
 		case R_CALL,
+			R_GOTPCREL,
 			R_PCREL:
-			if Linkmode == LinkExternal && r.Sym != nil && r.Sym.Type != SCONST && r.Sym.Sect != Ctxt.Cursym.Sect {
+			if Linkmode == LinkExternal && r.Sym != nil && r.Sym.Type != SCONST && (r.Sym.Sect != Ctxt.Cursym.Sect || r.Type == R_GOTPCREL) {
 				r.Done = 0
 
 				// set up addend for eventual relocation via outer symbol.
