@@ -119,6 +119,9 @@ func Ldmain() {
 	if Thearch.Thechar == '5' || Thearch.Thechar == '6' {
 		obj.Flagcount("shared", "generate shared object (implies -linkmode external)", &Flag_shared)
 	}
+	if Thechar.Thechar == '6' {
+		obj.Flagcount("linkshared", "TODO(mwhudson): write this", &Flag_linkshared)
+	}
 	obj.Flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir)
 	obj.Flagcount("u", "reject unsafe packages", &Debug['u'])
 	obj.Flagcount("v", "print link trace", &Debug['v'])
@@ -142,8 +145,10 @@ func Ldmain() {
 	Ctxt.Bso = &Bso
 	Ctxt.Debugvlog = int32(Debug['v'])
 
-	if flag.NArg() != 1 {
-		usage()
+	if Flag_shared == 0 {
+		if flag.NArg() != 1 {
+			usage()
+		}
 	}
 
 	if outfile == "" {
@@ -171,7 +176,20 @@ func Ldmain() {
 	}
 	Bflush(&Bso)
 
-	addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
+	if Flag_shared == 0 {
+		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
+	} else {
+		for i := 0; i < flags.NArg(); i++ {
+			arg := flags.Arg(i)
+			parts := strings.SplitN(arg, "=")
+			if len(parts) == 1 {
+				pkgpath, file = "main", arg
+			} else {
+				pkgpath, file = parts[0], parts[1]
+			}
+		}
+		addlibpath(Ctxt, "command line", "command line", file, pkgpath)
+	}
 	loadlib()
 
 	if Thearch.Thechar == '5' {

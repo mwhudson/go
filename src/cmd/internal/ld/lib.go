@@ -161,6 +161,7 @@ var (
 	flag_installsuffix string
 	flag_race          int
 	Flag_shared        int
+	Flag_linkshared    int
 	tracksym           string
 	interpreter        string
 	tmpdir             string

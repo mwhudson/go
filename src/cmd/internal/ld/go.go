@@ -619,13 +619,22 @@ func deadcode() {
 		fmt.Fprintf(&Bso, "%5.2f deadcode\n", obj.Cputime())
 	}
 
-	mark(Linklookup(Ctxt, INITENTRY, 0))
-	for i := 0; i < len(markextra); i++ {
-		mark(Linklookup(Ctxt, markextra[i], 0))
-	}
+	if Flag_linkshared != 0 && Flag_shared != 0 {
+		for s = Ctxt.Textp; s != nil; s = s.Next {
+			if strings.Contains(s.Name, "sync/atomic") {
+				continue
+			}
+			mark(s)
+		}
+	} else {
+		mark(Linklookup(Ctxt, INITENTRY, 0))
+		for i := 0; i < len(markextra); i++ {
+			mark(Linkrlookup(Ctxt, markextra[i], 0))
+		}
 
-	for i := 0; i < len(dynexp); i++ {
-		mark(dynexp[i])
+		for i := 0; i < len(dynexp); i++ {
+			mark(dynexp[i])
+		}
 	}
 
 	markflood()
