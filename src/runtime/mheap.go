@@ -42,9 +42,6 @@ type mheap struct {
 	shadow_enabled  bool    // shadow should be updated and checked
 	shadow_reserved bool    // shadow memory is reserved
 	shadow_heap     uintptr // heap-addr + shadow_heap = shadow heap addr
-	shadow_data     uintptr // data-addr + shadow_data = shadow data addr
-	data_start      uintptr // start of shadowed data addresses
-	data_end        uintptr // end of shadowed data addresses
 
 	// central free lists for small size classes.
 	// the padding makes sure that the MCentrals are

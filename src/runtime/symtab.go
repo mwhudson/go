@@ -47,6 +47,10 @@ type objectfiledata struct {
 
 	gcdatamask, gcbssmask bitvector
 
+	shadow_data uintptr // data-addr + shadow_data = shadow data addr
+	data_start  uintptr // start of shadowed data addresses
+	data_end    uintptr // end of shadowed data addresses
+
 	next *objectfiledata
 }
 

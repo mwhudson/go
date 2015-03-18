@@ -69,7 +69,7 @@ func markroot(desc *parfor, i uint32) {
 	case _RootBss:
 		datap := objectfiledatap
 		for datap != nil {
-			scanblock(datap.bss, datap.ebss-objectfiledatap.bss, datap.gcbssmask.bytedata, &gcw)
+			scanblock(datap.bss, datap.ebss-datap.bss, datap.gcbssmask.bytedata, &gcw)
 			datap = datap.next
 		}
 

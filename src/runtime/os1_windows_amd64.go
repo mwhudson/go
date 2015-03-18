@@ -34,6 +34,7 @@ func dumpregs(r *context) {
 func isgoexception(info *exceptionrecord, r *context) bool {
 	// Only handle exception if executing instructions in Go binary
 	// (not Windows library code).
+	// TODO(mwhudson): needs to loop to support shared libs
 	if r.rip < uint64(objectfiledatap.text) || uint64(objectfiledatap.etext) < r.rip {
 		return false
 	}
