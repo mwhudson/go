@@ -119,7 +119,7 @@ func Ldmain() {
 	if Thearch.Thechar == '5' || Thearch.Thechar == '6' {
 		obj.Flagcount("shared", "generate shared object (implies -linkmode external)", &Flag_shared)
 	}
-	if Thechar.Thechar == '6' {
+	if Thearch.Thechar == '6' {
 		obj.Flagcount("linkshared", "TODO(mwhudson): write this", &Flag_linkshared)
 	}
 	obj.Flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir)
@@ -179,16 +179,17 @@ func Ldmain() {
 	if Flag_shared == 0 {
 		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
 	} else {
-		for i := 0; i < flags.NArg(); i++ {
-			arg := flags.Arg(i)
-			parts := strings.SplitN(arg, "=")
+		for i := 0; i < flag.NArg(); i++ {
+			arg := flag.Arg(i)
+			parts := strings.SplitN(arg, "=", 2)
+			var pkgpath, file string
 			if len(parts) == 1 {
 				pkgpath, file = "main", arg
 			} else {
 				pkgpath, file = parts[0], parts[1]
 			}
+			addlibpath(Ctxt, "command line", "command line", file, pkgpath)
 		}
-		addlibpath(Ctxt, "command line", "command line", file, pkgpath)
 	}
 	loadlib()
 
