@@ -431,6 +431,7 @@ func finq_callback(fn *funcval, obj unsafe.Pointer, nret uintptr, fint *_type, o
 }
 
 func dumproots() {
+	// TODO(mwhudson): dump datamask etc from all objects
 	// data segment
 	dumpbvtypes(&gcdatamask, unsafe.Pointer(objectfiledatap.data))
 	dumpint(tagData)
