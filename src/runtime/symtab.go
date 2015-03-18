@@ -44,9 +44,17 @@ type objectfiledata struct {
 	end, gcdata, gcbss    uintptr
 
 	typelinks []*_type
+
+	next *objectfiledata
 }
 
-var objectfiledatap *objectfiledata // linker symbol
+var objectfiledatap, eobjectfiledatap *objectfiledata // linker symbol
+
+//go:nosplit
+func pushheapsegment(datap *objectfiledata) {
+	eobjectfiledatap.next = datap
+	eobjectfiledatap = datap
+}
 
 type functab struct {
 	entry   uintptr
@@ -69,39 +77,47 @@ type findfuncbucket struct {
 	subbuckets [16]byte
 }
 
-func symtabverify() {
+func symtabverify_objectfiledata(datap *objectfiledata) {
 	// See golang.org/s/go12symtab for header: 0xfffffffb,
 	// two zero bytes, a byte giving the PC quantum,
 	// and a byte giving the pointer width in bytes.
-	pcln := *(**[8]byte)(unsafe.Pointer(&objectfiledatap.pclntable))
-	pcln32 := *(**[2]uint32)(unsafe.Pointer(&objectfiledatap.pclntable))
+	pcln := *(**[8]byte)(unsafe.Pointer(&datap.pclntable))
+	pcln32 := *(**[2]uint32)(unsafe.Pointer(&datap.pclntable))
 	if pcln32[0] != 0xfffffffb || pcln[4] != 0 || pcln[5] != 0 || pcln[6] != _PCQuantum || pcln[7] != ptrSize {
 		println("runtime: function symbol table header:", hex(pcln32[0]), hex(pcln[4]), hex(pcln[5]), hex(pcln[6]), hex(pcln[7]))
 		throw("invalid function symbol table\n")
 	}
 
 	// ftab is lookup table for function by program counter.
-	nftab := len(objectfiledatap.ftab) - 1
+	nftab := len(datap.ftab) - 1
 	for i := 0; i < nftab; i++ {
 		// NOTE: ftab[nftab].entry is legal; it is the address beyond the final function.
-		if objectfiledatap.ftab[i].entry > objectfiledatap.ftab[i+1].entry {
-			f1 := (*_func)(unsafe.Pointer(&objectfiledatap.pclntable[objectfiledatap.ftab[i].funcoff]))
-			f2 := (*_func)(unsafe.Pointer(&objectfiledatap.pclntable[objectfiledatap.ftab[i+1].funcoff]))
+		if datap.ftab[i].entry > datap.ftab[i+1].entry {
+			f1 := (*_func)(unsafe.Pointer(&datap.pclntable[datap.ftab[i].funcoff]))
+			f2 := (*_func)(unsafe.Pointer(&datap.pclntable[datap.ftab[i+1].funcoff]))
 			f2name := "end"
 			if i+1 < nftab {
 				f2name = funcname(f2)
 			}
-			println("function symbol table not sorted by program counter:", hex(objectfiledatap.ftab[i].entry), funcname(f1), ">", hex(objectfiledatap.ftab[i+1].entry), f2name)
+			println("function symbol table not sorted by program counter:", hex(datap.ftab[i].entry), funcname(f1), ">", hex(datap.ftab[i+1].entry), f2name)
 			for j := 0; j <= i; j++ {
-				print("\t", hex(objectfiledatap.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&objectfiledatap.pclntable[objectfiledatap.ftab[j].funcoff]))), "\n")
+				print("\t", hex(datap.ftab[j].entry), " ", funcname((*_func)(unsafe.Pointer(&datap.pclntable[datap.ftab[j].funcoff]))), "\n")
 			}
 			throw("invalid runtime symbol table")
 		}
 	}
 
-	if objectfiledatap.minpc != objectfiledatap.ftab[0].entry ||
-		objectfiledatap.maxpc != objectfiledatap.ftab[nftab].entry {
+	if datap.minpc != datap.ftab[0].entry ||
+		datap.maxpc != datap.ftab[nftab].entry {
 		throw("minpc or maxpc invalid")
+	}
+}
+
+func symtabverify() {
+	datap := objectfiledatap
+	for datap != nil {
+		symtabverify_objectfiledata(datap)
+		datap = datap.next
 	}
 }
 
@@ -132,34 +148,47 @@ func (f *Func) FileLine(pc uintptr) (file string, line int) {
 	return file, int(line32)
 }
 
+func findobjectdatap(pc uintptr) *objectfiledata {
+	datap := objectfiledatap
+	for datap != nil {
+		if datap.minpc <= pc && pc <= datap.maxpc {
+			return datap
+		}
+		datap = datap.next
+	}
+	return nil
+}
+
 func findfunc(pc uintptr) *_func {
-	if pc < objectfiledatap.minpc || pc >= objectfiledatap.maxpc {
+	datap := findobjectdatap(pc)
+	if pc < datap.minpc || pc >= datap.maxpc {
 		return nil
 	}
 	const nsub = uintptr(len(findfuncbucket{}.subbuckets))
 
-	x := pc - objectfiledatap.minpc
+	x := pc - datap.minpc
 	b := x / pcbucketsize
 	i := x % pcbucketsize / (pcbucketsize / nsub)
 
-	ffb := (*findfuncbucket)(add(unsafe.Pointer(objectfiledatap.findfunctab), b*unsafe.Sizeof(findfuncbucket{})))
+	ffb := (*findfuncbucket)(add(unsafe.Pointer(datap.findfunctab), b*unsafe.Sizeof(findfuncbucket{})))
 	idx := ffb.idx + uint32(ffb.subbuckets[i])
-	if pc < objectfiledatap.ftab[idx].entry {
+	if pc < datap.ftab[idx].entry {
 		throw("findfunc: bad findfunctab entry")
 	}
 
 	// linear search to find func with pc >= entry.
-	for objectfiledatap.ftab[idx+1].entry <= pc {
+	for datap.ftab[idx+1].entry <= pc {
 		idx++
 	}
-	return (*_func)(unsafe.Pointer(&objectfiledatap.pclntable[objectfiledatap.ftab[idx].funcoff]))
+	return (*_func)(unsafe.Pointer(&datap.pclntable[datap.ftab[idx].funcoff]))
 }
 
 func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
+	datap := findobjectdatap(f.entry) // inefficient
 	if off == 0 {
 		return -1
 	}
-	p := objectfiledatap.pclntable[off:]
+	p := datap.pclntable[off:]
 	pc := f.entry
 	val := int32(-1)
 	for {
@@ -181,7 +210,7 @@ func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
 
 	print("runtime: invalid pc-encoded table f=", funcname(f), " pc=", hex(pc), " targetpc=", hex(targetpc), " tab=", p, "\n")
 
-	p = objectfiledatap.pclntable[off:]
+	p = datap.pclntable[off:]
 	pc = f.entry
 	val = -1
 	for {
@@ -198,10 +227,11 @@ func pcvalue(f *_func, off int32, targetpc uintptr, strict bool) int32 {
 }
 
 func cfuncname(f *_func) *byte {
+	datap := findobjectdatap(f.entry) // inefficient
 	if f == nil || f.nameoff == 0 {
 		return nil
 	}
-	return (*byte)(unsafe.Pointer(&objectfiledatap.pclntable[f.nameoff]))
+	return (*byte)(unsafe.Pointer(&datap.pclntable[f.nameoff]))
 }
 
 func funcname(f *_func) string {
@@ -209,13 +239,14 @@ func funcname(f *_func) string {
 }
 
 func funcline1(f *_func, targetpc uintptr, strict bool) (file string, line int32) {
+	datap := findobjectdatap(f.entry) // inefficient
 	fileno := int(pcvalue(f, f.pcfile, targetpc, strict))
 	line = pcvalue(f, f.pcln, targetpc, strict)
-	if fileno == -1 || line == -1 || fileno >= len(objectfiledatap.filetab) {
+	if fileno == -1 || line == -1 || fileno >= len(datap.filetab) {
 		// print("looking for ", hex(targetpc), " in ", funcname(f), " got file=", fileno, " line=", lineno, "\n")
 		return "?", 0
 	}
-	file = gostringnocopy(&objectfiledatap.pclntable[objectfiledatap.filetab[fileno]])
+	file = gostringnocopy(&datap.pclntable[datap.filetab[fileno]])
 	return
 }
 
