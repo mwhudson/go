@@ -45,6 +45,8 @@ type objectfiledata struct {
 
 	typelinks []*_type
 
+	gcdatamask, gcbssmask bitvector
+
 	next *objectfiledata
 }
 

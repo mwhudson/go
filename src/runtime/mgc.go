@@ -150,9 +150,6 @@ func atomicand8(src *byte, val byte) {
 	unlock(&andlock)
 }
 
-var gcdatamask bitvector
-var gcbssmask bitvector
-
 // heapminimum is the minimum number of bytes in the heap.
 // This cleans up the corner case of where we have a very small live set but a lot
 // of allocations and collecting every GOGC * live set is expensive.
@@ -168,8 +165,12 @@ func gcinit() {
 
 	work.markfor = parforalloc(_MaxGcproc)
 	gcpercent = readgogc()
-	gcdatamask = unrollglobgcprog((*byte)(unsafe.Pointer(objectfiledatap.gcdata)), objectfiledatap.edata-objectfiledatap.data)
-	gcbssmask = unrollglobgcprog((*byte)(unsafe.Pointer(objectfiledatap.gcbss)), objectfiledatap.ebss-objectfiledatap.bss)
+	datap := objectfiledatap
+	for datap != nil {
+		datap.gcdatamask = unrollglobgcprog((*byte)(unsafe.Pointer(datap.gcdata)), datap.edata-datap.data)
+		datap.gcbssmask = unrollglobgcprog((*byte)(unsafe.Pointer(datap.gcbss)), datap.ebss-datap.bss)
+		datap = datap.next
+	}
 	memstats.next_gc = heapminimum
 }
 

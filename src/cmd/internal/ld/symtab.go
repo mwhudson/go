@@ -459,6 +459,20 @@ func symtab() {
 	adduint(Ctxt, objfiledata, uint64(ntypelinks))
 	adduint(Ctxt, objfiledata, uint64(ntypelinks))
 
+	// Two bitvectors (int32, pointer)
+	for i := 0; i < 2; i++ {
+		Adduint32(Ctxt, objfiledata, 0)
+		if Thearch.Ptrsize == 8 {
+			// TODO(mwhudson): padding, is this right? is there a nicer way?
+			Adduint32(Ctxt, objfiledata, 0)
+			Adduint64(Ctxt, objfiledata, 0)
+		} else {
+			Adduint32(Ctxt, objfiledata, 0)
+		}
+	}
+	// uinptr (next)
+	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
+
 	objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
 	objfiledatap.Type = SNOPTRDATA
 	objfiledatap.Size = 0 // overwrite existing value
