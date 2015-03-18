@@ -467,7 +467,7 @@ func wbshadowinit() {
 		datap.shadow_data = uintptr(p1) - start
 		sysMap(p1, end-start, reserved, &memstats.other_sys)
 		memmove(p1, unsafe.Pointer(start), end-start)
-		datap := datap.next
+		datap = datap.next
 	}
 
 	mheap_.shadow_enabled = true
