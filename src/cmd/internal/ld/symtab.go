@@ -470,7 +470,12 @@ func symtab() {
 			Adduint32(Ctxt, objfiledata, 0)
 		}
 	}
-	// uinptr (next)
+	// Three uintptrs (shadow_data, data_start, data_end)
+	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
+	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
+	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
+
+	// uintptr (next)
 	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
 
 	objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
