@@ -759,7 +759,10 @@ func hostlink() {
 	}
 
 	if Flag_shared != 0 {
-		argv = append(argv, "-Wl,-Bsymbolic")
+		if Flag_linkshared == 0 {
+			argv = append(argv, "-Wl,-Bsymbolic")
+		}
+		//TODO(mwhudson): we might want -Bsymbolic-functions when -linkshared
 		argv = append(argv, "-shared")
 	}
 
@@ -1152,7 +1155,8 @@ func stkcheck(up *Chain, depth int) int {
 		// external function.
 		// should never be called directly.
 		// only diagnose the direct caller.
-		if depth == 1 && s.Type != SXREF {
+		// TODO(mwhudson): actually think about this.
+		if depth == 1 && s.Type != SXREF && Flag_linkshared != 0 {
 			Diag("call to external function %s", s.Name)
 		}
 		return -1
