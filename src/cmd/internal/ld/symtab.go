@@ -128,8 +128,12 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	// to get the exported symbols put into the dynamic symbol table.
 	// To avoid filling the dynamic table with lots of unnecessary symbols,
 	// mark all Go symbols local (not global) in the final executable.
-	if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 {
-		bind = STB_LOCAL
+	if Flag_linkshared == 0 {
+		if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 {
+			bind = STB_LOCAL
+		}
+	} else {
+
 	}
 
 	if bind != elfbind {
@@ -178,7 +182,7 @@ func Asmelfsym() {
 	elfbind = STB_LOCAL
 	genasmsym(putelfsym)
 
-	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd {
+	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd && Flag_linkshared == 0 {
 		s := Linklookup(Ctxt, "runtime.tlsg", 0)
 		if s.Sect == nil {
 			Ctxt.Cursym = nil
@@ -200,6 +204,25 @@ func Asmelfsym() {
 	elfbind = STB_GLOBAL
 	elfglobalsymndx = numelfsym
 	genasmsym(putelfsym)
+
+	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd && Flag_linkshared != 0 {
+		s := Linklookup(Ctxt, "runtime.tlsg", 0)
+		if s.Sect == nil {
+			Ctxt.Cursym = nil
+			Diag("missing section for %s", s.Name)
+			Errorexit()
+		}
+
+		if goos == "android" {
+			// Android emulates runtime.tlsg as a regular variable.
+			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_GLOBAL<<4|STT_OBJECT, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
+		} else {
+			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_GLOBAL<<4|STT_TLS, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
+		}
+
+		s.Elfsym = int32(numelfsym)
+		numelfsym++
+	}
 
 	var name string
 	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
