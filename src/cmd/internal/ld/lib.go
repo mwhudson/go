@@ -430,7 +430,7 @@ func loadlib() {
 	// TODO(crawshaw): android should require leaving the tlsg->type
 	// alone (as the runtime-provided SNOPTRBSS) just like darwin/arm.
 	// But some other part of the linker is expecting STLSBSS.
-	if goos != "darwin" || Thearch.Thechar != '5' {
+	if tlsg.Type != SDYNIMPORT && (goos != "darwin" || Thearch.Thechar != '5') {
 		tlsg.Type = STLSBSS
 	}
 	tlsg.Size = int64(Thearch.Ptrsize)

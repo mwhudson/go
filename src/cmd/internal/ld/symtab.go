@@ -205,7 +205,7 @@ func Asmelfsym() {
 	elfglobalsymndx = numelfsym
 	genasmsym(putelfsym)
 
-	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd && Flag_linkshared != 0 {
+	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd && Flag_linkshared != 0 && Ctxt.Tlsg.Type != SDYNIMPORT {
 		s := Linklookup(Ctxt, "runtime.tlsg", 0)
 		if s.Sect == nil {
 			Ctxt.Cursym = nil
@@ -234,7 +234,11 @@ func Asmelfsym() {
 		} else {
 			name = s.Name
 		}
-		putelfsyment(putelfstr(name), 0, 0, STB_GLOBAL<<4|STT_NOTYPE, 0, 0)
+		elftype := STT_NOTYPE
+		if s == Ctxt.Tlsg {
+			elftype = STT_TLS
+		}
+		putelfsyment(putelfstr(name), 0, 0, STB_GLOBAL<<4|elftype, 0, 0)
 		s.Elfsym = int32(numelfsym)
 		numelfsym++
 	}
