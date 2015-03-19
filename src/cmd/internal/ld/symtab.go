@@ -133,7 +133,9 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 			bind = STB_LOCAL
 		}
 	} else {
-
+		if x.Local {
+			bind = STB_LOCAL
+		}
 	}
 
 	if bind != elfbind {
@@ -386,6 +388,7 @@ func symtab() {
 
 	s = Linklookup(Ctxt, "go.string.*", 0)
 	s.Type = SGOSTRING
+	s.Local = true
 	s.Size = 0
 	s.Reachable = true
 	symgostring := s
@@ -413,7 +416,7 @@ func symtab() {
 		if !s.Reachable || s.Special != 0 || s.Type != SRODATA {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "type.") {
+		if strings.HasPrefix(s.Name, "type.") && Flag_linkshared == 0 {
 			s.Type = STYPE
 			s.Hide = 1
 			s.Outer = symtype
