@@ -33,11 +33,13 @@ package ld
 import (
 	"bytes"
 	"cmd/internal/obj"
+	"debug/elf"
 	"fmt"
 	"io/ioutil"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -216,8 +218,9 @@ const (
 )
 
 const (
-	symname = "__.GOSYMDEF"
-	pkgname = "__.PKGDEF"
+	symname   = "__.GOSYMDEF"
+	pkgname   = "__.PKGDEF"
+	shlibname = "__.SHLIBNAME"
 )
 
 var (
@@ -565,6 +568,18 @@ func objfile(file string, pkg string) {
 		ldpkg(f, pkg, atolwhex(arhdr.size), file, Pkgdef)
 	}
 
+	l = nextar(f, off, &arhdr)
+	if l < 0 {
+		Diag("%s: malformed archive", file)
+		Errorexit()
+		goto out
+	}
+	off += l
+	if l > 0 && arhdr.name == shlibname {
+		shlib := strings.TrimSpace(Brdline(f, '\n'))
+		ldshlibsyms(shlib)
+		goto out
+	}
 	/*
 	 * load all the object files from the archive now.
 	 * this gives us sequential file access and keeps us
@@ -577,11 +592,11 @@ func objfile(file string, pkg string) {
 	 * loading every object will also make it possible to
 	 * load foreign objects not referenced by __.GOSYMDEF.
 	 */
-	for {
+	for l > 0 {
+		pname = fmt.Sprintf("%s(%s)", file, arhdr.name)
+		l = atolwhex(arhdr.size)
+		ldobj(f, pkg, l, pname, file, ArchiveObj)
 		l = nextar(f, off, &arhdr)
-		if l == 0 {
-			break
-		}
 		if l < 0 {
 			Diag("%s: malformed archive", file)
 			Errorexit()
@@ -589,10 +604,6 @@ func objfile(file string, pkg string) {
 		}
 
 		off += l
-
-		pname = fmt.Sprintf("%s(%s)", file, arhdr.name)
-		l = atolwhex(arhdr.size)
-		ldobj(f, pkg, l, pname, file, ArchiveObj)
 	}
 
 out:
@@ -985,6 +996,55 @@ func ldobj(f *Biobuf, pkg string, length int64, pn string, file string, whence i
 
 eof:
 	Diag("truncated object file: %s", pn)
+}
+
+func ldshlibsyms(shlib string) {
+	fmt.Fprintf(Ctxt.Bso, "%5.2f ldshlibsyms: %s\n", obj.Cputime(), shlib)
+	for _, processedname := range Ctxt.SharedLibraries {
+		if processedname == shlib {
+			return
+		}
+	}
+	found := false
+	libpath := ""
+	for _, libdir := range Ctxt.Libdir {
+		libpath = filepath.Join(libdir, shlib)
+		if _, err := os.Stat(libpath); err == nil {
+			found = true
+			break
+		}
+	}
+	if !found {
+		Diag("cannot find shared library: %s", shlib)
+		return
+	}
+	if Ctxt.Debugvlog > 1 && Ctxt.Bso != nil {
+		fmt.Fprintf(Ctxt.Bso, "%5.2f ldshlibsyms: found library with name %s at %s\n", obj.Cputime(), shlib, libpath)
+	}
+
+	f, err := elf.Open(libpath)
+	if err != nil {
+		Diag("cannot open shared library: %s", libpath)
+		return
+	}
+	syms, err := f.DynamicSymbols()
+	if err != nil {
+		Diag("cannot read symbols from shared library: %s", libpath)
+		return
+	}
+	for _, s := range syms {
+		if elf.ST_TYPE(s.Info) == elf.STT_NOTYPE || elf.ST_TYPE(s.Info) == elf.STT_SECTION {
+			continue
+		}
+		if s.Section == elf.SHN_UNDEF {
+			continue
+		}
+		if s.Name == "" || s.Name == "_init" || s.Name == "_fini" {
+			continue
+		}
+		Linklookup(Ctxt, s.Name, 0).Type = SDYNIMPORT
+	}
+	Ctxt.SharedLibraries = append(Ctxt.SharedLibraries, shlib)
 }
 
 func mywhatsys() {
