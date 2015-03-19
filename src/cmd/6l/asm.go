@@ -313,6 +313,9 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case ld.R_CALL:
 		if r.Siz == 4 {
 			if r.Xsym.Type == ld.SDYNIMPORT {
+				// TODO(mwhudson): in my hackbranch I changed this to R_X86_64_PLT32
+				// which certainly seems to be more likely to be right.  Figure this
+				// out.
 				ld.Thearch.Vput(ld.R_X86_64_GOTPCREL | uint64(elfsym)<<32)
 			} else {
 				ld.Thearch.Vput(ld.R_X86_64_PC32 | uint64(elfsym)<<32)
