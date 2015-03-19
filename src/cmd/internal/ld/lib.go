@@ -1524,6 +1524,7 @@ func xdefine(p string, t int, v int64) {
 	s.Value = v
 	s.Reachable = true
 	s.Special = 1
+	s.Local = true
 }
 
 func datoff(addr int64) int64 {

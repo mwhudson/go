@@ -379,12 +379,15 @@ func symtab() {
 	xdefine("runtime.egcbss", SRODATA, 0)
 
 	// pseudo-symbols to mark locations of type, string, and go string data.
-	s = Linklookup(Ctxt, "type.*", 0)
 
-	s.Type = STYPE
-	s.Size = 0
-	s.Reachable = true
-	symtype := s
+	var symtype *LSym
+	if Flag_linkshared == 0 {
+		s = Linklookup(Ctxt, "type.*", 0)
+		s.Type = STYPE
+		s.Size = 0
+		s.Reachable = true
+		symtype := s
+	}
 
 	s = Linklookup(Ctxt, "go.string.*", 0)
 	s.Type = SGOSTRING
@@ -395,13 +398,16 @@ func symtab() {
 
 	s = Linklookup(Ctxt, "go.func.*", 0)
 	s.Type = SGOFUNC
+	s.Local = true
 	s.Size = 0
 	s.Reachable = true
 	symgofunc := s
 
 	symtypelink := Linklookup(Ctxt, "runtime.typelink", 0)
 
+	// TODO(mwhudson): Does this symbol do anything anyway?
 	symt = Linklookup(Ctxt, "runtime.symtab", 0)
+	symt.Local = true
 	symt.Type = SSYMTAB
 	symt.Size = 0
 	symt.Reachable = true
@@ -436,6 +442,8 @@ func symtab() {
 		}
 
 		if strings.HasPrefix(s.Name, "go.func.") {
+			Diag("Oh so this case is hit %s", s.Name)
+			Errorexit()
 			s.Type = SGOFUNC
 			s.Hide = 1
 			s.Outer = symgofunc
