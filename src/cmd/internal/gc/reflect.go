@@ -477,6 +477,8 @@ func dimportpath(p *Pkg) {
 		dimportpath_gopkg.Name = "go"
 	}
 
+	// If p == localpkg, this will define a symbol called go.importpath.""
+	// which the linker rewrites to the correct path.
 	nam := "importpath." + p.Prefix + "."
 
 	n := Nod(ONAME, nil, nil)
@@ -486,25 +488,21 @@ func dimportpath(p *Pkg) {
 	n.Xoffset = 0
 	p.Pathsym = n.Sym
 
-	gdatastring(n, p.Path)
-	ggloblsym(n.Sym, int32(Types[TSTRING].Width), obj.DUPOK|obj.RODATA)
+	path := p.Path
+	if p == localpkg {
+		path = myimportpath
+	}
+	// Assume an importing package will define the symbol in the (rare) case
+	// that -p is not passed.
+	if path != "" {
+		gdatastring(n, path)
+		ggloblsym(n.Sym, int32(Types[TSTRING].Width), obj.DUPOK|obj.RODATA)
+	}
 }
 
 func dgopkgpath(s *Sym, ot int, pkg *Pkg) int {
 	if pkg == nil {
 		return dgostringptr(s, ot, "")
-	}
-
-	// Emit reference to go.importpath.""., which 6l will
-	// rewrite using the correct import path.  Every package
-	// that imports this one directly defines the symbol.
-	if pkg == localpkg {
-		var ns *Sym
-
-		if ns == nil {
-			ns = Pkglookup("importpath.\"\".", mkpkg("go"))
-		}
-		return dsymptr(s, ot, ns, 0)
 	}
 
 	dimportpath(pkg)
