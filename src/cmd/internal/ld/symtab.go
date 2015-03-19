@@ -370,12 +370,14 @@ func symtab() {
 	s.Type = SRODATA
 	s.Size = 0
 	s.Reachable = true
+	s.Local = true
 	xdefine("runtime.egcdata", SRODATA, 0)
 
 	s = Linklookup(Ctxt, "runtime.gcbss", 0)
 	s.Type = SRODATA
 	s.Size = 0
 	s.Reachable = true
+	s.Local = true
 	xdefine("runtime.egcbss", SRODATA, 0)
 
 	// pseudo-symbols to mark locations of type, string, and go string data.
@@ -386,7 +388,7 @@ func symtab() {
 		s.Type = STYPE
 		s.Size = 0
 		s.Reachable = true
-		symtype := s
+		symtype = s
 	}
 
 	s = Linklookup(Ctxt, "go.string.*", 0)
