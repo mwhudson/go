@@ -628,7 +628,11 @@ func deadcode() {
 			mark(s)
 		}
 	} else {
-		mark(Linklookup(Ctxt, INITENTRY, 0))
+		mark(Linkrlookup(Ctxt, INITENTRY, 0))
+		if Flag_linkshared != 0 {
+			mark(Linkrlookup(Ctxt, "main.main", 0))
+			mark(Linkrlookup(Ctxt, "main.init", 0))
+		}
 		for i := 0; i < len(markextra); i++ {
 			mark(Linkrlookup(Ctxt, markextra[i], 0))
 		}

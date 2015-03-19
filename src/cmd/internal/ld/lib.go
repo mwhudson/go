@@ -1000,6 +1000,7 @@ eof:
 
 func ldshlibsyms(shlib string) {
 	fmt.Fprintf(Ctxt.Bso, "%5.2f ldshlibsyms: %s\n", obj.Cputime(), shlib)
+	Bflush(Ctxt.Bso)
 	for _, processedname := range Ctxt.SharedLibraries {
 		if processedname == shlib {
 			return
@@ -1020,6 +1021,7 @@ func ldshlibsyms(shlib string) {
 	}
 	if Ctxt.Debugvlog > 1 && Ctxt.Bso != nil {
 		fmt.Fprintf(Ctxt.Bso, "%5.2f ldshlibsyms: found library with name %s at %s\n", obj.Cputime(), shlib, libpath)
+		Bflush(Ctxt.Bso)
 	}
 
 	f, err := elf.Open(libpath)
