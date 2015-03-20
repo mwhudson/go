@@ -434,7 +434,6 @@ func loadlib() {
 		tlsg.Type = STLSBSS
 	}
 	tlsg.Size = int64(Thearch.Ptrsize)
-	tlsg.Hide = 1
 	tlsg.Reachable = true
 	Ctxt.Tlsg = tlsg
 
@@ -1439,6 +1438,16 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 				continue
 			}
 			put(s, s.Name, 'D', Symaddr(s), s.Size, int(s.Version), s.Gotype)
+			continue
+
+		case STLSBSS:
+			if !s.Reachable {
+				continue
+			}
+			if len(s.P) > 0 {
+				Diag("%s should not be bss (size=%d type=%d special=%d)", s.Name, int(len(s.P)), s.Type, s.Special)
+			}
+			put(s, s.Name, 't', Symaddr(s), s.Size, int(s.Version), s.Gotype)
 			continue
 
 		case SBSS,

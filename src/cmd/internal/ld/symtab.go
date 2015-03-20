@@ -90,6 +90,12 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	default:
 		return
 
+	case 't':
+		if Linkmode != LinkExternal {
+			return
+		}
+		type_ = STT_TLS
+
 	case 'T':
 		type_ = STT_FUNC
 
@@ -184,47 +190,9 @@ func Asmelfsym() {
 	elfbind = STB_LOCAL
 	genasmsym(putelfsym)
 
-	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd && Flag_linkshared == 0 {
-		s := Linklookup(Ctxt, "runtime.tlsg", 0)
-		if s.Sect == nil {
-			Ctxt.Cursym = nil
-			Diag("missing section for %s", s.Name)
-			Errorexit()
-		}
-
-		if goos == "android" {
-			// Android emulates runtime.tlsg as a regular variable.
-			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_LOCAL<<4|STT_OBJECT, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
-		} else {
-			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_LOCAL<<4|STT_TLS, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
-		}
-
-		s.Elfsym = int32(numelfsym)
-		numelfsym++
-	}
-
 	elfbind = STB_GLOBAL
 	elfglobalsymndx = numelfsym
 	genasmsym(putelfsym)
-
-	if Linkmode == LinkExternal && HEADTYPE != Hopenbsd && Flag_linkshared != 0 && Ctxt.Tlsg.Type != SDYNIMPORT {
-		s := Linklookup(Ctxt, "runtime.tlsg", 0)
-		if s.Sect == nil {
-			Ctxt.Cursym = nil
-			Diag("missing section for %s", s.Name)
-			Errorexit()
-		}
-
-		if goos == "android" {
-			// Android emulates runtime.tlsg as a regular variable.
-			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_GLOBAL<<4|STT_OBJECT, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
-		} else {
-			putelfsyment(putelfstr(s.Name), 0, s.Size, STB_GLOBAL<<4|STT_TLS, ((s.Sect.(*Section)).Elfsect.(*ElfShdr)).shnum, 0)
-		}
-
-		s.Elfsym = int32(numelfsym)
-		numelfsym++
-	}
 
 	var name string
 	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
@@ -237,7 +205,7 @@ func Asmelfsym() {
 			name = s.Name
 		}
 		elftype := STT_NOTYPE
-		if s == Ctxt.Tlsg {
+		if s.Type == STLSBSS {
 			elftype = STT_TLS
 		}
 		putelfsyment(putelfstr(name), 0, 0, STB_GLOBAL<<4|elftype, 0, 0)
