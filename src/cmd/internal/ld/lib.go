@@ -1038,7 +1038,7 @@ func ldshlibsyms(shlib string) {
 		if s.Section == elf.SHN_UNDEF {
 			continue
 		}
-		if s.Name == "_init" || s.Name == "_fini" {
+		if s.Name == "_init" || s.Name == "_fini" || s.Name == "main" {
 			continue
 		}
 		Linklookup(Ctxt, s.Name, 0).Type = SDYNIMPORT

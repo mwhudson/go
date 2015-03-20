@@ -205,7 +205,7 @@ func Asmelfsym() {
 			name = s.Name
 		}
 		elftype := STT_NOTYPE
-		if s.Type == STLSBSS {
+		if s == Ctxt.Tlsg {
 			elftype = STT_TLS
 		}
 		putelfsyment(putelfstr(name), 0, 0, STB_GLOBAL<<4|elftype, 0, 0)

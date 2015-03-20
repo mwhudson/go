@@ -334,7 +334,7 @@ func relocsym(s *LSym) {
 
 		if r.Sym != nil && (r.Sym.Type&(SMASK|SHIDDEN) == 0 || r.Sym.Type&SMASK == SXREF) {
 			// When putting the runtime but not main into a shared library
-			// with, these symbols are undefined and that's OK.
+			// these symbols are undefined and that's OK.
 			if Flag_linkshared != 0 && (r.Sym.Name == "main.main" || r.Sym.Name == "main.init") {
 				r.Sym.Type = SDYNIMPORT
 			} else {

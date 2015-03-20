@@ -87,7 +87,7 @@ func addlib(ctxt *Link, src string, obj string, pathname string) {
  */
 func addlibpath(ctxt *Link, srcref string, objref string, file string, pkg string) {
 	for i := 0; i < len(ctxt.Library); i++ {
-		if file == ctxt.Library[i].File {
+		if pkg == ctxt.Library[i].Pkg {
 			return
 		}
 	}
