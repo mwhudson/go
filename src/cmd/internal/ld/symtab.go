@@ -431,6 +431,7 @@ func symtab() {
 	objfiledata := Linklookup(Ctxt, "local.objectfiledata", 0)
 	objfiledata.Type = SNOPTRDATA
 	objfiledata.Reachable = true
+	objfiledata.Local = true
 	// See runtime/symtab.go
 	// The pclntab slice
 	Addaddr(Ctxt, objfiledata, Linklookup(Ctxt, "runtime.pclntab", 0))
@@ -487,8 +488,11 @@ func symtab() {
 	// uintptr (next)
 	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
 
-	objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
-	objfiledatap.Type = SNOPTRDATA
-	objfiledatap.Size = 0 // overwrite existing value
-	Addaddr(Ctxt, objfiledatap, objfiledata)
+	println("runtime.objectfiledatap type:", Linklookup(Ctxt, "runtime.objectfiledatap", 0).Type)
+	if Linklookup(Ctxt, "runtime.objectfiledatap", 0).Type != SDYNIMPORT {
+		objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
+		objfiledatap.Type = SNOPTRDATA
+		objfiledatap.Size = 0 // overwrite existing value
+		Addaddr(Ctxt, objfiledatap, objfiledata)
+	}
 }
