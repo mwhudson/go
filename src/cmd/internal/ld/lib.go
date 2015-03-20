@@ -575,7 +575,7 @@ func objfile(file string, pkg string) {
 		goto out
 	}
 	off += l
-	if l > 0 && arhdr.name == shlibname {
+	if Flag_linkshared != 0 && l > 0 && arhdr.name == shlibname {
 		shlib := strings.TrimSpace(Brdline(f, '\n'))
 		ldshlibsyms(shlib)
 		goto out
@@ -999,9 +999,7 @@ eof:
 }
 
 func ldshlibsyms(shlib string) {
-	fmt.Fprintf(Ctxt.Bso, "%5.2f ldshlibsyms: %s\n", obj.Cputime(), shlib)
-	Bflush(Ctxt.Bso)
-	for _, processedname := range Ctxt.SharedLibraries {
+	for _, processedname := range Ctxt.Shlibs {
 		if processedname == shlib {
 			return
 		}
@@ -1041,12 +1039,12 @@ func ldshlibsyms(shlib string) {
 		if s.Section == elf.SHN_UNDEF {
 			continue
 		}
-		if s.Name == "" || s.Name == "_init" || s.Name == "_fini" {
+		if s.Name == "_init" || s.Name == "_fini" {
 			continue
 		}
 		Linklookup(Ctxt, s.Name, 0).Type = SDYNIMPORT
 	}
-	Ctxt.SharedLibraries = append(Ctxt.SharedLibraries, shlib)
+	Ctxt.Shlibs = append(Ctxt.Shlibs, shlib)
 }
 
 func mywhatsys() {

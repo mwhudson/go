@@ -98,31 +98,31 @@ type Auto struct {
 }
 
 type Link struct {
-	Thechar         int32
-	Thestring       string
-	Goarm           int32
-	Headtype        int
-	Arch            *LinkArch
-	Debugasm        int32
-	Debugvlog       int32
-	Bso             *Biobuf
-	Windows         int32
-	Goroot          string
-	Hash            map[symVer]*LSym
-	Allsym          *LSym
-	Nsymbol         int32
-	Tlsg            *LSym
-	Libdir          []string
-	Library         []Library
-	SharedLibraries []string
-	Tlsoffset       int
-	Diag            func(string, ...interface{})
-	Cursym          *LSym
-	Version         int
-	Textp           *LSym
-	Etextp          *LSym
-	Nhistfile       int32
-	Filesyms        *LSym
+	Thechar   int32
+	Thestring string
+	Goarm     int32
+	Headtype  int
+	Arch      *LinkArch
+	Debugasm  int32
+	Debugvlog int32
+	Bso       *Biobuf
+	Windows   int32
+	Goroot    string
+	Hash      map[symVer]*LSym
+	Allsym    *LSym
+	Nsymbol   int32
+	Tlsg      *LSym
+	Libdir    []string
+	Library   []Library
+	Shlibs    []string
+	Tlsoffset int
+	Diag      func(string, ...interface{})
+	Cursym    *LSym
+	Version   int
+	Textp     *LSym
+	Etextp    *LSym
+	Nhistfile int32
+	Filesyms  *LSym
 }
 
 type LinkArch struct {
