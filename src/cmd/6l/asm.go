@@ -61,7 +61,75 @@ func needlib(name string) int {
 	return 0
 }
 
+func Addcall(ctxt *ld.Link, s *ld.LSym, t *ld.LSym) int64 {
+	s.Reachable = true
+	i := s.Size
+	s.Size += 4
+	ld.Symgrow(ctxt, s, s.Size)
+	r := ld.Addrel(s)
+	r.Sym = t
+	r.Off = int32(i)
+	r.Type = ld.R_CALL
+	r.Siz = 4
+	return i + int64(r.Siz)
+}
+
 func gentext() {
+	if ld.Flag_linkshared != 0 {
+		addobjectfiledata := ld.Linklookup(ld.Ctxt, "runtime.addobjectfiledata", 0)
+		if addobjectfiledata.Type == ld.STEXT {
+			// we're linking an object containing the runtime -> no need for
+			// an init function
+			return
+		}
+		addobjectfiledata.Reachable = true
+		initfunc := ld.Linklookup(ld.Ctxt, "local.dso_init", 0)
+		initfunc.Type = ld.STEXT
+		initfunc.Local = true
+		initfunc.Reachable = true
+		o := func(op ...uint8) {
+			for _, op1 := range op {
+				ld.Adduint8(ld.Ctxt, initfunc, op1)
+			}
+		}
+		// TODO(mwhudson): It's a total hack that we can get away with only saving %rbx and %r13
+
+		// 0000000000000000 <local.dso_init>:
+		//    0:        53                      push   %rbx
+		//    1:        41 55                   push   %r13
+		//    3:        48 8d 1d 00 00 00 00    lea    0x0(%rip),%rbx        # a <local.dso_init+0xa>
+		//                      6: R_X86_64_PC32        local.heapsegment-0x4
+		//    a:        53                      push   %rbx
+		//    b:        e8 00 00 00 00          callq  10 <local.dso_init+0x10>
+		//                      c: R_X86_64_PLT32       runtime.addobjectfiledata-0x4
+		//   10:        48 83 c4 08             add    $0x8,%rsp
+		//   14:        41 5d                   pop    %r13
+		//   16:        5b                      pop    %rbx
+		//   17:        c3                      retq
+		//
+		o(0x53)
+		o(0x41, 0x55)
+		o(0x48, 0x8d, 0x1d)
+		ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "local.objectfiledata", 0), 0)
+		o(0x53)
+		o(0xe8)
+		Addcall(ld.Ctxt, initfunc, addobjectfiledata)
+		o(0x48, 0x83, 0xc4, 0x08)
+		o(0x41, 0x5d)
+		o(0x5b)
+		o(0xc3)
+		if ld.Ctxt.Etextp != nil {
+			ld.Ctxt.Etextp.Next = initfunc
+		} else {
+			ld.Ctxt.Textp = initfunc
+		}
+		ld.Ctxt.Etextp = initfunc
+		initarray_entry := ld.Linklookup(ld.Ctxt, "local.dso_init.init", 0)
+		initarray_entry.Reachable = true
+		initarray_entry.Local = true
+		initarray_entry.Type = ld.SINITARR
+		ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
+	}
 }
 
 func adddynrela(rela *ld.LSym, s *ld.LSym, r *ld.Reloc) {

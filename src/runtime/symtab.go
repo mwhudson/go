@@ -57,7 +57,7 @@ type objectfiledata struct {
 var objectfiledatap, eobjectfiledatap *objectfiledata // linker symbol
 
 //go:nosplit
-func pushheapsegment(datap *objectfiledata) {
+func addobjectfiledata(datap *objectfiledata) {
 	eobjectfiledatap.next = datap
 	eobjectfiledatap = datap
 }

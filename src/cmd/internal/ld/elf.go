@@ -1655,7 +1655,7 @@ func doelf() {
 		Addstring(shstrtab, ".note.GNU-stack")
 	}
 
-	if Flag_shared != 0 {
+	if Flag_shared != 0 || Flag_linkshared != 0 {
 		Addstring(shstrtab, ".init_array")
 		if Thearch.Thechar == '6' || Thearch.Thechar == '9' {
 			Addstring(shstrtab, ".rela.init_array")

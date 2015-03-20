@@ -493,5 +493,9 @@ func symtab() {
 		objfiledatap.Type = SNOPTRDATA
 		objfiledatap.Size = 0 // overwrite existing value
 		Addaddr(Ctxt, objfiledatap, objfiledata)
+		eobjfiledatap := Linklookup(Ctxt, "runtime.eobjectfiledatap", 0)
+		eobjfiledatap.Type = SNOPTRDATA
+		eobjfiledatap.Size = 0 // overwrite existing value
+		Addaddr(Ctxt, eobjfiledatap, objfiledata)
 	}
 }
