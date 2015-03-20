@@ -621,10 +621,6 @@ func deadcode() {
 
 	if Flag_linkshared != 0 && Flag_shared != 0 {
 		for s := Ctxt.Textp; s != nil; s = s.Next {
-			// TODO(mwhudson): figure out why this is needed!
-			if strings.Contains(s.Name, "sync/atomic") {
-				continue
-			}
 			mark(s)
 		}
 	} else {
