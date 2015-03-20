@@ -488,7 +488,6 @@ func symtab() {
 	// uintptr (next)
 	adduintxx(Ctxt, objfiledata, 0, Thearch.Ptrsize)
 
-	println("runtime.objectfiledatap type:", Linklookup(Ctxt, "runtime.objectfiledatap", 0).Type)
 	if Linklookup(Ctxt, "runtime.objectfiledatap", 0).Type != SDYNIMPORT {
 		objfiledatap := Linklookup(Ctxt, "runtime.objectfiledatap", 0)
 		objfiledatap.Type = SNOPTRDATA

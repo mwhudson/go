@@ -771,8 +771,14 @@ func hostlink() {
 	if Flag_shared != 0 {
 		if Flag_linkshared == 0 {
 			argv = append(argv, "-Wl,-Bsymbolic")
+		} else {
+			// TODO(mwhudson): unless you do this, dynamic relocations fill
+			// out the findfunctab table and for some reason shared libraries
+			// and the executable both define a main function and putting the
+			// address of executable's main into the shared libraries
+			// findfunctab violates the assumptions of the runtime.
+			argv = append(argv, "-Wl,-Bsymbolic-functions")
 		}
-		//TODO(mwhudson): we might want -Bsymbolic-functions when -linkshared
 		argv = append(argv, "-shared")
 	}
 
