@@ -110,6 +110,53 @@ func dumpobj() {
 	obj.Bterm(bout)
 }
 
+func dumpgox() {
+	var err error
+	bout, err = obj.Bopenw(gox)
+	if err != nil {
+		Flusherrors()
+		fmt.Printf("can't create %s: %v\n", gox, err)
+		errorexit()
+	}
+
+	startobj := int64(0)
+	var arhdr [ArhdrSize]byte
+	obj.Bwritestring(bout, "!<arch>\n")
+	arhdr = [ArhdrSize]byte{}
+	obj.Bwrite(bout, arhdr[:])
+	startobj = obj.Boffset(bout)
+
+	fmt.Fprintf(bout, "go object %s %s %s %s\n", obj.Getgoos(), obj.Getgoarch(), obj.Getgoversion(), obj.Expstring())
+	dumpexport()
+
+	obj.Bflush(bout)
+	size := obj.Boffset(bout) - startobj
+	if size&1 != 0 {
+		obj.Bputc(bout, 0)
+	}
+	obj.Bseek(bout, startobj-ArhdrSize, 0)
+	formathdr(arhdr[:], "__.PKGDEF", size)
+	obj.Bwrite(bout, arhdr[:])
+	obj.Bflush(bout)
+
+	obj.Bseek(bout, startobj+size+(size&1), 0)
+	arhdr = [ArhdrSize]byte{}
+	obj.Bwrite(bout, arhdr[:])
+	startobj = obj.Boffset(bout)
+	obj.Bwritestring(bout, shlibname+"\n")
+	obj.Bflush(bout)
+	size = obj.Boffset(bout) - startobj
+	if size&1 != 0 {
+		obj.Bputc(bout, 0)
+	}
+	obj.Bseek(bout, startobj-ArhdrSize, 0)
+	formathdr(arhdr[:], "__.SHLIBNAME", size)
+	obj.Bwrite(bout, arhdr[:])
+	obj.Bflush(bout)
+
+	obj.Bterm(bout)
+}
+
 func dumpglobls() {
 	var n *Node
 

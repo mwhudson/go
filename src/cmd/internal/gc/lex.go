@@ -104,6 +104,8 @@ func doversion() {
 	os.Exit(0)
 }
 
+var gox, shlibname string
+
 func Main() {
 	defer hidePanic()
 
@@ -226,6 +228,8 @@ func Main() {
 	if Thearch.Thechar == '6' {
 		obj.Flagcount("largemodel", "generate code that assumes a large memory model", &flag_largemodel)
 		obj.Flagcount("shared", "generate code that can be linked into a shared library", &flag_shared)
+		obj.Flagstr("gox", "TODO(mwhudson): write this", &gox)
+		obj.Flagstr("shlibname", "TODO(mwhudson): write this", &shlibname)
 	}
 
 	obj.Flagstr("cpuprofile", "file: write cpu profile to file", &cpuprofile)
@@ -477,6 +481,10 @@ func Main() {
 	}
 
 	dumpobj()
+
+	if gox != "" {
+		dumpgox()
+	}
 
 	if asmhdr != "" {
 		dumpasmhdr()
