@@ -304,7 +304,7 @@ func runBuild(cmd *Command, args []string) {
 		if buildI {
 			fatalf("-buildmode=shared and -i not supported together")
 		}
-		if buildO {
+		if *buildO != "" {
 			fatalf("-buildmode=shared and -o not supported together")
 		}
 	default:
@@ -385,7 +385,7 @@ func runInstall(cmd *Command, args []string) {
 	a := &action{}
 	if buildBuildmode == "shared" {
 		a.f = (*builder).install
-		linkSharedAction := &action
+		linkSharedAction := &action{}
 		linkSharedAction.f = (*builder).linkShared
 		a.deps = append(a.deps, linkSharedAction)
 		for _, p := range pkgs {
@@ -393,7 +393,7 @@ func runInstall(cmd *Command, args []string) {
 				continue
 			}
 			a.deps = append(a.deps, b.action(modeInstallGox, modeBuild, p))
-			linkSharedAction = append(linkSharedAction.deps, b.action(modeBuild, modeBuild, p))
+			linkSharedAction.deps = append(linkSharedAction.deps, b.action(modeBuild, modeBuild, p))
 		}
 	} else {
 		var tools []*action
@@ -504,6 +504,7 @@ type buildMode int
 const (
 	modeBuild buildMode = iota
 	modeInstall
+	modeInstallGox
 )
 
 var (
@@ -690,6 +691,10 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 	switch mode {
 	case modeInstall:
 		a.f = (*builder).install
+		a.deps = []*action{b.action(modeBuild, depMode, p)}
+		a.target = a.p.target
+	case modeInstallGox:
+		a.f = (*builder).installGox
 		a.deps = []*action{b.action(modeBuild, depMode, p)}
 		a.target = a.p.target
 	case modeBuild:
@@ -1133,8 +1138,12 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 	return
 }
 
-func (b *builder) linkShared(a *action) (err error) {
+func (b *builder) installGox(a *action) (err error) {
+	return
+}
 
+func (b *builder) linkShared(a *action) (err error) {
+	return
 }
 
 // install is the action for installing a single package or executable.
