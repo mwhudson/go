@@ -145,6 +145,8 @@ var buildLdflags []string    // -ldflags flag
 var buildGccgoflags []string // -gccgoflags flag
 var buildRace bool           // -race flag
 var buildToolExec []string   // -toolexec flag
+var buildBuildmode string    // -buildmode flag
+var buildLibname string      // -libname flag
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -199,6 +201,8 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var(buildCompiler{}, "compiler", "")
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
 	cmd.Flag.Var((*stringsFlag)(&buildToolExec), "toolexec", "")
+	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
+	cmd.Flag.StringVar(&buildLibname, "libname", "", "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -273,8 +277,45 @@ func (v *stringsFlag) String() string {
 	return "<stringsFlag>"
 }
 
+func buildModeInit() {
+	// TODO(mwhudson): this sets installsuffix based on buildmode. It is likely that
+	// the mapping buildmode -> compiler option will not be injective, and really the
+	// installsuffix only needs to depend on the compiler options used. OK for now
+	// though.
+	switch buildBuildmode {
+	case "":
+		if buildLibname != "" {
+			fatalf("-libname can only be combined with -buildmode=shared")
+		}
+		return
+	case "shared":
+		if buildI {
+			fatalf("-buildmode=shared and -i not supported together")
+		}
+		if *buildO != "" {
+			fatalf("-buildmode=shared and -o not supported together")
+		}
+	default:
+		fatalf("buildmode=%s not supported", buildBuildmode)
+	}
+	if goarch != "amd64" || goos != "linux" {
+		fmt.Fprintf(os.Stderr, "go %s: -buildmode is only supported on linux/amd64\n", flag.Args()[0])
+		os.Exit(2)
+	}
+	buildGcflags = append(buildGcflags, "-buildmode="+buildBuildmode)
+	buildLdflags = append(buildLdflags, "-buildmode="+buildBuildmode)
+	buildAsmflags = append(buildLdflags, "-buildmode="+buildBuildmode)
+	if buildContext.InstallSuffix != "" {
+		buildContext.InstallSuffix += "_"
+	}
+	buildContext.InstallSuffix += "bm-" + buildBuildmode
+	//buildContext.BuildTags = append(buildContext.BuildTags, "shared")
+
+}
+
 func runBuild(cmd *Command, args []string) {
 	raceInit()
+	buildModeInit()
 	var b builder
 	b.init()
 
@@ -319,9 +360,14 @@ func runBuild(cmd *Command, args []string) {
 		return
 	}
 
-	a := &action{}
-	for _, p := range packages(args) {
-		a.deps = append(a.deps, b.action(modeBuild, depMode, p))
+	var a *action
+	if buildBuildmode == "shared" {
+		a = b.libaction(packages(args), libname(args), modeBuild)
+	} else {
+		a = &action{}
+		for _, p := range packages(args) {
+			a.deps = append(a.deps, b.action(modeBuild, depMode, p))
+		}
 	}
 	b.do(a)
 }
@@ -340,8 +386,35 @@ See also: go build, go get, go clean.
 	`,
 }
 
+func libname(args []string) string {
+	var libname string
+	if buildLibname != "" {
+		libname = buildLibname
+	} else {
+		for _, arg := range args {
+			arg = strings.Replace(arg, ".", "dot", -1)
+			clean := func(r rune) rune {
+				switch {
+				case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
+					'0' <= r && r <= '9':
+					return r
+				}
+				return '-'
+			}
+			arg = strings.Map(clean, arg)
+			if libname != "" {
+				libname = libname + "-" + arg
+			} else {
+				libname = arg
+			}
+		}
+	}
+	return "lib" + libname + ".so"
+}
+
 func runInstall(cmd *Command, args []string) {
 	raceInit()
+	buildModeInit()
 	pkgs := packagesForBuild(args)
 
 	for _, p := range pkgs {
@@ -360,25 +433,56 @@ func runInstall(cmd *Command, args []string) {
 	var b builder
 	b.init()
 	a := &action{}
-	var tools []*action
-	for _, p := range pkgs {
-		// If p is a tool, delay the installation until the end of the build.
-		// This avoids installing assemblers/compilers that are being executed
-		// by other steps in the build.
-		// cmd/cgo is handled specially in b.action, so that we can
-		// both build and use it in the same 'go install'.
-		action := b.action(modeInstall, modeInstall, p)
-		if goTools[p.ImportPath] == toTool && p.ImportPath != "cmd/cgo" {
-			a.deps = append(a.deps, action.deps...)
-			action.deps = append(action.deps, a)
-			tools = append(tools, action)
-			continue
+	if buildBuildmode == "shared" {
+		var libdir string
+		for _, p := range pkgs {
+			if p.Name == "main" {
+				continue
+			}
+			// TODO(mwhudson): make this less vomitsome (involves changing go/build)
+			plibdir := strings.TrimSuffix(p.build.PkgObj, "/"+p.ImportPath+".a")
+			if libdir == "" {
+				libdir = plibdir
+			} else if libdir != plibdir {
+				fatalf("multiple roots %s & %s", libdir, plibdir)
+			}
 		}
-		a.deps = append(a.deps, action)
-	}
-	if len(tools) > 0 {
-		a = &action{
-			deps: tools,
+
+		a.f = (*builder).install
+		linkSharedAction := b.libaction(pkgs, libname(args), modeInstall)
+		a.target = filepath.Join(libdir, libname(args))
+		a.deps = append(a.deps, linkSharedAction)
+		for _, p := range pkgs {
+			if p.Name == "main" {
+				continue
+			}
+			shlibnameaction := b.action(modeInstallShlibname, modeInstall, p)
+			a.deps = append(a.deps, shlibnameaction)
+			// Add a dependency on linkSharedAction to shlibnameaction so that
+			// the shlibname files are not installed if the link fails.
+			shlibnameaction.deps = append(shlibnameaction.deps, linkSharedAction)
+		}
+	} else {
+		var tools []*action
+		for _, p := range pkgs {
+			// If p is a tool, delay the installation until the end of the build.
+			// This avoids installing assemblers/compilers that are being executed
+			// by other steps in the build.
+			// cmd/cgo is handled specially in b.action, so that we can
+			// both build and use it in the same 'go install'.
+			action := b.action(modeInstall, modeInstall, p)
+			if goTools[p.ImportPath] == toTool && p.ImportPath != "cmd/cgo" {
+				a.deps = append(a.deps, action.deps...)
+				action.deps = append(action.deps, a)
+				tools = append(tools, action)
+				continue
+			}
+			a.deps = append(a.deps, action)
+		}
+		if len(tools) > 0 {
+			a = &action{
+				deps: tools,
+			}
 		}
 	}
 	b.do(a)
@@ -467,6 +571,7 @@ type buildMode int
 const (
 	modeBuild buildMode = iota
 	modeInstall
+	modeInstallShlibname
 )
 
 var (
@@ -655,6 +760,10 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 		a.f = (*builder).install
 		a.deps = []*action{b.action(modeBuild, depMode, p)}
 		a.target = a.p.target
+	case modeInstallShlibname:
+		a.f = (*builder).installShlibname
+		a.deps = []*action{b.action(modeInstall, depMode, p)}
+		a.target = a.p.target[:len(a.p.target)-2] + ".shlibname"
 	case modeBuild:
 		a.f = (*builder).build
 		a.target = a.objpkg
@@ -675,6 +784,20 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 	}
 
 	return a
+}
+
+func (b *builder) libaction(args []*Package, libname string, depMode buildMode) *action {
+	a := &action{}
+	a.f = (*builder).linkShared
+	a.target = filepath.Join(b.work, libname)
+	for _, p := range args {
+		if p.Name == "main" {
+			continue
+		}
+		a.deps = append(a.deps, b.action(depMode, depMode, p))
+	}
+	return a
+
 }
 
 // actionList returns the list of actions in the dag rooted at root
@@ -1094,6 +1217,35 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 		}
 	}
 	return
+}
+
+func (b *builder) installShlibname(a *action) (err error) {
+	a2 := a.deps[1]
+	fd, err := os.OpenFile(a.target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return
+	}
+	fd.WriteString(filepath.Base(a2.target) + "\n")
+	if buildX {
+		b.showcmd("", "echo '%s' > %s # internal", filepath.Base(a2.target), a.target)
+	}
+	return fd.Close()
+}
+
+func (b *builder) linkShared(a *action) (err error) {
+	// TODO(mwhudson): obvious copy pasting from gcToolchain.ld, should make a few
+	// changes to that function and then call it. And support gccgo.
+	allactions := actionList(a)
+	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
+	// TODO(mwhudson): this does not check for cxx-ness, extldflags etc
+	ldflags := []string{"-installsuffix", buildContext.InstallSuffix}
+	ldflags = append(ldflags, buildLdflags...)
+	for _, d := range a.deps {
+		if d.target != "" { // omit unsafe etc
+			ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
+		}
+	}
+	return b.run(".", a.target, nil, buildToolExec, tool(archChar()+"l"), "-o", a.target, importArgs, ldflags)
 }
 
 // install is the action for installing a single package or executable.
