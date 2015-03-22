@@ -142,6 +142,7 @@ var buildLdflags []string    // -ldflags flag
 var buildGccgoflags []string // -gccgoflags flag
 var buildRace bool           // -race flag
 var buildToolExec []string   // -toolexec flag
+var buildBuildmode string    // -buildmode flag
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -195,6 +196,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var(buildCompiler{}, "compiler", "")
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
 	cmd.Flag.Var((*stringsFlag)(&buildToolExec), "toolexec", "")
+	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -296,6 +298,19 @@ func runBuild(cmd *Command, args []string) {
 		}
 	}
 
+	switch buildBuildmode {
+	case "":
+	case "shared":
+		if buildI {
+			fatalf("-buildmode=shared and -i not supported together")
+		}
+		if buildO {
+			fatalf("-buildmode=shared and -o not supported together")
+		}
+	default:
+		fatalf("buildmode=%s not supported", buildBuildmode)
+	}
+
 	depMode := modeBuild
 	if buildI {
 		depMode = modeInstall
@@ -316,7 +331,13 @@ func runBuild(cmd *Command, args []string) {
 	}
 
 	a := &action{}
+	if buildBuildmode == "shared" {
+		a.f = (*builder).linkShared
+	}
 	for _, p := range packages(args) {
+		if buildBuildmode == "shared" && p.Name == "main" {
+			continue
+		}
 		a.deps = append(a.deps, b.action(modeBuild, depMode, p))
 	}
 	b.do(a)
@@ -355,26 +376,46 @@ func runInstall(cmd *Command, args []string) {
 
 	var b builder
 	b.init()
-	a := &action{}
-	var tools []*action
-	for _, p := range pkgs {
-		// If p is a tool, delay the installation until the end of the build.
-		// This avoids installing assemblers/compilers that are being executed
-		// by other steps in the build.
-		// cmd/cgo is handled specially in b.action, so that we can
-		// both build and use it in the same 'go install'.
-		action := b.action(modeInstall, modeInstall, p)
-		if goTools[p.ImportPath] == toTool && p.ImportPath != "cmd/cgo" {
-			a.deps = append(a.deps, action.deps...)
-			action.deps = append(action.deps, a)
-			tools = append(tools, action)
-			continue
-		}
-		a.deps = append(a.deps, action)
+	switch buildBuildmode {
+	case "":
+	case "shared":
+	default:
+		fatalf("buildmode=%s not supported", buildBuildmode)
 	}
-	if len(tools) > 0 {
-		a = &action{
-			deps: tools,
+	a := &action{}
+	if buildBuildmode == "shared" {
+		a.f = (*builder).install
+		linkSharedAction := &action
+		linkSharedAction.f = (*builder).linkShared
+		a.deps = append(a.deps, linkSharedAction)
+		for _, p := range pkgs {
+			if p.Name == "main" {
+				continue
+			}
+			a.deps = append(a.deps, b.action(modeInstallGox, modeBuild, p))
+			linkSharedAction = append(linkSharedAction.deps, b.action(modeBuild, modeBuild, p))
+		}
+	} else {
+		var tools []*action
+		for _, p := range pkgs {
+			// If p is a tool, delay the installation until the end of the build.
+			// This avoids installing assemblers/compilers that are being executed
+			// by other steps in the build.
+			// cmd/cgo is handled specially in b.action, so that we can
+			// both build and use it in the same 'go install'.
+			action := b.action(modeInstall, modeInstall, p)
+			if goTools[p.ImportPath] == toTool && p.ImportPath != "cmd/cgo" {
+				a.deps = append(a.deps, action.deps...)
+				action.deps = append(action.deps, a)
+				tools = append(tools, action)
+				continue
+			}
+			a.deps = append(a.deps, action)
+		}
+		if len(tools) > 0 {
+			a = &action{
+				deps: tools,
+			}
 		}
 	}
 	b.do(a)
@@ -1090,6 +1131,10 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 		}
 	}
 	return
+}
+
+func (b *builder) linkShared(a *action) (err error) {
+
 }
 
 // install is the action for installing a single package or executable.
