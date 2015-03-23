@@ -1145,7 +1145,19 @@ func (b *builder) installGox(a *action) (err error) {
 }
 
 func (b *builder) linkShared(a *action) (err error) {
-	return
+	// obvious copy pasta from gcToolchain.ld
+	allactions := actionList(a)
+	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
+	// need to check for cxx-ness
+	ldflags := []string{"-shared", "-linkshared"}
+	if buildContext.InstallSuffix != "" {
+		ldflags = append(ldflags, "-installsuffix", buildContext.InstallSuffix)
+	}
+	ldflags = append(ldflags, buildLdflags...)
+	for _, d := range a.deps {
+		ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
+	}
+	return b.run(".", a.target, nil, buildToolExec, tool(archChar()+"l"), "-o", a.target, importArgs, ldflags)
 }
 
 // install is the action for installing a single package or executable.
