@@ -119,11 +119,13 @@ func addlibpath(ctxt *Link, srcref string, objref string, file string, pkg strin
 	l.Srcref = srcref
 	l.File = file
 	l.Pkg = pkg
-	shlibbytes, err := ioutil.ReadFile(shlibnamefile)
-	if err != nil {
-		Diag("Error reading %s: %v", shlibnamefile, err)
+	if shlibnamefile != "" {
+		shlibbytes, err := ioutil.ReadFile(shlibnamefile)
+		if err != nil {
+			Diag("Error reading %s: %v", shlibnamefile, err)
+		}
+		l.Shlib = string(shlibbytes)
 	}
-	l.Shlib = string(shlibbytes)
 }
 
 func atolwhex(s string) int64 {
