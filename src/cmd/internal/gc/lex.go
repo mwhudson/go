@@ -783,7 +783,13 @@ func importfile(f *Val, line int) {
 
 	// assume files move (get installed)
 	// so don't record the full path.
-	linehist(file[len(file)-len(path_)-2:], -1, 1) // acts as #pragma lib
+	var i int
+	if strings.HasSuffix(file, ".gox") {
+		i = len(file) - len(path_) - 4
+	} else {
+		i = len(file) - len(path_) - 2
+	}
+	linehist(file[i:], -1, 1) // acts as #pragma lib
 
 	/*
 	 * position the input right

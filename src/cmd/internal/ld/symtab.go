@@ -134,7 +134,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	// to get the exported symbols put into the dynamic symbol table.
 	// To avoid filling the dynamic table with lots of unnecessary symbols,
 	// mark all Go symbols local (not global) in the final executable.
-	if Flag_sharedpartial == 0 {
+	if Flag_sharedpartial == 0 && Flag_linkshared == 0 {
 		if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 {
 			bind = STB_LOCAL
 		}
