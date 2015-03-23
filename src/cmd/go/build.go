@@ -144,6 +144,7 @@ var buildRace bool           // -race flag
 var buildToolExec []string   // -toolexec flag
 var buildBuildmode string    // -buildmode flag
 var buildLibname string      // -libname flag
+var buildLinkshared bool     // -linkshared flag
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -199,6 +200,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var((*stringsFlag)(&buildToolExec), "toolexec", "")
 	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
 	cmd.Flag.StringVar(&buildLibname, "libname", "", "")
+	cmd.Flag.BoolVar(&buildLinkshared, "linkshared", false, "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -341,8 +343,11 @@ func runBuild(cmd *Command, args []string) {
 		a.target = filepath.Join(b.work, "libfoo.so")
 	}
 	for _, p := range packages(args) {
-		if buildBuildmode == "shared" && p.Name == "main" {
-			continue
+		if buildBuildmode == "shared" {
+			if p.Name == "main" {
+				continue
+			}
+			p.Stale = true
 		}
 		a.deps = append(a.deps, b.action(modeBuild, depMode, p))
 	}
@@ -446,6 +451,7 @@ func runInstall(cmd *Command, args []string) {
 			if p.Name == "main" {
 				continue
 			}
+			p.Stale = true
 			goxaction := b.action(modeInstallGox, modeBuild, p)
 			a.deps = append(a.deps, goxaction)
 			// Add a dependency on linkSharedAction to
@@ -1248,6 +1254,9 @@ func (b *builder) linkShared(a *action) (err error) {
 	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
 	// TODO(mwhudson): check for cxx-ness, extldflags etc
 	ldflags := []string{"-sharedpartial"}
+	if buildLinkshared {
+		ldflags = append(ldflags, "-linkshared")
+	}
 	if buildContext.InstallSuffix != "" {
 		ldflags = append(ldflags, "-installsuffix", buildContext.InstallSuffix)
 	}

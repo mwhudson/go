@@ -762,7 +762,7 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 		return true
 	}
 
-	if buildBuildmode == "shared" {
+	if buildBuildmode == "shared" && !buildLinkshared {
 		return true
 	}
 
@@ -773,6 +773,15 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 	}
 	if built.IsZero() {
 		return true
+	}
+
+	if buildBuildmode == "shared" && buildLinkshared {
+		// TODO(mwhudson): If there is a gox (and so
+		// presumably a .so) but it's older than the sources,
+		// we can't rebuild it because we don't know which
+		// other packages were built into the .so!  Need to
+		// fix that.
+		return false
 	}
 
 	olderThan := func(file string) bool {
