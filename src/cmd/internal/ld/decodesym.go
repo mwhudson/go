@@ -67,12 +67,24 @@ func decodetype_size(s *LSym) int64 {
 
 // Type.commonType.gc
 func decodetype_gcprog(s *LSym) *LSym {
-	return decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+2*int32(Thearch.Ptrsize))
+	if Flag_linkshared != 0 || Flag_sharedpartial != 0 {
+		// type.$name -> type..gcprog.$name
+		x := "type..gcprog." + s.Name[5:]
+		return Linklookup(Ctxt, x, 0)
+	} else {
+		return decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+2*int32(Thearch.Ptrsize))
+	}
 }
 
 func decodetype_gcmask(s *LSym) []byte {
-	mask := decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
-	return mask.P
+	if Flag_linkshared != 0 || Flag_sharedpartial != 0 {
+		// type.$name -> type..gcbits.$name
+		x := "type..gcbits." + s.Name[5:]
+		return Linklookup(Ctxt, x, 0).P
+	} else {
+		mask := decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
+		return mask.P
+	}
 }
 
 // Type.ArrayType.elem and Type.SliceType.Elem

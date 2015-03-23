@@ -1028,6 +1028,7 @@ func ldshlibsyms(shlib string) {
 		Diag("cannot open shared library: %s", libpath)
 		return
 	}
+	defer f.Close()
 	syms, err := f.DynamicSymbols()
 	if err != nil {
 		Diag("cannot read symbols from shared library: %s", libpath)
@@ -1045,14 +1046,16 @@ func ldshlibsyms(shlib string) {
 		}
 		lsym := Linklookup(Ctxt, s.Name, 0)
 		lsym.Type = SDYNIMPORT
-		if strings.HasPrefix(lsym.Name, "type.") && !strings.HasPrefix(lsym.Name, "type..") {
+		if strings.HasPrefix(lsym.Name, "type.") {
 			data := make([]byte, s.Size)
 			sect := f.Sections[s.Section]
-			n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
-			if uint64(n) != s.Size {
-				Diag("Error reading contents of %s: %v", s.Name, err)
+			if sect.Type == elf.SHT_PROGBITS {
+				n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
+				if uint64(n) != s.Size {
+					Diag("Error reading contents of %s: %v", s.Name, err)
+				}
+				lsym.P = data
 			}
-			lsym.P = data
 		}
 	}
 	Ctxt.Shlibs = append(Ctxt.Shlibs, libpath)

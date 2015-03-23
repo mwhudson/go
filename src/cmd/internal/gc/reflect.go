@@ -782,24 +782,33 @@ func dcommontype(s *Sym, ot int, t *Type) int {
 		for i := 0; i < 8; i++ {
 			x1 = x1<<8 | uint64(gcmask[i])
 		}
-		var p string
-		if Widthptr == 4 {
-			p = fmt.Sprintf("gcbits.0x%016x", x1)
-		} else {
-			x2 := uint64(0)
-			for i := 0; i < 8; i++ {
-				x2 = x2<<8 | uint64(gcmask[i+8])
-			}
-			p = fmt.Sprintf("gcbits.0x%016x%016x", x1, x2)
-		}
-
-		sbits := Pkglookup(p, Runtimepkg)
-		if sbits.Flags&SymUniq == 0 {
-			sbits.Flags |= SymUniq
+		var sbits *Sym
+		if Ctxt.Flag_shared != 0 {
+			sbits = typesymprefix(".gcbits", t)
 			for i := 0; i < 2*Widthptr; i++ {
 				duint8(sbits, i, gcmask[i])
 			}
 			ggloblsym(sbits, 2*int32(Widthptr), obj.DUPOK|obj.RODATA)
+		} else {
+			var p string
+			if Widthptr == 4 {
+				p = fmt.Sprintf("gcbits.0x%016x", x1)
+			} else {
+				x2 := uint64(0)
+				for i := 0; i < 8; i++ {
+					x2 = x2<<8 | uint64(gcmask[i+8])
+				}
+				p = fmt.Sprintf("gcbits.0x%016x%016x", x1, x2)
+			}
+
+			sbits = Pkglookup(p, Runtimepkg)
+			if sbits.Flags&SymUniq == 0 {
+				sbits.Flags |= SymUniq
+				for i := 0; i < 2*Widthptr; i++ {
+					duint8(sbits, i, gcmask[i])
+				}
+				ggloblsym(sbits, 2*int32(Widthptr), obj.DUPOK|obj.RODATA)
+			}
 		}
 
 		ot = dsymptr(s, ot, sbits, 0)
