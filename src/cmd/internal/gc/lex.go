@@ -105,6 +105,7 @@ func doversion() {
 }
 
 var gox, shlibname string
+var flag_linkshared int
 
 func Main() {
 	defer hidePanic()
@@ -230,6 +231,7 @@ func Main() {
 		obj.Flagcount("shared", "generate code that can be linked into a shared library", &flag_shared)
 		obj.Flagstr("gox", "TODO(mwhudson): write this", &gox)
 		obj.Flagstr("shlibname", "TODO(mwhudson): write this", &shlibname)
+		obj.Flagcount("linkshared", "TODO(mwhudson): write this", &flag_linkshared)
 	}
 
 	obj.Flagstr("cpuprofile", "file: write cpu profile to file", &cpuprofile)
@@ -577,6 +579,12 @@ func findpkg(name string) (file string, ok bool) {
 		// try .a before .6.  important for building libraries:
 		// if there is an array.6 in the array.a library,
 		// want to find all of array.a, not just array.6.
+		if flag_linkshared != 0 {
+			file = fmt.Sprintf("%s.gox", name)
+			if obj.Access(file, 0) >= 0 {
+				return file, true
+			}
+		}
 		file = fmt.Sprintf("%s.a", name)
 		if obj.Access(file, 0) >= 0 {
 			return file, true
@@ -599,6 +607,12 @@ func findpkg(name string) (file string, ok bool) {
 	}
 
 	for p := idirs; p != nil; p = p.link {
+		if flag_linkshared != 0 {
+			file = fmt.Sprintf("%s/%s.gox", p.dir, name)
+			if obj.Access(file, 0) >= 0 {
+				return file, true
+			}
+		}
 		file = fmt.Sprintf("%s/%s.a", p.dir, name)
 		if obj.Access(file, 0) >= 0 {
 			return file, true
@@ -620,13 +634,20 @@ func findpkg(name string) (file string, ok bool) {
 			suffix = "race"
 		}
 
-		file = fmt.Sprintf("%s/pkg/%s_%s%s%s/%s.a", goroot, goos, goarch, suffixsep, suffix, name)
-		if obj.Access(file, 0) >= 0 {
-			return file, true
-		}
-		file = fmt.Sprintf("%s/pkg/%s_%s%s%s/%s.%c", goroot, goos, goarch, suffixsep, suffix, name, Thearch.Thechar)
-		if obj.Access(file, 0) >= 0 {
-			return file, true
+		if flag_linkshared != 0 {
+			file = fmt.Sprintf("%s/pkg/%s_%s%s%s/%s.gox", goroot, goos, goarch, suffixsep, suffix, name)
+			if obj.Access(file, 0) >= 0 {
+				return file, true
+			}
+		} else {
+			file = fmt.Sprintf("%s/pkg/%s_%s%s%s/%s.a", goroot, goos, goarch, suffixsep, suffix, name)
+			if obj.Access(file, 0) >= 0 {
+				return file, true
+			}
+			file = fmt.Sprintf("%s/pkg/%s_%s%s%s/%s.%c", goroot, goos, goarch, suffixsep, suffix, name, Thearch.Thechar)
+			if obj.Access(file, 0) >= 0 {
+				return file, true
+			}
 		}
 	}
 

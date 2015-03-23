@@ -89,9 +89,9 @@ func addlib(ctxt *Link, src string, obj string, pathname string) {
 	}
 
 	if shlibname {
-		addlibpath(ctxt, src, obj, pname, pkg, "")
-	} else {
 		addlibpath(ctxt, src, obj, "", pkg, pname)
+	} else {
+		addlibpath(ctxt, src, obj, pname, pkg, "")
 	}
 }
 

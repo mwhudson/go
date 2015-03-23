@@ -468,7 +468,11 @@ func runInstall(cmd *Command, args []string) {
 			// by other steps in the build.
 			// cmd/cgo is handled specially in b.action, so that we can
 			// both build and use it in the same 'go install'.
-			action := b.action(modeInstall, modeInstall, p)
+			depMode := modeInstall
+			if buildLinkshared {
+				depMode = modeBuild
+			}
+			action := b.action(modeInstall, depMode, p)
 			if goTools[p.ImportPath] == toTool && p.ImportPath != "cmd/cgo" {
 				a.deps = append(a.deps, action.deps...)
 				action.deps = append(action.deps, a)
@@ -1262,7 +1266,9 @@ func (b *builder) linkShared(a *action) (err error) {
 	}
 	ldflags = append(ldflags, buildLdflags...)
 	for _, d := range a.deps {
-		ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
+		if d.target != "" { // omit unsafe etc
+			ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
+		}
 	}
 	return b.run(".", a.target, nil, buildToolExec, tool(archChar()+"l"), "-o", a.target, importArgs, ldflags)
 }
@@ -1855,6 +1861,9 @@ func (gcToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, 
 	if buildContext.InstallSuffix != "" {
 		gcargs = append(gcargs, "-installsuffix", buildContext.InstallSuffix)
 	}
+	if buildLinkshared {
+		gcargs = append(gcargs, "-linkshared")
+	}
 
 	args := []interface{}{buildToolExec, tool(archChar() + "g"), "-o", ofile, "-trimpath", b.work, buildGcflags, gcargs, "-D", p.localPrefix, importArgs}
 	if ofile == archive {
@@ -2027,6 +2036,9 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 	}
 	if p.omitDWARF {
 		ldflags = append(ldflags, "-w")
+	}
+	if buildLinkshared {
+		ldflags = append(ldflags, "-linkshared")
 	}
 
 	// If the user has not specified the -extld option, then specify the

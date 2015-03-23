@@ -520,8 +520,13 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 		p.target = ""
 	} else {
 		p.target = p.build.PkgObj
+		gox := p.target[:len(p.target)-2] + ".gox"
 		if buildBuildmode == "shared" {
-			p.target = p.target[:len(p.target)-2] + ".gox"
+			p.target = gox
+		} else if buildLinkshared {
+			if _, err = os.Stat(gox); err == nil {
+				p.target = gox
+			}
 		}
 	}
 
@@ -775,7 +780,7 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 		return true
 	}
 
-	if buildBuildmode == "shared" && buildLinkshared {
+	if buildLinkshared && strings.HasSuffix(p.target, ".gox") {
 		// TODO(mwhudson): If there is a gox (and so
 		// presumably a .so) but it's older than the sources,
 		// we can't rebuild it because we don't know which
