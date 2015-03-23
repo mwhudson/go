@@ -219,9 +219,8 @@ const (
 )
 
 const (
-	symname   = "__.GOSYMDEF"
-	pkgname   = "__.PKGDEF"
-	shlibname = "__.SHLIBNAME"
+	symname = "__.GOSYMDEF"
+	pkgname = "__.PKGDEF"
 )
 
 var (
@@ -308,18 +307,29 @@ func Errorexit() {
 }
 
 func loadinternal(name string) {
-	var pname string
-
 	found := 0
 	for i := 0; i < len(Ctxt.Libdir); i++ {
-		pname = fmt.Sprintf("%s/%s.a", Ctxt.Libdir[i], name)
-		if Debug['v'] != 0 {
-			fmt.Fprintf(&Bso, "searching for %s.a in %s\n", name, pname)
+		if i < len(Ctxt.Libdir)-1 || (Flag_linkshared == 0 && Flag_sharedpartial == 0) {
+			pname := fmt.Sprintf("%s/%s.a", Ctxt.Libdir[i], name)
+			if Debug['v'] != 0 {
+				fmt.Fprintf(&Bso, "searching for %s.a in %s\n", name, pname)
+			}
+			if obj.Access(pname, obj.AEXIST) >= 0 {
+				addlibpath(Ctxt, "internal", "internal", pname, name, "")
+				found = 1
+				break
+			}
 		}
-		if obj.Access(pname, obj.AEXIST) >= 0 {
-			addlibpath(Ctxt, "internal", "internal", pname, name)
-			found = 1
-			break
+		if Flag_linkshared != 0 {
+			shlibname := fmt.Sprintf("%s/%s.gox.shlibname", Ctxt.Libdir[i], name)
+			if Debug['v'] != 0 {
+				fmt.Fprintf(&Bso, "searching for %s.gox.shlibname in %s\n", name, shlibname)
+			}
+			if obj.Access(shlibname, obj.AEXIST) >= 0 {
+				addlibpath(Ctxt, "internal", "internal", "", name, shlibname)
+				found = 1
+				break
+			}
 		}
 	}
 
@@ -349,7 +359,11 @@ func loadlib() {
 			fmt.Fprintf(&Bso, "%5.2f autolib: %s (from %s)\n", obj.Cputime(), Ctxt.Library[i].File, Ctxt.Library[i].Objref)
 		}
 		iscgo = iscgo || Ctxt.Library[i].Pkg == "runtime/cgo"
-		objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+		if Ctxt.Library[i].Shlib != "" {
+			ldshlibsyms(Ctxt.Library[i].Shlib)
+		} else {
+			objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+		}
 	}
 
 	if Linkmode == LinkAuto {
@@ -382,7 +396,11 @@ func loadlib() {
 		loadinternal("runtime/cgo")
 
 		if i < len(Ctxt.Library) {
-			objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+			if Ctxt.Library[i].Shlib != "" {
+				ldshlibsyms(Ctxt.Library[i].Shlib)
+			} else {
+				objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+			}
 		}
 	}
 
@@ -557,11 +575,6 @@ func objfile(file string, pkg string) {
 		goto out
 	}
 	off += l
-	if Flag_linkshared != 0 && l > 0 && arhdr.name == shlibname {
-		shlib := strings.TrimSpace(Brdline(f, '\n'))
-		ldshlibsyms(shlib)
-		goto out
-	}
 	/*
 	 * load all the object files from the archive now.
 	 * this gives us sequential file access and keeps us
@@ -987,11 +1000,6 @@ eof:
 }
 
 func ldshlibsyms(shlib string) {
-	for _, processedname := range Ctxt.Shlibs {
-		if processedname == shlib {
-			return
-		}
-	}
 	found := false
 	libpath := ""
 	for _, libdir := range Ctxt.Libdir {
@@ -1004,6 +1012,11 @@ func ldshlibsyms(shlib string) {
 	if !found {
 		Diag("cannot find shared library: %s", shlib)
 		return
+	}
+	for _, processedname := range Ctxt.Shlibs {
+		if processedname == libpath {
+			return
+		}
 	}
 	if Ctxt.Debugvlog > 1 && Ctxt.Bso != nil {
 		fmt.Fprintf(Ctxt.Bso, "%5.2f ldshlibsyms: found library with name %s at %s\n", obj.Cputime(), shlib, libpath)
@@ -1032,7 +1045,7 @@ func ldshlibsyms(shlib string) {
 		}
 		Linklookup(Ctxt, s.Name, 0).Type = SDYNIMPORT
 	}
-	Ctxt.Shlibs = append(Ctxt.Shlibs, shlib)
+	Ctxt.Shlibs = append(Ctxt.Shlibs, libpath)
 }
 
 func mywhatsys() {

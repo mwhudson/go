@@ -182,7 +182,7 @@ func Ldmain() {
 	Bflush(&Bso)
 
 	if Flag_sharedpartial == 0 {
-		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
+		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main", "")
 	} else {
 		for i := 0; i < flag.NArg(); i++ {
 			arg := flag.Arg(i)
@@ -193,7 +193,7 @@ func Ldmain() {
 			} else {
 				pkgpath, file = parts[0], parts[1]
 			}
-			addlibpath(Ctxt, "command line", "command line", file, pkgpath)
+			addlibpath(Ctxt, "command line", "command line", file, pkgpath, "")
 		}
 	}
 	loadlib()

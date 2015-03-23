@@ -139,6 +139,7 @@ type Library struct {
 	Srcref string
 	File   string
 	Pkg    string
+	Shlib  string
 }
 
 type Pcln struct {
