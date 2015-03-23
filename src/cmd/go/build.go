@@ -448,6 +448,9 @@ func runInstall(cmd *Command, args []string) {
 			}
 			goxaction := b.action(modeInstallGox, modeBuild, p)
 			a.deps = append(a.deps, goxaction)
+			// Add a dependency on linkSharedAction to
+			// goxaction so that gox's are not installed
+			// if the link fails.
 			goxaction.deps = append(goxaction.deps, linkSharedAction)
 			linkSharedAction.deps = append(linkSharedAction.deps, b.action(modeBuild, modeBuild, p))
 		}
@@ -752,7 +755,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 	case modeInstallGox:
 		a.f = (*builder).installGox
 		a.deps = []*action{b.action(modeBuild, depMode, p)}
-		a.target = a.p.target[:len(a.p.target)-2] + ".gox"
+		a.target = a.p.target
 	case modeBuild:
 		a.f = (*builder).build
 		a.target = a.objpkg
@@ -1231,6 +1234,11 @@ func (b *builder) installGox(a *action) (err error) {
 	}
 	fd.WriteString(filepath.Base(a2.target))
 	err = fd.Close()
+	if buildX {
+		b.showcmd("", "extract-pkddef %s > %s # internal", a1.target, a.target)
+		b.showcmd("", "echo \"%s\" > %s # internal", filepath.Base(a2.target), a.target+".shlibname")
+	}
+
 	return
 }
 

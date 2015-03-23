@@ -520,6 +520,9 @@ func (p *Package) load(stk *importStack, bp *build.Package, err error) *Package 
 		p.target = ""
 	} else {
 		p.target = p.build.PkgObj
+		if buildBuildmode == "shared" {
+			p.target = p.target[:len(p.target)-2] + ".gox"
+		}
 	}
 
 	importPaths := p.Imports
@@ -756,6 +759,10 @@ func isStale(p *Package, topRoot map[string]bool) bool {
 	}
 
 	if pkgBuildA || p.target == "" || p.Stale {
+		return true
+	}
+
+	if buildBuildmode == "shared" {
 		return true
 	}
 
