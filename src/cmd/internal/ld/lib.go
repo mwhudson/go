@@ -1043,7 +1043,17 @@ func ldshlibsyms(shlib string) {
 		if s.Name == "_init" || s.Name == "_fini" || s.Name == "main" {
 			continue
 		}
-		Linklookup(Ctxt, s.Name, 0).Type = SDYNIMPORT
+		lsym := Linklookup(Ctxt, s.Name, 0)
+		lsym.Type = SDYNIMPORT
+		if strings.HasPrefix(lsym.Name, "type.") && !strings.HasPrefix(lsym.Name, "type..") {
+			data := make([]byte, s.Size)
+			sect := f.Sections[s.Section]
+			n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
+			if uint64(n) != s.Size {
+				Diag("Error reading contents of %s: %v", s.Name, err)
+			}
+			lsym.P = data
+		}
 	}
 	Ctxt.Shlibs = append(Ctxt.Shlibs, libpath)
 }
