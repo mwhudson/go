@@ -143,6 +143,7 @@ var buildGccgoflags []string // -gccgoflags flag
 var buildRace bool           // -race flag
 var buildToolExec []string   // -toolexec flag
 var buildBuildmode string    // -buildmode flag
+var buildLibname string      // -libname flag
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -197,6 +198,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.BoolVar(&buildRace, "race", false, "")
 	cmd.Flag.Var((*stringsFlag)(&buildToolExec), "toolexec", "")
 	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
+	cmd.Flag.StringVar(&buildLibname, "libname", "", "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -300,6 +302,9 @@ func runBuild(cmd *Command, args []string) {
 
 	switch buildBuildmode {
 	case "":
+		if buildLibname != "" {
+			fatalf("-libname can only be combined with -buildmode=shared")
+		}
 	case "shared":
 		if buildI {
 			fatalf("-buildmode=shared and -i not supported together")
@@ -358,6 +363,28 @@ See also: go build, go get, go clean.
 	`,
 }
 
+func defaultLibName(args []string) string {
+	var libname string
+	for _, arg := range args {
+		arg = strings.Replace(arg, ".", "dot", -1)
+		clean := func(r rune) rune {
+			switch {
+			case 'A' <= r && r <= 'Z', 'a' <= r && r <= 'z',
+				'0' <= r && r <= '9':
+				return r
+			}
+			return '-'
+		}
+		arg = strings.Map(clean, arg)
+		if libname != "" {
+			libname = libname + "-" + arg
+		} else {
+			libname = arg
+		}
+	}
+	return libname
+}
+
 func runInstall(cmd *Command, args []string) {
 	raceInit()
 	pkgs := packagesForBuild(args)
@@ -379,17 +406,41 @@ func runInstall(cmd *Command, args []string) {
 	b.init()
 	switch buildBuildmode {
 	case "":
+		if buildLibname != "" {
+			fatalf("-libname can only be combined with -buildmode=shared")
+		}
 	case "shared":
 	default:
 		fatalf("buildmode=%s not supported", buildBuildmode)
 	}
 	a := &action{}
 	if buildBuildmode == "shared" {
+		var libname string
+		var libdir string
+		for _, p := range pkgs {
+			if p.Name == "main" {
+				continue
+			}
+			// TODO(mwhudson): make this less vomitsome (involves changing go/build)
+			plibdir := strings.TrimSuffix(p.build.PkgObj, "/"+p.ImportPath+".a")
+			if libdir == "" {
+				libdir = plibdir
+			} else if libdir != plibdir {
+				fatalf("multiple roots %s & %s", libdir, plibdir)
+			}
+		}
+		if buildLibname == "" {
+			libname = defaultLibName(args)
+		} else {
+			libname = buildLibname
+		}
+
+		libname = "lib" + libname + ".so"
 		a.f = (*builder).install
 		linkSharedAction := &action{}
 		linkSharedAction.f = (*builder).linkShared
-		a.target = "libfoo.so"
-		linkSharedAction.target = filepath.Join(b.work, "libfoo.so") // XXX
+		a.target = filepath.Join(libdir, libname)
+		linkSharedAction.target = filepath.Join(b.work, libname)
 		a.deps = append(a.deps, linkSharedAction)
 		for _, p := range pkgs {
 			if p.Name == "main" {
@@ -701,7 +752,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 	case modeInstallGox:
 		a.f = (*builder).installGox
 		a.deps = []*action{b.action(modeBuild, depMode, p)}
-		a.target = a.p.target + ".gox"
+		a.target = a.p.target[:len(a.p.target)-2] + ".gox"
 	case modeBuild:
 		a.f = (*builder).build
 		a.target = a.objpkg
@@ -1173,6 +1224,13 @@ func (b *builder) installGox(a *action) (err error) {
 		}
 	}
 	ar.scan(act)
+	a2 := a.deps[1]
+	fd, err := os.OpenFile(a.target+".shlibname", os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0644)
+	if err != nil {
+		return
+	}
+	fd.WriteString(filepath.Base(a2.target))
+	err = fd.Close()
 	return
 }
 
