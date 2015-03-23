@@ -333,6 +333,7 @@ func runBuild(cmd *Command, args []string) {
 	a := &action{}
 	if buildBuildmode == "shared" {
 		a.f = (*builder).linkShared
+		a.target = filepath.Join(b.work, "libfoo.so")
 	}
 	for _, p := range packages(args) {
 		if buildBuildmode == "shared" && p.Name == "main" {
@@ -387,14 +388,16 @@ func runInstall(cmd *Command, args []string) {
 		a.f = (*builder).install
 		linkSharedAction := &action{}
 		linkSharedAction.f = (*builder).linkShared
-		a.target = "libfoo.so"                // XXX
-		linkSharedAction.target = "libfoo.so" // XXX
+		a.target = "libfoo.so"
+		linkSharedAction.target = filepath.Join(b.work, "libfoo.so") // XXX
 		a.deps = append(a.deps, linkSharedAction)
 		for _, p := range pkgs {
 			if p.Name == "main" {
 				continue
 			}
-			a.deps = append(a.deps, b.action(modeInstallGox, modeBuild, p))
+			goxaction := b.action(modeInstallGox, modeBuild, p)
+			a.deps = append(a.deps, goxaction)
+			goxaction.deps = append(goxaction.deps, linkSharedAction)
 			linkSharedAction.deps = append(linkSharedAction.deps, b.action(modeBuild, modeBuild, p))
 		}
 	} else {
@@ -698,7 +701,7 @@ func (b *builder) action(mode buildMode, depMode buildMode, p *Package) *action 
 	case modeInstallGox:
 		a.f = (*builder).installGox
 		a.deps = []*action{b.action(modeBuild, depMode, p)}
-		a.target = a.p.target
+		a.target = a.p.target + ".gox"
 	case modeBuild:
 		a.f = (*builder).build
 		a.target = a.objpkg
@@ -1141,6 +1144,35 @@ func (b *builder) getPkgConfigFlags(p *Package) (cflags, ldflags []string, err e
 }
 
 func (b *builder) installGox(a *action) (err error) {
+	dir, _ := filepath.Split(a.target)
+	if dir != "" {
+		err = b.mkdir(dir)
+		if err != nil {
+			return
+		}
+	}
+	a1 := a.deps[0]
+	ar, err := archive(a1.target, os.O_RDONLY, []string{"__.PKGDEF"})
+	if err != nil {
+		return err
+	}
+	act := func(entry *Entry) {
+		if ar.match(entry) {
+			fd, err1 := os.OpenFile(a.target, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, entry.mode)
+			if err1 != nil && err == nil {
+				err = err1
+				return
+			}
+			err = ar.output(entry, fd)
+			if err != nil {
+				return
+			}
+			fd.Close()
+		} else {
+			ar.skip(entry)
+		}
+	}
+	ar.scan(act)
 	return
 }
 
@@ -1148,7 +1180,7 @@ func (b *builder) linkShared(a *action) (err error) {
 	// obvious copy pasta from gcToolchain.ld
 	allactions := actionList(a)
 	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
-	// need to check for cxx-ness
+	// TODO(mwhudson): check for cxx-ness, extldflags etc
 	ldflags := []string{"-shared", "-linkshared"}
 	if buildContext.InstallSuffix != "" {
 		ldflags = append(ldflags, "-installsuffix", buildContext.InstallSuffix)
