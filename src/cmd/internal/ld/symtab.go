@@ -134,7 +134,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	// to get the exported symbols put into the dynamic symbol table.
 	// To avoid filling the dynamic table with lots of unnecessary symbols,
 	// mark all Go symbols local (not global) in the final executable.
-	if Flag_linkshared == 0 {
+	if Flag_sharedpartial == 0 {
 		if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 {
 			bind = STB_LOCAL
 		}
@@ -351,7 +351,7 @@ func symtab() {
 	// pseudo-symbols to mark locations of type, string, and go string data.
 
 	var symtype *LSym
-	if Flag_linkshared == 0 {
+	if Flag_linkshared == 0 && Flag_sharedpartial == 0 {
 		s = Linklookup(Ctxt, "type.*", 0)
 		s.Type = STYPE
 		s.Size = 0
@@ -392,7 +392,7 @@ func symtab() {
 		if !s.Reachable || s.Special != 0 || s.Type != SRODATA {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "type.") && Flag_linkshared == 0 {
+		if strings.HasPrefix(s.Name, "type.") && Flag_linkshared == 0 && Flag_sharedpartial == 0 {
 			s.Type = STYPE
 			s.Hide = 1
 			s.Outer = symtype

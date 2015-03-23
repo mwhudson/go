@@ -619,7 +619,7 @@ func deadcode() {
 		fmt.Fprintf(&Bso, "%5.2f deadcode\n", obj.Cputime())
 	}
 
-	if Flag_linkshared != 0 && Flag_shared != 0 {
+	if Flag_sharedpartial != 0 {
 		for s := Ctxt.Textp; s != nil; s = s.Next {
 			mark(s)
 		}

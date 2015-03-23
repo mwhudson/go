@@ -1239,7 +1239,7 @@ func (b *builder) linkShared(a *action) (err error) {
 	allactions := actionList(a)
 	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
 	// TODO(mwhudson): check for cxx-ness, extldflags etc
-	ldflags := []string{"-shared", "-linkshared"}
+	ldflags := []string{"-sharedpartial"}
 	if buildContext.InstallSuffix != "" {
 		ldflags = append(ldflags, "-installsuffix", buildContext.InstallSuffix)
 	}

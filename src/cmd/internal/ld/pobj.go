@@ -120,6 +120,7 @@ func Ldmain() {
 		obj.Flagcount("shared", "generate shared object (implies -linkmode external)", &Flag_shared)
 	}
 	if Thearch.Thechar == '6' {
+		obj.Flagcount("sharedpartial", "TODO(mwhudson): write this", &Flag_sharedpartial)
 		obj.Flagcount("linkshared", "TODO(mwhudson): write this", &Flag_linkshared)
 	}
 	obj.Flagstr("tmpdir", "dir: leave temporary files in this directory", &tmpdir)
@@ -145,10 +146,14 @@ func Ldmain() {
 	Ctxt.Bso = &Bso
 	Ctxt.Debugvlog = int32(Debug['v'])
 
-	if Flag_shared == 0 {
+	if Flag_sharedpartial == 0 {
 		if flag.NArg() != 1 {
 			usage()
 		}
+	}
+
+	if Flag_sharedpartial != 0 {
+		Flag_shared = 1
 	}
 
 	if outfile == "" {
@@ -176,7 +181,7 @@ func Ldmain() {
 	}
 	Bflush(&Bso)
 
-	if Flag_shared == 0 {
+	if Flag_sharedpartial == 0 {
 		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
 	} else {
 		for i := 0; i < flag.NArg(); i++ {

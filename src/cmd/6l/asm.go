@@ -75,7 +75,7 @@ func Addcall(ctxt *ld.Link, s *ld.LSym, t *ld.LSym) int64 {
 }
 
 func gentext() {
-	if ld.Flag_linkshared != 0 {
+	if ld.Flag_linkshared != 0 || ld.Flag_sharedpartial != 0 {
 		addobjectfiledata := ld.Linklookup(ld.Ctxt, "runtime.addobjectfiledata", 0)
 		if addobjectfiledata.Type == ld.STEXT {
 			// we're linking an object containing the runtime -> no need for

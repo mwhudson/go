@@ -335,7 +335,7 @@ func relocsym(s *LSym) {
 		if r.Sym != nil && (r.Sym.Type&(SMASK|SHIDDEN) == 0 || r.Sym.Type&SMASK == SXREF) {
 			// When putting the runtime but not main into a shared library
 			// these symbols are undefined and that's OK.
-			if Flag_linkshared != 0 && (r.Sym.Name == "main.main" || r.Sym.Name == "main.init") {
+			if Flag_sharedpartial != 0 && (r.Sym.Name == "main.main" || r.Sym.Name == "main.init") {
 				r.Sym.Type = SDYNIMPORT
 			} else {
 				Diag("%s: not defined", r.Sym.Name)
@@ -352,7 +352,7 @@ func relocsym(s *LSym) {
 
 		// We need to be able to reference dynimport symbols when linking against
 		// shared libraries, and solaris needs it always
-		if HEADTYPE != Hsolaris && r.Sym != nil && r.Sym.Type == SDYNIMPORT && Flag_linkshared == 0 {
+		if HEADTYPE != Hsolaris && r.Sym != nil && r.Sym.Type == SDYNIMPORT && Flag_linkshared == 0 && Flag_sharedpartial == 0 {
 			Diag("unhandled relocation for %s (type %d rtype %d)", r.Sym.Name, r.Sym.Type, r.Type)
 		}
 		if r.Sym != nil && r.Sym.Type != STLSBSS && !r.Sym.Reachable {

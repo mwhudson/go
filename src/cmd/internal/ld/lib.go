@@ -162,8 +162,9 @@ var (
 	elfglobalsymndx    int
 	flag_installsuffix string
 	flag_race          int
-	Flag_shared        int
-	Flag_linkshared    int
+	Flag_shared        int // Create a shared library
+	Flag_sharedpartial int // Create a shared library suitable as input for Flag_linkshared
+	Flag_linkshared    int // Link against shared libraries found on disk
 	tracksym           string
 	interpreter        string
 	tmpdir             string
@@ -751,7 +752,7 @@ func hostlink() {
 	}
 
 	if Flag_shared != 0 {
-		if Flag_linkshared == 0 {
+		if Flag_sharedpartial == 0 {
 			argv = append(argv, "-Wl,-Bsymbolic")
 		} else {
 			// TODO(mwhudson): unless you do this, dynamic relocations fill
@@ -1203,7 +1204,7 @@ func stkcheck(up *Chain, depth int) int {
 		// should never be called directly.
 		// only diagnose the direct caller.
 		// TODO(mwhudson): actually think about this.
-		if depth == 1 && s.Type != SXREF && Flag_linkshared == 0 {
+		if depth == 1 && s.Type != SXREF && Flag_linkshared == 0 && Flag_sharedpartial == 0 {
 			Diag("call to external function %s", s.Name)
 		}
 		return -1
