@@ -80,7 +80,7 @@ func stackcopy(n, ns *gc.Node, osrc, odst, w int64) {
 		gins(x86.ACLD, nil, nil)
 	} else {
 		// normal direction
-		if q > 128 || (gc.Nacl && q >= 4) {
+		if q > 128 || (gc.Nacl && q >= 4) || (gc.Ctxt.Flag_shared != 0 && q >= 4) {
 			gconreg(movptr, q, x86.REG_CX)
 			gins(x86.AREP, nil, nil)   // repeat
 			gins(x86.AMOVSQ, nil, nil) // MOVQ *(SI)+,*(DI)+

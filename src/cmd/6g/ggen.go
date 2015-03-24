@@ -557,7 +557,7 @@ func clearfat(nl *gc.Node) {
 	savex(x86.REG_AX, &ax, &oldax, nil, gc.Types[gc.Tptr])
 	gconreg(x86.AMOVL, 0, x86.REG_AX)
 
-	if q > 128 || gc.Nacl {
+	if q > 128 || gc.Nacl || gc.Ctxt.Flag_shared != 0 {
 		gconreg(movptr, q, x86.REG_CX)
 		gins(x86.AREP, nil, nil)   // repeat
 		gins(x86.ASTOSQ, nil, nil) // STOQ AL,*(DI)+
