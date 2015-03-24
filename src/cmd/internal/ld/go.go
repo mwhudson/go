@@ -675,6 +675,12 @@ func deadcode() {
 			s.Special = 1 // do not lay out in data segment
 			s.Reachable = true
 			s.Hide = 1
+			// if Flag_linkshared != 0 || Flag_sharedpartial != 0 {
+			// 	t := Linkrlookup(Ctxt, s.Name[8:], int(s.Version))
+			// 	if t != nil {
+			// 		t.Reachable = true
+			// 	}
+			// }
 		}
 	}
 

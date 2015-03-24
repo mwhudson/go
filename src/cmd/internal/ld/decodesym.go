@@ -52,6 +52,10 @@ func decodetype_kind(s *LSym) uint8 {
 
 // Type.commonType.kind
 func decodetype_noptr(s *LSym) uint8 {
+	index := 1*Thearch.Ptrsize + 7
+	if index >= len(s.P) {
+		println(s.Name)
+	}
 	return uint8(s.P[1*Thearch.Ptrsize+7] & obj.KindNoPointers) //  0x13 / 0x1f
 }
 
