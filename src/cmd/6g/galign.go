@@ -60,7 +60,9 @@ func betypeinit() {
 		typedefs[1].Sameas = gc.TUINT32
 		typedefs[2].Sameas = gc.TUINT32
 	}
-
+	if gc.Ctxt.Flag_shared != 0 {
+		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, x86.REG_R13)
+	}
 }
 
 func main() {
