@@ -777,16 +777,6 @@ func hostlink() {
 		}
 		argv = append(argv, "-shared")
 	}
-	if Flag_linkshared != 0 {
-		for _, shlib := range Ctxt.Shlibs {
-			dir, base := filepath.Split(shlib)
-			argv = append(argv, "-L"+dir)
-			argv = append(argv, "-Wl,-rpath="+dir)
-			base = strings.TrimSuffix(base, ".so")
-			base = strings.TrimPrefix(base, "lib")
-			argv = append(argv, "-l"+base)
-		}
-	}
 
 	argv = append(argv, "-o")
 	argv = append(argv, outfile)
@@ -856,6 +846,18 @@ func hostlink() {
 	}
 
 	argv = append(argv, fmt.Sprintf("%s/go.o", tmpdir))
+
+	if Flag_linkshared != 0 {
+		for _, shlib := range Ctxt.Shlibs {
+			dir, base := filepath.Split(shlib)
+			argv = append(argv, "-L"+dir)
+			argv = append(argv, "-Wl,-rpath="+dir)
+			base = strings.TrimSuffix(base, ".so")
+			base = strings.TrimPrefix(base, "lib")
+			argv = append(argv, "-l"+base)
+		}
+	}
+
 	var i int
 	for i = 0; i < len(ldflag); i++ {
 		argv = append(argv, ldflag[i])
