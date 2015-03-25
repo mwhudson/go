@@ -167,7 +167,7 @@ func findobjectdatap(pc uintptr) *objectfiledata {
 
 func findfunc(pc uintptr) *_func {
 	datap := findobjectdatap(pc)
-	if pc < datap.minpc || pc >= datap.maxpc {
+	if datap == nil {
 		return nil
 	}
 	const nsub = uintptr(len(findfuncbucket{}.subbuckets))
