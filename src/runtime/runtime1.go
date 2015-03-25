@@ -431,6 +431,7 @@ func reflect_typelinks() []*_type {
 	datap := objectfiledatap
 	for datap != nil {
 		ret = append(ret, datap.typelinks...)
+		datap = datap.next
 	}
 	return ret
 }
