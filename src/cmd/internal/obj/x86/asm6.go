@@ -3462,6 +3462,9 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					ctxt.Diag("call without target")
 					log.Fatalf("bad code")
 				}
+				if yt.zcase == Zcallduff && ctxt.Flag_shared != 0 {
+					ctxt.Diag("calling duff when -shared")
+				}
 
 				if obj.Framepointer_enabled != 0 && yt.zcase == Zcallduff && p.Mode == 64 {
 					// Maintain BP around call, since duffcopy/duffzero can't do it

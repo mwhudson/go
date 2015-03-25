@@ -86,7 +86,7 @@ func zerorange(p *obj.Prog, frame int64, lo int64, hi int64, ax *uint32) *obj.Pr
 		for i := int64(0); i < cnt; i += int64(gc.Widthreg) {
 			p = appendpp(p, x86.AMOVQ, obj.TYPE_REG, x86.REG_AX, 0, obj.TYPE_MEM, x86.REG_SP, frame+lo+i)
 		}
-	} else if !gc.Nacl && (cnt <= int64(128*gc.Widthreg)) {
+	} else if !gc.Nacl && gc.Ctxt.Flag_shared == 0 && (cnt <= int64(128*gc.Widthreg)) {
 		p = appendpp(p, leaptr, obj.TYPE_MEM, x86.REG_SP, frame+lo, obj.TYPE_REG, x86.REG_DI, 0)
 		p = appendpp(p, obj.ADUFFZERO, obj.TYPE_NONE, 0, 0, obj.TYPE_ADDR, 0, 2*(128-cnt/int64(gc.Widthreg)))
 		p.To.Sym = gc.Linksym(gc.Pkglookup("duffzero", gc.Runtimepkg))
