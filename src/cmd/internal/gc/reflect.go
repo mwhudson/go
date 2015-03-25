@@ -691,12 +691,10 @@ func dcommontype(s *Sym, ot int, t *Type) int {
 	}
 
 	var sptr *Sym
-	if Ctxt.Flag_shared == 0 && flag_linkshared == 0 {
-		if t.Sym != nil && !Isptr[t.Etype] {
-			sptr = dtypesym(Ptrto(t))
-		} else {
-			sptr = weaktypesym(Ptrto(t))
-		}
+	if t.Sym != nil && !Isptr[t.Etype] {
+		sptr = dtypesym(Ptrto(t))
+	} else {
+		sptr = weaktypesym(Ptrto(t))
 	}
 
 	// All (non-reflect-allocated) Types share the same zero object.
