@@ -704,6 +704,7 @@ func dcommontype(s *Sym, ot int, t *Type) int {
 	// might be returned by a runtime call (map access return value,
 	// 2-arg type cast) declares the size of the zerovalue it needs.
 	// The linker magically takes the max of all the sizes.
+	// TODO(mwhudson): eeek
 	zero := Pkglookup("zerovalue", Runtimepkg)
 
 	// We use size 0 here so we get the pointer to the zero value,
