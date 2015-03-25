@@ -1872,7 +1872,7 @@ func (gcToolchain) gc(b *builder, p *Package, archive, obj string, asmhdr bool, 
 	if asmhdr {
 		args = append(args, "-asmhdr", obj+"go_asm.h")
 	}
-	if buildBuildmode == "shared" {
+	if buildBuildmode == "shared" || buildLinkshared {
 		args = append(args, "-shared")
 	}
 	for _, f := range gofiles {
@@ -1893,14 +1893,14 @@ func (gcToolchain) asm(b *builder, p *Package, obj, ofile, sfile string) error {
 	inc := filepath.Join(goroot, "pkg", "include")
 	sfile = mkAbs(p.Dir, sfile)
 	args := []interface{}{buildToolExec, tool("asm"), "-o", ofile, "-trimpath", b.work, "-I", obj, "-I", inc, "-D", "GOOS_" + goos, "-D", "GOARCH_" + goarch}
-	if buildBuildmode == "shared" {
+	if buildBuildmode == "shared" || buildLinkshared {
 		args = append(args, "-shared")
 	}
 	args = append(args, sfile)
 	if err := b.run(p.Dir, p.ImportPath, nil, args...); err != nil {
 		return err
 	}
-	if verifyAsm && goarch != "arm64" && buildBuildmode != "shared" {
+	if verifyAsm && goarch != "arm64" && (buildBuildmode != "shared" && !buildLinkshared) {
 		if err := toolVerify(b, p, "old"+archChar()+"a", ofile, args); err != nil {
 			return err
 		}
