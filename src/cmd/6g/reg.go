@@ -122,8 +122,9 @@ func BtoR(b uint64) int {
 	} else if obj.Framepointer_enabled != 0 {
 		// BP is part of the calling convention if framepointer_enabled.
 		b &^= (1 << (x86.REG_BP - x86.REG_AX))
+	} else if gc.Ctxt.Flag_shared != 0 {
+		b &^= (1 << (x86.REG_R13 - x86.REG_AX))
 	}
-
 	if b == 0 {
 		return 0
 	}
