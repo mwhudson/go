@@ -623,6 +623,7 @@ func deadcode() {
 		for s := Ctxt.Textp; s != nil; s = s.Next {
 			mark(s)
 		}
+		// TODO(mwhudson): need to mark some other stuff here, e.g. type.complex64
 	} else {
 		mark(Linkrlookup(Ctxt, INITENTRY, 0))
 		if Flag_linkshared != 0 {
@@ -668,6 +669,7 @@ func deadcode() {
 		Ctxt.Textp = nil
 	} else {
 		last.Next = nil
+		Ctxt.Etextp = last
 	}
 
 	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
