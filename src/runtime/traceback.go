@@ -86,8 +86,18 @@ func tracebackdefers(gp *g, callback func(*stkframe, unsafe.Pointer) bool, v uns
 			frame.pc = uintptr(fn.fn)
 			f := findfunc(frame.pc)
 			if f == nil {
-				print("runtime: unknown pc in defer ", hex(frame.pc), "\n")
-				throw("unknown pc")
+				p := (*[2]uint8)(unsafe.Pointer(fn.fn))
+				if p[0] == 0xff && p[1] == 0x25 {
+					off := *(*int32)(unsafe.Pointer(fn.fn + 2))
+					add := int64(fn.fn) + int64(off) + 6
+					val := *(*uintptr)(unsafe.Pointer(uintptr(add)))
+					frame.pc = val
+					f = findfunc(frame.pc)
+				}
+				if f == nil {
+					print("runtime: unknown pc in defer ", hex(frame.pc), "\n")
+					throw("unknown pc")
+				}
 			}
 			frame.fn = f
 			frame.argp = uintptr(deferArgs(d))

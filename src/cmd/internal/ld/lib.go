@@ -778,6 +778,10 @@ func hostlink() {
 		argv = append(argv, "-shared")
 	}
 
+	if Flag_linkshared != 0 {
+		argv = append(argv, "-znow")
+	}
+
 	argv = append(argv, "-o")
 	argv = append(argv, outfile)
 
