@@ -1058,6 +1058,7 @@ func ldshlibsyms(shlib string) {
 		}
 		lsym := Linklookup(Ctxt, s.Name, 0)
 		lsym.Type = SDYNIMPORT
+		lsym.File = libpath
 		if strings.HasPrefix(lsym.Name, "type.") {
 			data := make([]byte, s.Size)
 			sect := f.Sections[s.Section]

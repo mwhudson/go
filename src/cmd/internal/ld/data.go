@@ -1153,7 +1153,7 @@ func proggenaddsym(g *ProgGen, s *LSym) {
 		for i := int64(0); i < size; i += int64(Thearch.Ptrsize) {
 			index := i / int64(Thearch.Ptrsize) / 2
 			if index >= int64(len(mask)) {
-				println(s.Gotype.Name)
+				println(s.Gotype.Name, index, len(mask))
 			}
 			proggendata(g, uint8((mask[i/int64(Thearch.Ptrsize)/2]>>uint64((i/int64(Thearch.Ptrsize)%2)*4+2))&obj.BitsMask))
 		}

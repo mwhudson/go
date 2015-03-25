@@ -85,8 +85,8 @@ func readsym(ctxt *Link, f *Biobuf, pkg string, pn string) {
 	s := Linklookup(ctxt, name, v)
 	var dup *LSym
 	if s.Type != 0 && s.Type != SXREF {
-		if (t == SDATA || t == SBSS || t == SNOPTRBSS) && len(data) == 0 && nreloc == 0 {
-			if s.Size < int64(size) {
+		if (t == SDATA || t == SBSS || t == SNOPTRBSS || t == SDYNIMPORT) && len(data) == 0 && nreloc == 0 {
+			if s.Size < int64(size) && t != SDYNIMPORT {
 				s.Size = int64(size)
 			}
 			if typ != nil && s.Gotype == nil {
@@ -95,6 +95,10 @@ func readsym(ctxt *Link, f *Biobuf, pkg string, pn string) {
 			return
 		}
 
+		if s.Type == SDYNIMPORT {
+			// println("overwriting", name)
+			goto overwrite
+		}
 		if (s.Type == SDATA || s.Type == SBSS || s.Type == SNOPTRBSS) && len(s.P) == 0 && len(s.R) == 0 {
 			goto overwrite
 		}
