@@ -1016,12 +1016,6 @@ func TypeOf(i interface{}) Type {
 	return toType(eface.typ)
 }
 
-// ptrMap is the cache for PtrTo.
-var ptrMap struct {
-	sync.RWMutex
-	m map[*rtype]*ptrType
-}
-
 // PtrTo returns the pointer type with element t.
 // For example, if t represents type Foo, PtrTo(t) represents *Foo.
 func PtrTo(t Type) Type {
@@ -1051,36 +1045,14 @@ func (t *rtype) ptrTo() *rtype {
 
 	// Otherwise, synthesize one.
 	// This only happens for pointers with no methods.
-	// We keep the mapping in a map on the side, because
-	// this operation is rare and a separate map lets us keep
-	// the type structures in read-only memory.
-	ptrMap.RLock()
-	if m := ptrMap.m; m != nil {
-		if p := m[t]; p != nil {
-			ptrMap.RUnlock()
-			return &p.rtype
-		}
-	}
-	ptrMap.RUnlock()
-	ptrMap.Lock()
-	if ptrMap.m == nil {
-		ptrMap.m = make(map[*rtype]*ptrType)
-	}
-	p := ptrMap.m[t]
-	if p != nil {
-		// some other goroutine won the race and created it
-		ptrMap.Unlock()
-		return &p.rtype
-	}
 
 	// Create a new ptrType starting with the description
 	// of an *unsafe.Pointer.
-	p = new(ptrType)
+	p := new(ptrType)
 	var iptr interface{} = (*unsafe.Pointer)(nil)
 	prototype := *(**ptrType)(unsafe.Pointer(&iptr))
 	*p = *prototype
 
-	// s := "*" + *t.string
 	p.string = &s
 
 	// For the type structures linked into the binary, the
@@ -1094,11 +1066,7 @@ func (t *rtype) ptrTo() *rtype {
 	p.ptrToThis = nil
 	p.zero = unsafe.Pointer(&make([]byte, p.size)[0])
 	p.elem = t
-
-	ptrMap.m[t] = p
-	ptrMap.Unlock()
 	return cachePut(ckey, &p.rtype).(*rtype)
-	// return &p.rtype
 }
 
 // fnv1 incorporates the list of bytes into the hash x using the FNV-1 hash function.
