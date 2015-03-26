@@ -426,11 +426,11 @@ func gomcache() *mcache {
 
 //go:linkname reflect_typelinks reflect.typelinks
 //go:nosplit
-func reflect_typelinks() []*_type {
-	ret := []*_type{}
+func reflect_typelinks() [][]*_type {
+	ret := [][]*_type{}
 	datap := objectfiledatap
 	for datap != nil {
-		ret = append(ret, datap.typelinks...)
+		ret = append(ret, datap.typelinks)
 		datap = datap.next
 	}
 	return ret
