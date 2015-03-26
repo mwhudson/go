@@ -1134,7 +1134,7 @@ func implements(T, V *rtype) bool {
 		for j := 0; j < len(v.methods); j++ {
 			tm := &t.methods[i]
 			vm := &v.methods[j]
-			if vm.name == tm.name && vm.pkgPath == tm.pkgPath && vm.typ == tm.typ {
+			if *vm.name == *tm.name && vm.pkgPath == tm.pkgPath && vm.typ == tm.typ {
 				if i++; i >= len(t.methods) {
 					return true
 				}
@@ -1151,7 +1151,7 @@ func implements(T, V *rtype) bool {
 	for j := 0; j < len(v.methods); j++ {
 		tm := &t.methods[i]
 		vm := &v.methods[j]
-		if vm.name == tm.name && vm.pkgPath == tm.pkgPath && vm.mtyp == tm.typ {
+		if *vm.name == *tm.name && vm.pkgPath == tm.pkgPath && vm.mtyp == tm.typ {
 			if i++; i >= len(t.methods) {
 				return true
 			}
