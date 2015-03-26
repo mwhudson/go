@@ -14,6 +14,7 @@ func ResetLocalOnceForTest() {
 }
 
 func ForceUSPacificForTesting() {
+	println("forcing")
 	ResetLocalOnceForTest()
 	localOnce.Do(initTestingZone)
 }
