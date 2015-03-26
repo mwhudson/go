@@ -623,6 +623,9 @@ func deadcode() {
 		for s := Ctxt.Textp; s != nil; s = s.Next {
 			mark(s)
 		}
+		mark(Linkrlookup(Ctxt, "unicode.TurkishCase", 0))
+		mark(Linkrlookup(Ctxt, "database/sql/driver.Int32", 0))
+		mark(Linkrlookup(Ctxt, "database/sql/driver.ResultNoRows", 0))
 		// TODO(mwhudson): need to mark some other stuff here, e.g. type.complex64
 	} else {
 		mark(Linkrlookup(Ctxt, INITENTRY, 0))
