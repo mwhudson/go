@@ -428,6 +428,8 @@ func symtab() {
 		}
 	}
 
+	Linklookup(Ctxt, "runtime.zerovalue", 0).Local = true
+
 	objfiledata := Linklookup(Ctxt, "local.objectfiledata", 0)
 	objfiledata.Type = SNOPTRDATA
 	objfiledata.Reachable = true

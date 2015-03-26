@@ -690,7 +690,7 @@ var nodfp *Node
 
 var Disable_checknil int
 
-var zerosize int64
+var zerosize int64 = 140
 
 type Flow struct {
 	Prog   *obj.Prog // actual instruction
