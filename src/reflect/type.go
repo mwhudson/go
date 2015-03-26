@@ -1033,6 +1033,22 @@ func (t *rtype) ptrTo() *rtype {
 		return p
 	}
 
+	// Look in cache.
+	ckey := cacheKey{Ptr, t, nil, 0}
+	if ch := cacheGet(ckey); ch != nil {
+		return ch.(*rtype)
+	}
+
+	// Look in known types.
+	s := "*" + *t.string
+	for _, tt := range typesByString(s) {
+		println(tt.string)
+		p := (*ptrType)(unsafe.Pointer(tt))
+		if p.elem == t {
+			return cachePut(ckey, tt).(*rtype)
+		}
+	}
+
 	// Otherwise, synthesize one.
 	// This only happens for pointers with no methods.
 	// We keep the mapping in a map on the side, because
@@ -1064,7 +1080,7 @@ func (t *rtype) ptrTo() *rtype {
 	prototype := *(**ptrType)(unsafe.Pointer(&iptr))
 	*p = *prototype
 
-	s := "*" + *t.string
+	// s := "*" + *t.string
 	p.string = &s
 
 	// For the type structures linked into the binary, the
@@ -1081,7 +1097,8 @@ func (t *rtype) ptrTo() *rtype {
 
 	ptrMap.m[t] = p
 	ptrMap.Unlock()
-	return &p.rtype
+	return cachePut(ckey, &p.rtype).(*rtype)
+	// return &p.rtype
 }
 
 // fnv1 incorporates the list of bytes into the hash x using the FNV-1 hash function.
@@ -1310,30 +1327,38 @@ func typelinks() []*rtype
 func typesByString(s string) []*rtype {
 	typ := typelinks()
 
-	// We are looking for the first index i where the string becomes >= s.
-	// This is a copy of sort.Search, with f(h) replaced by (*typ[h].string >= s).
-	i, j := 0, len(typ)
-	for i < j {
-		h := i + (j-i)/2 // avoid overflow when computing h
-		// i ≤ h < j
-		if !(*typ[h].string >= s) {
-			i = h + 1 // preserves f(i-1) == false
-		} else {
-			j = h // preserves f(j) == true
+	r := []*rtype{}
+	for _, tt := range typ {
+		if *tt.string == s {
+			r = append(r, tt)
 		}
 	}
-	// i == j, f(i-1) == false, and f(j) (= f(i)) == true  =>  answer is i.
 
-	// Having found the first, linear scan forward to find the last.
-	// We could do a second binary search, but the caller is going
-	// to do a linear scan anyway.
-	j = i
-	for j < len(typ) && *typ[j].string == s {
-		j++
-	}
+	return r
+	// // We are looking for the first index i where the string becomes >= s.
+	// // This is a copy of sort.Search, with f(h) replaced by (*typ[h].string >= s).
+	// i, j := 0, len(typ)
+	// for i < j {
+	// 	h := i + (j-i)/2 // avoid overflow when computing h
+	// 	// i ≤ h < j
+	// 	if !(*typ[h].string >= s) {
+	// 		i = h + 1 // preserves f(i-1) == false
+	// 	} else {
+	// 		j = h // preserves f(j) == true
+	// 	}
+	// }
+	// // i == j, f(i-1) == false, and f(j) (= f(i)) == true  =>  answer is i.
 
-	// This slice will be empty if the string is not found.
-	return typ[i:j]
+	// // Having found the first, linear scan forward to find the last.
+	// // We could do a second binary search, but the caller is going
+	// // to do a linear scan anyway.
+	// j = i
+	// for j < len(typ) && *typ[j].string == s {
+	// 	j++
+	// }
+
+	// // This slice will be empty if the string is not found.
+	// return typ[i:j]
 }
 
 // The lookupCache caches ChanOf, MapOf, and SliceOf lookups.
