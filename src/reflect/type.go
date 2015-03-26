@@ -1036,7 +1036,6 @@ func (t *rtype) ptrTo() *rtype {
 	// Look in known types.
 	s := "*" + *t.string
 	for _, tt := range typesByString(s) {
-		println(tt.string)
 		p := (*ptrType)(unsafe.Pointer(tt))
 		if p.elem == t {
 			return cachePut(ckey, tt).(*rtype)
