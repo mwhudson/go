@@ -900,7 +900,7 @@ func addpool(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) {
 		t.To.Type = a.Type
 		t.To.Name = a.Name
 
-		if ctxt.Flag_shared != 0 && t.To.Sym != nil {
+		if needsPcrel(ctxt) && t.To.Sym != nil {
 			t.Pcrel = p
 		}
 
@@ -1352,7 +1352,7 @@ func buildop(ctxt *obj.Link) {
 	}
 	for n = 0; optab[n].as != obj.AXXX; n++ {
 		if optab[n].flag&LPCREL != 0 {
-			if ctxt.Flag_shared != 0 {
+			if needsPcrel(ctxt) {
 				optab[n].size += int8(optab[n].pcrelsiz)
 			} else {
 				optab[n].flag &^= LPCREL
@@ -1674,12 +1674,12 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			// its type declaration if necessary.
 			if rel.Sym == ctxt.Tlsg && ctxt.Tlsg.Type == 0 {
 				rel.Type = obj.R_TLS
-				if ctxt.Flag_shared != 0 {
+				if needsPcrel(ctxt) { //TODO(mwhudson): maybe this should be needsInitalExecTLS
 					rel.Add += ctxt.Pc - p.Pcrel.Pc - 8 - int64(rel.Siz)
 				}
 				rel.Xadd = rel.Add
 				rel.Xsym = rel.Sym
-			} else if ctxt.Flag_shared != 0 {
+			} else if needsPcrel(ctxt) {
 				rel.Type = obj.R_PCREL
 				rel.Add += ctxt.Pc - p.Pcrel.Pc - 8
 			} else {

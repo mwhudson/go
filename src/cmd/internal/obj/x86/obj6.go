@@ -38,6 +38,14 @@ import (
 	"math"
 )
 
+func needsInitalExecTLS(ctxt *obj.Link) bool {
+	switch ctxt.Buildmode {
+	case obj.Buildmode_CShared:
+		return true
+	}
+	return false
+}
+
 func canuselocaltls(ctxt *obj.Link) bool {
 	if ctxt.Arch.Regsize == 4 {
 		switch ctxt.Headtype {
@@ -56,7 +64,7 @@ func canuselocaltls(ctxt *obj.Link) bool {
 		obj.Hwindows:
 		return false
 	case obj.Hlinux:
-		return ctxt.Flag_shared == 0
+		return !needsInitalExecTLS(ctxt)
 	}
 
 	return true

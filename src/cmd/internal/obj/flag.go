@@ -5,6 +5,7 @@
 package obj
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -118,3 +119,28 @@ func (f fn1) Set(s string) error {
 }
 
 func (f fn1) String() string { return "" }
+
+type Buildmode uint8
+
+const (
+	Buildmode_None Buildmode = iota
+	Buildmode_CShared
+)
+
+func (mode *Buildmode) Set(s string) error {
+	switch s {
+	default:
+		return errors.New("buildmode %s not recognized")
+	case "c-shared":
+		*mode = Buildmode_CShared
+	}
+	return nil
+}
+
+func (mode *Buildmode) String() string {
+	switch *mode {
+	case Buildmode_CShared:
+		return "c-shared"
+	}
+	return fmt.Sprintf("Buildmode(%d)", uint8(*mode))
+}

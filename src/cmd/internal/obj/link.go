@@ -475,7 +475,7 @@ type Link struct {
 	Debugdivmod        int32
 	Debugfloat         int32
 	Debugpcln          int32
-	Flag_shared        int32
+	Buildmode          Buildmode
 	Iself              int32
 	Bso                *Biobuf
 	Pathname           string
