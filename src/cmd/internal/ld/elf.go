@@ -5,6 +5,7 @@
 package ld
 
 import (
+	"cmd/internal/obj"
 	"encoding/binary"
 	"fmt"
 	"os"
@@ -1655,7 +1656,7 @@ func doelf() {
 		Addstring(shstrtab, ".note.GNU-stack")
 	}
 
-	if Flag_shared != 0 {
+	if Buildmode == obj.Buildmode_CShared {
 		Addstring(shstrtab, ".init_array")
 		if Thearch.Thechar == '6' || Thearch.Thechar == '9' {
 			Addstring(shstrtab, ".rela.init_array")

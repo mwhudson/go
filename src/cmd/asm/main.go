@@ -41,9 +41,7 @@ func main() {
 		ctxt.Debugasm = 1
 	}
 	ctxt.Trimpath = *flags.TrimPath
-	if *flags.Shared {
-		ctxt.Flag_shared = 1
-	}
+	ctxt.Buildmode = flags.Buildmode
 	ctxt.Bso = obj.Binitw(os.Stdout)
 	defer obj.Bflush(ctxt.Bso)
 	ctxt.Diag = log.Fatalf

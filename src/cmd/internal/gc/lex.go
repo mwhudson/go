@@ -195,6 +195,7 @@ func Main() {
 	obj.Flagfn0("V", "print compiler version", doversion)
 	obj.Flagcount("W", "debug parse tree after type checking", &Debug['W'])
 	obj.Flagstr("asmhdr", "file: write assembly header to named file", &asmhdr)
+	flag.Var(&Ctxt.Buildmode, "buildmode", "build mode to use")
 	obj.Flagcount("complete", "compiling complete package (no C or assembly)", &pure_go)
 	obj.Flagstr("d", "list: print debug information about items in list", &debugstr)
 	obj.Flagcount("e", "no limit on number of errors reported", &Debug['e'])
@@ -231,7 +232,13 @@ func Main() {
 	obj.Flagstr("cpuprofile", "file: write cpu profile to file", &cpuprofile)
 	obj.Flagstr("memprofile", "file: write memory profile to file", &memprofile)
 	obj.Flagparse(usage)
-	Ctxt.Flag_shared = int32(flag_shared)
+	if flag_shared != 0 {
+		if Ctxt.Buildmode == obj.Buildmode_None {
+			Ctxt.Buildmode = obj.Buildmode_CShared
+		} else if Ctxt.Buildmode != obj.Buildmode_CShared {
+			log.Fatalf("-shared and -buildmode=%s are incompatible\n", Ctxt.Buildmode.String())
+		}
+	}
 	Ctxt.Debugasm = int32(Debug['S'])
 	Ctxt.Debugvlog = int32(Debug['v'])
 

@@ -6,6 +6,7 @@
 package flags
 
 import (
+	"cmd/internal/obj"
 	"flag"
 	"fmt"
 	"os"
@@ -18,7 +19,7 @@ var (
 	OutputFile = flag.String("o", "", "output file; default foo.6 for /a/b/c/foo.s on amd64")
 	PrintOut   = flag.Bool("S", false, "print assembly and machine code")
 	TrimPath   = flag.String("trimpath", "", "remove prefix from recorded source file paths")
-	Shared     = flag.Bool("shared", false, "generate code that can be linked into a shared library")
+	Buildmode  = obj.Buildmode_None
 )
 
 var (
@@ -29,6 +30,7 @@ var (
 func init() {
 	flag.Var(&D, "D", "predefined symbol with optional simple value -D=identifer=value; can be set multiple times")
 	flag.Var(&I, "I", "include directory; can be set multiple times")
+	flag.Var(&Buildmode, "buildmode", "build mode to use")
 }
 
 // MultiFlag allows setting a value multiple times to collect a list, as in -I=dir1 -I=dir2.
