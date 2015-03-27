@@ -1305,7 +1305,7 @@ func dodata() {
 	sect.Length = uint64(datsize) - sect.Vaddr
 
 	/* shared library initializer */
-	if Flag_shared != 0 {
+	if Buildmode == obj.Buildmode_CShared {
 		sect := addsection(&Segdata, ".init_array", 06)
 		sect.Align = maxalign(s, SINITARR)
 		datsize = Rnd(datsize, int64(sect.Align))
