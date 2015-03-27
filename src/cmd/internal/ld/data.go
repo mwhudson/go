@@ -956,7 +956,7 @@ func dosymtype() {
 		}
 		// Create a new entry in the .init_array section that points to the
 		// library initializer function.
-		if Flag_shared != 0 && s.Name == INITENTRY {
+		if Buildmode == Buildmode_CShared && s.Name == INITENTRY {
 			addinitarrdata(s)
 		}
 	}
@@ -1318,7 +1318,7 @@ func dodata() {
 	sect.Length = uint64(datsize) - sect.Vaddr
 
 	/* shared library initializer */
-	if Flag_shared != 0 {
+	if Buildmode == Buildmode_CShared {
 		sect := addsection(&Segdata, ".init_array", 06)
 		sect.Align = maxalign(s, SINITARR)
 		datsize = Rnd(datsize, int64(sect.Align))

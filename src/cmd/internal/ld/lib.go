@@ -33,6 +33,7 @@ package ld
 import (
 	"bytes"
 	"cmd/internal/obj"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -160,7 +161,7 @@ var (
 	elfglobalsymndx    int
 	flag_installsuffix string
 	flag_race          int
-	Flag_shared        int
+	Buildmode          BuildMode
 	tracksym           string
 	interpreter        string
 	tmpdir             string
@@ -234,6 +235,37 @@ func Lflag(arg string) {
 	Ctxt.Libdir = append(Ctxt.Libdir, arg)
 }
 
+type BuildMode uint8
+
+const (
+	Buildmode_None BuildMode = iota
+	Buildmode_CShared
+)
+
+func (mode *BuildMode) Set(s string) error {
+	switch s {
+	default:
+		return errors.New("invalid mode")
+	case "c-shared":
+		goarch := obj.Getgoarch()
+		if goarch != "amd64" && goarch != "arm" {
+			return fmt.Errorf("not supported on %s", goarch)
+		}
+		*mode = Buildmode_CShared
+	}
+	return nil
+}
+
+func (mode *BuildMode) String() string {
+	switch *mode {
+	case Buildmode_None:
+		return ""
+	case Buildmode_CShared:
+		return "c-shared"
+	}
+	return fmt.Sprintf("BuildMode(%d)", uint8(*mode))
+}
+
 /*
  * Unix doesn't like it when we write to a running (or, sometimes,
  * recently run) binary, so remove the output file before writing it.
@@ -276,10 +308,13 @@ func libinit() {
 	coutbuf = *Binitw(f)
 
 	if INITENTRY == "" {
-		if Flag_shared == 0 {
-			INITENTRY = fmt.Sprintf("_rt0_%s_%s", goarch, goos)
-		} else {
+		switch Buildmode {
+		case Buildmode_CShared:
 			INITENTRY = fmt.Sprintf("_rt0_%s_%s_lib", goarch, goos)
+		case Buildmode_None:
+			INITENTRY = fmt.Sprintf("_rt0_%s_%s", goarch, goos)
+		default:
+			Diag("unknown INITENTRY for buildmode %v", Buildmode)
 		}
 	}
 
@@ -324,7 +359,7 @@ func loadinternal(name string) {
 }
 
 func loadlib() {
-	if Flag_shared != 0 {
+	if Buildmode == Buildmode_CShared {
 		s := Linklookup(Ctxt, "runtime.islibrary", 0)
 		s.Dupok = 1
 		Adduint8(Ctxt, s, 1)
@@ -448,7 +483,7 @@ func loadlib() {
 	// binaries, so leave it enabled on OS X (Mach-O) binaries.
 	// Also leave it enabled on Solaris which doesn't support
 	// statically linked binaries.
-	if Flag_shared == 0 && havedynamic == 0 && HEADTYPE != Hdarwin && HEADTYPE != Hsolaris {
+	if Buildmode == Buildmode_None && havedynamic == 0 && HEADTYPE != Hdarwin && HEADTYPE != Hsolaris {
 		Debug['d'] = 1
 	}
 
@@ -737,7 +772,7 @@ func hostlink() {
 		argv = append(argv, "-Wl,--rosegment")
 	}
 
-	if Flag_shared != 0 {
+	if Buildmode == Buildmode_CShared {
 		argv = append(argv, "-Wl,-Bsymbolic")
 		argv = append(argv, "-shared")
 	}
