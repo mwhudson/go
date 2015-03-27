@@ -160,7 +160,7 @@ var (
 	elfglobalsymndx    int
 	flag_installsuffix string
 	flag_race          int
-	Flag_shared        int
+	Buildmode          obj.Buildmode
 	tracksym           string
 	interpreter        string
 	tmpdir             string
@@ -276,10 +276,13 @@ func libinit() {
 	coutbuf = *Binitw(f)
 
 	if INITENTRY == "" {
-		if Flag_shared == 0 {
-			INITENTRY = fmt.Sprintf("_rt0_%s_%s", goarch, goos)
-		} else {
+		switch Buildmode {
+		case obj.Buildmode_CShared:
 			INITENTRY = fmt.Sprintf("_rt0_%s_%s_lib", goarch, goos)
+		case obj.Buildmode_None:
+			INITENTRY = fmt.Sprintf("_rt0_%s_%s", goarch, goos)
+		default:
+			Diag("unknown INITENTRY for buildmode %v", Buildmode)
 		}
 	}
 
@@ -324,7 +327,7 @@ func loadinternal(name string) {
 }
 
 func loadlib() {
-	if Flag_shared != 0 {
+	if Buildmode == obj.Buildmode_CShared {
 		s := Linklookup(Ctxt, "runtime.islibrary", 0)
 		s.Dupok = 1
 		Adduint8(Ctxt, s, 1)
@@ -448,7 +451,7 @@ func loadlib() {
 	// binaries, so leave it enabled on OS X (Mach-O) binaries.
 	// Also leave it enabled on Solaris which doesn't support
 	// statically linked binaries.
-	if Flag_shared == 0 && havedynamic == 0 && HEADTYPE != Hdarwin && HEADTYPE != Hsolaris {
+	if Buildmode == obj.Buildmode_None && havedynamic == 0 && HEADTYPE != Hdarwin && HEADTYPE != Hsolaris {
 		Debug['d'] = 1
 	}
 
@@ -738,7 +741,7 @@ func hostlink() {
 		argv = append(argv, "-Wl,--rosegment")
 	}
 
-	if Flag_shared != 0 {
+	if Buildmode == obj.Buildmode_CShared {
 		argv = append(argv, "-Wl,-Bsymbolic")
 		argv = append(argv, "-shared")
 	}

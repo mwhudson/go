@@ -1950,8 +1950,8 @@ func prefixof(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 				log.Fatalf("unknown TLS base register for %s", obj.Headstr(ctxt.Headtype))
 
 			case obj.Hlinux:
-				if ctxt.Flag_shared != 0 {
-					log.Fatalf("unknown TLS base register for linux with -shared")
+				if needsInitalExecTLS(ctxt) {
+					log.Fatalf("unknown TLS base register for linux with IE model")
 				} else {
 					return 0x64 // FS
 				}
@@ -1984,7 +1984,7 @@ func prefixof(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 		return 0x26
 
 	case REG_TLS:
-		if ctxt.Flag_shared != 0 {
+		if needsInitalExecTLS(ctxt) {
 			// When building for inclusion into a shared library, an instruction of the form
 			//     MOV 0(CX)(TLS*1), AX
 			// becomes
@@ -2624,7 +2624,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 	}
 
 	if REG_AX <= base && base <= REG_R15 {
-		if a.Index == REG_TLS && ctxt.Flag_shared == 0 {
+		if a.Index == REG_TLS && needsInitalExecTLS(ctxt) {
 			rel = obj.Reloc{}
 			rel.Type = obj.R_TLS_IE
 			rel.Siz = 4
@@ -3834,8 +3834,8 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 						log.Fatalf("unknown TLS base location for %s", obj.Headstr(ctxt.Headtype))
 
 					case obj.Hlinux:
-						if ctxt.Flag_shared == 0 {
-							log.Fatalf("unknown TLS base location for linux without -shared")
+						if !needsInitalExecTLS(ctxt) {
+							log.Fatalf("unknown TLS base location for linux with LE model")
 						}
 						// Note that this is not generating the same insn as the other cases.
 						//     MOV TLS, R_to

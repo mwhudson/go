@@ -38,6 +38,22 @@ import (
 	"math"
 )
 
+func needsInitalExecTLS(ctxt *obj.Link) bool {
+	switch ctxt.Buildmode {
+	case obj.Buildmode_CShared:
+		return true
+	}
+	return false
+}
+
+func needsPcrel(ctxt *obj.Link) bool {
+	switch ctxt.Buildmode {
+	case obj.Buildmode_CShared:
+		return true
+	}
+	return false
+}
+
 var progedit_tlsfallback *obj.LSym
 
 func progedit(ctxt *obj.Link, p *obj.Prog) {
@@ -142,7 +158,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		}
 	}
 
-	if ctxt.Flag_shared != 0 {
+	if needsInitalExecTLS(ctxt) {
 		// Shared libraries use R_ARM_TLS_IE32 instead of
 		// R_ARM_TLS_LE32, replacing the link time constant TLS offset in
 		// runtime.tlsg with an address to a GOT entry containing the
@@ -273,7 +289,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 	for p := cursym.Text; p != nil; p = p.Link {
 		switch p.As {
 		case ACASE:
-			if ctxt.Flag_shared != 0 {
+			if needsPcrel(ctxt) {
 				linkcase(p)
 			}
 
