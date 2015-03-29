@@ -289,11 +289,15 @@ func SetFinalizer(obj interface{}, finalizer interface{}) {
 		// The relevant segments are: noptrdata, data, bss, noptrbss.
 		// We cannot assume they are in any order or even contiguous,
 		// due to external linking.
-		if themoduledata.noptrdata <= uintptr(e.data) && uintptr(e.data) < themoduledata.enoptrdata ||
-			themoduledata.data <= uintptr(e.data) && uintptr(e.data) < themoduledata.edata ||
-			themoduledata.bss <= uintptr(e.data) && uintptr(e.data) < themoduledata.ebss ||
-			themoduledata.noptrbss <= uintptr(e.data) && uintptr(e.data) < themoduledata.enoptrbss {
-			return
+		datap := &themoduledata
+		for datap != nil {
+			if datap.noptrdata <= uintptr(e.data) && uintptr(e.data) < datap.enoptrdata ||
+				datap.data <= uintptr(e.data) && uintptr(e.data) < datap.edata ||
+				datap.bss <= uintptr(e.data) && uintptr(e.data) < datap.ebss ||
+				datap.noptrbss <= uintptr(e.data) && uintptr(e.data) < datap.enoptrbss {
+				return
+			}
+			datap = datap.next
 		}
 		throw("runtime.SetFinalizer: pointer not in allocated block")
 	}
