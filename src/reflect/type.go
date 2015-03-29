@@ -1057,27 +1057,39 @@ func (t *rtype) ptrTo() *rtype {
 		return &p.rtype
 	}
 
-	// Create a new ptrType starting with the description
-	// of an *unsafe.Pointer.
-	p = new(ptrType)
-	var iptr interface{} = (*unsafe.Pointer)(nil)
-	prototype := *(**ptrType)(unsafe.Pointer(&iptr))
-	*p = *prototype
-
+	// Look in known types.
 	s := "*" + *t.string
-	p.string = &s
+	found := false
+	for _, tt := range typesByString(s) {
+		p = (*ptrType)(unsafe.Pointer(tt))
+		if p.elem == t {
+			found = true
+			break
+		}
+	}
 
-	// For the type structures linked into the binary, the
-	// compiler provides a good hash of the string.
-	// Create a good hash for the new string by using
-	// the FNV-1 hash's mixing function to combine the
-	// old hash and the new "*".
-	p.hash = fnv1(t.hash, '*')
+	if !found {
+		// Create a new ptrType starting with the description
+		// of an *unsafe.Pointer.
+		p = new(ptrType)
+		var iptr interface{} = (*unsafe.Pointer)(nil)
+		prototype := *(**ptrType)(unsafe.Pointer(&iptr))
+		*p = *prototype
 
-	p.uncommonType = nil
-	p.ptrToThis = nil
-	p.zero = unsafe.Pointer(&make([]byte, p.size)[0])
-	p.elem = t
+		p.string = &s
+
+		// For the type structures linked into the binary, the
+		// compiler provides a good hash of the string.
+		// Create a good hash for the new string by using
+		// the FNV-1 hash's mixing function to combine the
+		// old hash and the new "*".
+		p.hash = fnv1(t.hash, '*')
+
+		p.uncommonType = nil
+		p.ptrToThis = nil
+		p.zero = unsafe.Pointer(&make([]byte, p.size)[0])
+		p.elem = t
+	}
 
 	ptrMap.m[t] = p
 	ptrMap.Unlock()
