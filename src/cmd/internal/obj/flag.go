@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 )
@@ -125,6 +126,7 @@ type Buildmode uint8
 const (
 	Buildmode_None Buildmode = iota
 	Buildmode_CShared
+	Buildmode_Shared
 )
 
 func (mode *Buildmode) Set(s string) error {
@@ -133,6 +135,8 @@ func (mode *Buildmode) Set(s string) error {
 		return errors.New("buildmode %s not recognized")
 	case "c-shared":
 		*mode = Buildmode_CShared
+	case "shared":
+		*mode = Buildmode_Shared
 	}
 	return nil
 }
@@ -141,6 +145,32 @@ func (mode *Buildmode) String() string {
 	switch *mode {
 	case Buildmode_CShared:
 		return "c-shared"
+	case Buildmode_Shared:
+		return "shared"
 	}
 	return fmt.Sprintf("Buildmode(%d)", uint8(*mode))
+}
+
+func (ctxt *Link) CheckBuildOptions() {
+	CheckBuildOptions(ctxt.Headtype, ctxt.Arch.Thechar, ctxt.Buildmode, ctxt.Linkshared)
+}
+
+func CheckBuildOptions(headtype int, thechar int, mode Buildmode, linkshared bool) {
+	switch mode {
+	case Buildmode_None:
+		// fine
+	case Buildmode_CShared:
+		if (thechar != '5' && thechar != '6') || headtype != Hlinux {
+			log.Fatal("-buildmode=c-shared is not supported on this platform")
+		}
+	case Buildmode_Shared:
+		if true || thechar != '6' || headtype != Hlinux {
+			log.Fatal("-buildmode=shared is not supported on this platform")
+		}
+	}
+	if linkshared {
+		if true || thechar != '6' || headtype != Hlinux {
+			log.Fatal("-linkshared is not supported on this platform")
+		}
+	}
 }

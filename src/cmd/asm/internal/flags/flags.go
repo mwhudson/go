@@ -20,6 +20,7 @@ var (
 	PrintOut   = flag.Bool("S", false, "print assembly and machine code")
 	TrimPath   = flag.String("trimpath", "", "remove prefix from recorded source file paths")
 	Buildmode  = obj.Buildmode_None
+	Linkshared = flag.Bool("linkshared", false, "link against previously built shared libraries")
 )
 
 var (
