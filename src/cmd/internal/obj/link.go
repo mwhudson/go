@@ -173,6 +173,7 @@ const (
 	NAME_STATIC
 	NAME_AUTO
 	NAME_PARAM
+	NAME_GOTREF
 )
 
 const (
@@ -406,6 +407,7 @@ const (
 	R_PLT2
 	R_USEFIELD
 	R_POWER_TOC
+	R_GOTPCREL
 )
 
 // Reloc.variant
