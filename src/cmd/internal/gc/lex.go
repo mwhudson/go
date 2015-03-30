@@ -206,6 +206,7 @@ func Main() {
 	obj.Flagstr("installsuffix", "pkg directory suffix", &flag_installsuffix)
 	obj.Flagcount("j", "debug runtime-initialized variables", &Debug['j'])
 	obj.Flagcount("l", "disable inlining", &Debug['l'])
+	flag.BoolVar(&Ctxt.Linkshared, "linkshared", false, "link against previously built shared libraries")
 	obj.Flagcount("live", "debug liveness analysis", &debuglive)
 	obj.Flagcount("m", "print optimization decisions", &Debug['m'])
 	obj.Flagcount("nolocalimports", "reject local (relative) imports", &nolocalimports)
@@ -239,6 +240,7 @@ func Main() {
 			log.Fatalf("-shared and -buildmode=%s are incompatible\n", Ctxt.Buildmode.String())
 		}
 	}
+	Ctxt.CheckBuildOptions()
 	Ctxt.Debugasm = int32(Debug['S'])
 	Ctxt.Debugvlog = int32(Debug['v'])
 
