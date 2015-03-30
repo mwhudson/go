@@ -174,3 +174,7 @@ func CheckBuildOptions(headtype int, thechar int32, mode Buildmode, linkshared b
 		}
 	}
 }
+
+func DynlinkingGo(ctxt *Link) bool {
+	return ctxt.Buildmode == Buildmode_Shared || ctxt.Linkshared
+}

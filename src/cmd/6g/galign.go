@@ -61,6 +61,9 @@ func betypeinit() {
 		typedefs[2].Sameas = gc.TUINT32
 	}
 
+	if obj.DynlinkingGo(gc.Ctxt) {
+		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, x86.REG_R13)
+	}
 }
 
 func main() {
