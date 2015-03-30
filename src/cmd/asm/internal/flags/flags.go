@@ -19,6 +19,7 @@ var (
 	PrintOut   = flag.Bool("S", false, "print assembly and machine code")
 	TrimPath   = flag.String("trimpath", "", "remove prefix from recorded source file paths")
 	Shared     = flag.Bool("shared", false, "generate code that can be linked into a shared library")
+	Dynlink    = flag.Bool("dynlink", false, "generate code that can be dynamically linked (implies -shared)")
 )
 
 var (

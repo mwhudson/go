@@ -173,6 +173,7 @@ const (
 	NAME_STATIC
 	NAME_AUTO
 	NAME_PARAM
+	NAME_GOTREF
 )
 
 const (
@@ -379,6 +380,7 @@ const (
 	R_PLT2
 	R_USEFIELD
 	R_POWER_TOC
+	R_GOTPCREL
 )
 
 type Auto struct {
@@ -430,6 +432,7 @@ type Link struct {
 	Debugdivmod        int32
 	Debugpcln          int32
 	Flag_shared        int32
+	Flag_dynlink       bool
 	Bso                *Biobuf
 	Pathname           string
 	Windows            int32
