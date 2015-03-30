@@ -41,6 +41,7 @@ import (
 func needsInitalExecTLS(ctxt *obj.Link) bool {
 	switch ctxt.Buildmode {
 	case obj.Buildmode_CShared:
+	case obj.Buildmode_Shared:
 		return true
 	}
 	return false

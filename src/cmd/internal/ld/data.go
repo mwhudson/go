@@ -329,8 +329,14 @@ func relocsym(s *LSym) {
 		}
 
 		if r.Sym != nil && (r.Sym.Type&(SMASK|SHIDDEN) == 0 || r.Sym.Type&SMASK == SXREF) {
-			Diag("%s: not defined", r.Sym.Name)
-			continue
+			// When putting the runtime but not main into a shared library
+			// these symbols are undefined and that's OK.
+			if Buildmode == obj.Buildmode_Shared && (r.Sym.Name == "main.main" || r.Sym.Name == "main.init") {
+				r.Sym.Type = SDYNIMPORT
+			} else {
+				Diag("%s: not defined", r.Sym.Name)
+				continue
+			}
 		}
 
 		if r.Type >= 256 {
@@ -340,8 +346,9 @@ func relocsym(s *LSym) {
 			continue
 		}
 
-		// Solaris needs the ability to reference dynimport symbols.
-		if HEADTYPE != Hsolaris && r.Sym != nil && r.Sym.Type == SDYNIMPORT {
+		// We need to be able to reference dynimport symbols when linking against
+		// shared libraries, and Solaris needs it always
+		if HEADTYPE != Hsolaris && r.Sym != nil && r.Sym.Type == SDYNIMPORT && !DynlinkingGo() {
 			Diag("unhandled relocation for %s (type %d rtype %d)", r.Sym.Name, r.Sym.Type, r.Type)
 		}
 		if r.Sym != nil && r.Sym.Type != STLSBSS && !r.Sym.Reachable {
@@ -958,7 +965,7 @@ func dosymtype() {
 		}
 		// Create a new entry in the .init_array section that points to the
 		// library initializer function.
-		if Buildmode == obj.Buildmode_CShared && s.Name == INITENTRY {
+		if DynlinkingGo() && s.Name == INITENTRY {
 			addinitarrdata(s)
 		}
 	}
@@ -1320,7 +1327,7 @@ func dodata() {
 	sect.Length = uint64(datsize) - sect.Vaddr
 
 	/* shared library initializer */
-	if Buildmode == obj.Buildmode_CShared {
+	if Buildmode == obj.Buildmode_CShared || DynlinkingGo() {
 		sect := addsection(&Segdata, ".init_array", 06)
 		sect.Align = maxalign(s, SINITARR)
 		datsize = Rnd(datsize, int64(sect.Align))

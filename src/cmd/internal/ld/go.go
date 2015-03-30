@@ -619,15 +619,24 @@ func deadcode() {
 		fmt.Fprintf(&Bso, "%5.2f deadcode\n", obj.Cputime())
 	}
 
-	mark(Linklookup(Ctxt, INITENTRY, 0))
-	for i := 0; i < len(markextra); i++ {
-		mark(Linklookup(Ctxt, markextra[i], 0))
-	}
+	if Buildmode == obj.Buildmode_Shared {
+		// Mark all symbols as reachable when building a
+		// shared library.
+		for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+			if s.Type != 0 {
+				mark(s)
+			}
+		}
+	} else {
+		mark(Linklookup(Ctxt, INITENTRY, 0))
+		for i := 0; i < len(markextra); i++ {
+			mark(Linklookup(Ctxt, markextra[i], 0))
+		}
 
-	for i := 0; i < len(dynexp); i++ {
-		mark(dynexp[i])
+		for i := 0; i < len(dynexp); i++ {
+			mark(dynexp[i])
+		}
 	}
-
 	markflood()
 
 	// keep each beginning with 'typelink.' if the symbol it points at is being kept.
