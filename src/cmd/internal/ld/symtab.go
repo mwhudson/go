@@ -40,8 +40,13 @@ func putelfstr(s string) int {
 		putelfstr("")
 	}
 
-	// Rewrite · to . for ASCII-only tools like DTrace (sigh)
-	s = strings.Replace(s, "·", ".", -1)
+	// When dynamically linking, we create LSym's by reading the names from
+	// the symbol tables of the shared libraries and so the names need to
+	// match exactly.  Tools like DTrace will have to wait for now.
+	if !DynlinkingGo() {
+		// Rewrite · to . for ASCII-only tools like DTrace (sigh)
+		s = strings.Replace(s, "·", ".", -1)
+	}
 
 	n := len(s) + 1
 	for len(Elfstrdat)+n > cap(Elfstrdat) {
@@ -138,7 +143,11 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	// to get the exported symbols put into the dynamic symbol table.
 	// To avoid filling the dynamic table with lots of unnecessary symbols,
 	// mark all Go symbols local (not global) in the final executable.
-	if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 && elfshnum != SHN_UNDEF {
+	if DynlinkingGo() {
+		if x.Local {
+			bind = STB_LOCAL
+		}
+	} else if Linkmode == LinkExternal && x.Cgoexport&CgoExportStatic == 0 && elfshnum != SHN_UNDEF {
 		bind = STB_LOCAL
 	}
 
@@ -324,21 +333,26 @@ func symtab() {
 	xdefine("runtime.egcbss", SRODATA, 0)
 
 	// pseudo-symbols to mark locations of type, string, and go string data.
-	s = Linklookup(Ctxt, "type.*", 0)
+	var symtype *LSym
+	if !DynlinkingGo() {
+		s = Linklookup(Ctxt, "type.*", 0)
 
-	s.Type = STYPE
-	s.Size = 0
-	s.Reachable = true
-	symtype := s
+		s.Type = STYPE
+		s.Size = 0
+		s.Reachable = true
+		symtype = s
+	}
 
 	s = Linklookup(Ctxt, "go.string.*", 0)
 	s.Type = SGOSTRING
+	s.Local = true
 	s.Size = 0
 	s.Reachable = true
 	symgostring := s
 
 	s = Linklookup(Ctxt, "go.func.*", 0)
 	s.Type = SGOFUNC
+	s.Local = true
 	s.Size = 0
 	s.Reachable = true
 	symgofunc := s
@@ -346,6 +360,7 @@ func symtab() {
 	symtypelink := Linklookup(Ctxt, "runtime.typelink", 0)
 
 	symt = Linklookup(Ctxt, "runtime.symtab", 0)
+	symt.Local = true
 	symt.Type = SSYMTAB
 	symt.Size = 0
 	symt.Reachable = true
@@ -358,7 +373,7 @@ func symtab() {
 		if !s.Reachable || s.Special != 0 || s.Type != SRODATA {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "type.") {
+		if strings.HasPrefix(s.Name, "type.") && !DynlinkingGo() {
 			s.Type = STYPE
 			s.Hide = 1
 			s.Outer = symtype
@@ -398,6 +413,7 @@ func symtab() {
 	moduledata.Type = SNOPTRDATA
 	moduledata.Size = 0 // truncate symbol back to 0 bytes to reinitialize
 	moduledata.Reachable = true
+	moduledata.Local = true
 	// Three slices (pclntable, ftab, filetab), uninitalized
 	moduledata.Size += int64((3 * 3 * Thearch.Ptrsize))
 	Symgrow(Ctxt, moduledata, moduledata.Size)

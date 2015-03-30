@@ -91,7 +91,7 @@ func archinit() {
 		ld.Linkmode = ld.LinkInternal
 	}
 
-	if ld.Buildmode == ld.Buildmode_CShared {
+	if ld.Buildmode == ld.Buildmode_CShared || ld.DynlinkingGo() {
 		ld.Linkmode = ld.LinkExternal
 	}
 

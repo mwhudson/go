@@ -1655,7 +1655,7 @@ func doelf() {
 		Addstring(shstrtab, ".note.GNU-stack")
 	}
 
-	if Buildmode == Buildmode_CShared {
+	if Buildmode == Buildmode_CShared || DynlinkingGo() {
 		Addstring(shstrtab, ".init_array")
 		if Thearch.Thechar == '6' || Thearch.Thechar == '9' {
 			Addstring(shstrtab, ".rela.init_array")
