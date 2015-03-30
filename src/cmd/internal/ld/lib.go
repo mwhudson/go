@@ -161,6 +161,7 @@ var (
 	flag_installsuffix string
 	flag_race          int
 	Buildmode          obj.Buildmode
+	Linkshared         bool
 	tracksym           string
 	interpreter        string
 	tmpdir             string

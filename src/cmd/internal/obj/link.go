@@ -476,6 +476,7 @@ type Link struct {
 	Debugfloat         int32
 	Debugpcln          int32
 	Buildmode          Buildmode
+	Linkshared         bool
 	Iself              int32
 	Bso                *Biobuf
 	Pathname           string

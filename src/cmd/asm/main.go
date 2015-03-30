@@ -42,6 +42,8 @@ func main() {
 	}
 	ctxt.Trimpath = *flags.TrimPath
 	ctxt.Buildmode = flags.Buildmode
+	ctxt.Linkshared = *flags.Linkshared
+	ctxt.CheckBuildOptions()
 	ctxt.Bso = obj.Binitw(os.Stdout)
 	defer obj.Bflush(ctxt.Bso)
 	ctxt.Diag = log.Fatalf

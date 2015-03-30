@@ -112,6 +112,7 @@ func Ldmain() {
 	obj.Flagstr("installsuffix", "suffix: pkg directory suffix", &flag_installsuffix)
 	obj.Flagstr("k", "sym: set field tracking symbol", &tracksym)
 	obj.Flagfn1("linkmode", "mode: set link mode (internal, external, auto)", setlinkmode)
+	flag.BoolVar(&Linkshared, "linkshared", false, "link against previously built shared libraries")
 	obj.Flagcount("n", "dump symbol table", &Debug['n'])
 	obj.Flagstr("o", "outfile: set output file", &outfile)
 	obj.Flagstr("r", "dir1:dir2:...: set ELF dynamic linker search path", &rpath)
@@ -151,6 +152,7 @@ func Ldmain() {
 			Errorexit()
 		}
 	}
+	obj.CheckBuildOptions(int(HEADTYPE), int32(Thearch.Thechar), Buildmode, Linkshared)
 
 	if flag.NArg() != 1 {
 		usage()
