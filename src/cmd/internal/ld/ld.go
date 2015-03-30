@@ -61,7 +61,12 @@ func addlib(ctxt *Link, src string, obj string, pathname string) {
 		pname = name
 	} else {
 		// try dot, -L "libdir", and then goroot.
-		for _, dir := range ctxt.Libdir {
+		for i, dir := range ctxt.Libdir {
+			if DynlinkingGo() && i == len(ctxt.Libdir)-1 && strings.HasSuffix(name, ".a") {
+				// .a files containing code suitable for dynamic linking are
+				// never installed to GOROOT.
+				continue
+			}
 			pname = dir + "/" + name
 			if _, err := os.Stat(pname); err == nil {
 				break

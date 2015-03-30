@@ -164,7 +164,7 @@ func CheckBuildOptions(headtype int, thechar int, mode Buildmode, linkshared boo
 			log.Fatal("-buildmode=c-shared is not supported on this platform")
 		}
 	case Buildmode_Shared:
-		if true || thechar != '6' || headtype != Hlinux {
+		if thechar != '6' || headtype != Hlinux {
 			log.Fatal("-buildmode=shared is not supported on this platform")
 		}
 	}
