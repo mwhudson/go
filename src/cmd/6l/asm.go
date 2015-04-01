@@ -61,7 +61,93 @@ func needlib(name string) int {
 	return 0
 }
 
+func Addcall(ctxt *ld.Link, s *ld.LSym, t *ld.LSym) int64 {
+	s.Reachable = true
+	i := s.Size
+	s.Size += 4
+	ld.Symgrow(ctxt, s, s.Size)
+	r := ld.Addrel(s)
+	r.Sym = t
+	r.Off = int32(i)
+	r.Type = ld.R_CALL
+	r.Siz = 4
+	return i + int64(r.Siz)
+}
+
 func gentext() {
+	if !ld.DynlinkingGo() {
+		return
+	}
+	addmoduledata := ld.Linklookup(ld.Ctxt, "runtime.addmoduledata", 0)
+	if addmoduledata.Type == ld.STEXT {
+		// we're linking an object containing the runtime -> no need for
+		// an init function
+		return
+	}
+	addmoduledata.Reachable = true
+	initfunc := ld.Linklookup(ld.Ctxt, "local.dso_init", 0)
+	initfunc.Type = ld.STEXT
+	initfunc.Local = true
+	initfunc.Reachable = true
+	o := func(op ...uint8) {
+		for _, op1 := range op {
+			ld.Adduint8(ld.Ctxt, initfunc, op1)
+		}
+	}
+	// 0000000000000000 <local.dso_init>:
+	//    0:	41 54                	push   %r12
+	o(0x41, 0x54)
+	//    2:	41 55                	push   %r13
+	o(0x41, 0x55)
+	//    4:	41 56                	push   %r14
+	o(0x41, 0x56)
+	//    6:	41 57                	push   %r15
+	o(0x41, 0x57)
+	//    8:	53                   	push   %rbx
+	o(0x53)
+	//    9:	54                   	push   %rsp
+	o(0x54)
+	//    a:	55                   	push   %rbp
+	o(0x55)
+	//    b:	48 8d 1d 00 00 00 00 	lea    0x0(%rip),%rbx        # 12 <local.dso_init+0x12>
+	// 			e: R_X86_64_PC32	runtime.firstmoduledata-0x4
+	o(0x48, 0x8d, 0x1d)
+	ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "runtime.firstmoduledata", 0), 0)
+	//   12:	53                   	push   %rbx
+	o(0x53)
+	//   13:	e8 00 00 00 00       	callq  18 <local.dso_init+0x18>
+	o(0xe8)
+	Addcall(ld.Ctxt, initfunc, addmoduledata)
+	// 			14: R_X86_64_PLT32	runtime.addmoduledata-0x4
+	//   18:	48 83 c4 08          	add    $0x8,%rsp
+	o(0x48, 0x83, 0xc4, 0x08)
+	//   1c:	5d                   	pop    %rbp
+	o(0x5d)
+	//   1d:	5c                   	pop    %rsp
+	o(0x5c)
+	//   1e:	5b                   	pop    %rbx
+	o(0x5b)
+	//   1f:	41 5f                	pop    %r15
+	o(0x41, 0x5f)
+	//   21:	41 5e                	pop    %r14
+	o(0x41, 0x5e)
+	//   23:	41 5d                	pop    %r13
+	o(0x41, 0x5d)
+	//   25:	41 5c                	pop    %r12
+	o(0x41, 0x5c)
+	//   27:	c3                   	retq
+	o(0xc3)
+	if ld.Ctxt.Etextp != nil {
+		ld.Ctxt.Etextp.Next = initfunc
+	} else {
+		ld.Ctxt.Textp = initfunc
+	}
+	ld.Ctxt.Etextp = initfunc
+	initarray_entry := ld.Linklookup(ld.Ctxt, "local.dso_init.init", 0)
+	initarray_entry.Reachable = true
+	initarray_entry.Local = true
+	initarray_entry.Type = ld.SINITARR
+	ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
 }
 
 func adddynrela(rela *ld.LSym, s *ld.LSym, r *ld.Reloc) {
