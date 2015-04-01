@@ -112,6 +112,9 @@ func Ldmain() {
 	obj.Flagstr("installsuffix", "suffix: pkg directory suffix", &flag_installsuffix)
 	obj.Flagstr("k", "sym: set field tracking symbol", &tracksym)
 	obj.Flagfn1("linkmode", "mode: set link mode (internal, external, auto)", setlinkmode)
+	if Thearch.Thechar == '6' {
+		flag.BoolVar(&Linkshared, "linkshared", false, "TODO(mwhudson): write this")
+	}
 	obj.Flagcount("n", "dump symbol table", &Debug['n'])
 	obj.Flagstr("o", "outfile: set output file", &outfile)
 	obj.Flagstr("r", "dir1:dir2:...: set ELF dynamic linker search path", &rpath)
@@ -191,10 +194,10 @@ func Ldmain() {
 			} else {
 				pkgpath, file = parts[0], parts[1]
 			}
-			addlibpath(Ctxt, "command line", "command line", file, pkgpath)
+			addlibpath(Ctxt, "command line", "command line", file, pkgpath, "")
 		}
 	} else {
-		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main")
+		addlibpath(Ctxt, "command line", "command line", flag.Arg(0), "main", "")
 	}
 	loadlib()
 
