@@ -147,6 +147,7 @@ var buildRace bool           // -race flag
 var buildToolExec []string   // -toolexec flag
 var buildBuildmode string    // -buildmode flag
 var buildLibname string      // -libname flag
+var buildLinkshared bool     // -linkshared flag
 
 var buildContext = build.Default
 var buildToolchain toolchain = noToolchain{}
@@ -203,6 +204,7 @@ func addBuildFlags(cmd *Command) {
 	cmd.Flag.Var((*stringsFlag)(&buildToolExec), "toolexec", "")
 	cmd.Flag.StringVar(&buildBuildmode, "buildmode", "", "")
 	cmd.Flag.StringVar(&buildLibname, "libname", "", "")
+	cmd.Flag.BoolVar(&buildLinkshared, "linkshared", false, "")
 }
 
 func addBuildFlagsNX(cmd *Command) {
@@ -284,7 +286,6 @@ func buildModeInit() {
 		if buildLibname != "" {
 			fatalf("-libname can only be combined with -buildmode=shared")
 		}
-		return
 	case "shared":
 		if goarch != "amd64" || goos != "linux" {
 			fmt.Fprintf(os.Stderr, "go %s: -buildmode=shared is only supported on linux/amd64\n", flag.Args()[0])
@@ -301,10 +302,21 @@ func buildModeInit() {
 	default:
 		fatalf("buildmode=%s not supported", buildBuildmode)
 	}
+	if buildLinkshared {
+		if goarch != "amd64" || goos != "linux" {
+			fmt.Fprintf(os.Stderr, "go %s: -linkshared is only supported on linux/amd64\n", flag.Args()[0])
+			os.Exit(2)
+		}
+		liblinkArg = "-dynlink"
+		// TODO(mwhudson): remove -w when that gets fixed in linker.
+		buildLdflags = append(buildLdflags, "-linkshared", "-w")
+	}
+	if buildBuildmode != "" {
+		buildLdflags = append(buildLdflags, "-buildmode="+buildBuildmode)
+	}
 	if liblinkArg != "" {
 		buildAsmflags = append(buildAsmflags, liblinkArg)
 		buildGcflags = append(buildGcflags, liblinkArg)
-		buildLdflags = append(buildLdflags, "-buildmode="+buildBuildmode)
 		if buildContext.InstallSuffix != "" {
 			buildContext.InstallSuffix += "_"
 		}
