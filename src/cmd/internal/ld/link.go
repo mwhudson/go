@@ -75,6 +75,7 @@ type LSym struct {
 	P           []byte
 	R           []Reloc
 	Local       bool
+	bits        []byte
 }
 
 type Reloc struct {

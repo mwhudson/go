@@ -1163,7 +1163,11 @@ func proggenaddsym(g *ProgGen, s *LSym) {
 			Diag("proggenaddsym: unaligned gcmask symbol %s: size=%d pos=%d", s.Name, s.Size, g.pos)
 		}
 		for i := int64(0); i < size; i += int64(Thearch.Ptrsize) {
-			proggendata(g, uint8((mask[i/int64(Thearch.Ptrsize)/2]>>uint64((i/int64(Thearch.Ptrsize)%2)*4+2))&obj.BitsMask))
+			index := i / int64(Thearch.Ptrsize) / 2
+			if index >= int64(len(mask)) {
+				println(s.Gotype.Name, index, len(mask))
+			}
+			proggendata(g, uint8((mask[index]>>uint64((i/int64(Thearch.Ptrsize)%2)*4+2))&obj.BitsMask))
 		}
 		g.pos = s.Value + size
 	}

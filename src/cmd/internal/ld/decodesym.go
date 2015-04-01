@@ -52,7 +52,11 @@ func decodetype_kind(s *LSym) uint8 {
 
 // Type.commonType.kind
 func decodetype_noptr(s *LSym) uint8 {
-	return uint8(s.P[1*Thearch.Ptrsize+7] & obj.KindNoPointers) //  0x13 / 0x1f
+	index := 1*Thearch.Ptrsize + 7
+	if index >= len(s.P) {
+		println(s.Name, index, len(s.P))
+	}
+	return uint8(s.P[index] & obj.KindNoPointers) //  0x13 / 0x1f
 }
 
 // Type.commonType.kind
@@ -67,10 +71,19 @@ func decodetype_size(s *LSym) int64 {
 
 // Type.commonType.gc
 func decodetype_gcprog(s *LSym) *LSym {
+	if DynlinkingGo() {
+		// type.$name -> type..gcprog.$name
+		x := "type..gcprog." + s.Name[5:]
+		return Linklookup(Ctxt, x, 0)
+	}
 	return decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+2*int32(Thearch.Ptrsize))
 }
 
 func decodetype_gcmask(s *LSym) []byte {
+	if s.Type == SDYNIMPORT {
+		// ARGH
+		return s.bits
+	}
 	mask := decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
 	return mask.P
 }
