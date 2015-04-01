@@ -67,10 +67,19 @@ func decodetype_size(s *LSym) int64 {
 
 // Type.commonType.gc
 func decodetype_gcprog(s *LSym) *LSym {
+	if DynlinkingGo() {
+		// type.$name -> type..gcprog.$name
+		x := "type..gcprog." + s.Name[5:]
+		return Linklookup(Ctxt, x, 0)
+	}
 	return decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+2*int32(Thearch.Ptrsize))
 }
 
 func decodetype_gcmask(s *LSym) []byte {
+	if s.Type == SDYNIMPORT {
+		// ARGH
+		return s.bits
+	}
 	mask := decode_reloc_sym(s, 1*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
 	return mask.P
 }

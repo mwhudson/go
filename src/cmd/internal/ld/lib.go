@@ -1142,11 +1142,13 @@ func ldshlibsyms(shlib string) {
 		return
 	}
 	defer f.Close()
-	syms, err := f.DynamicSymbols()
+	syms, err := f.Symbols()
 	if err != nil {
 		Diag("cannot read symbols from shared library: %s", libpath)
 		return
 	}
+	bits := make(map[uint64][]byte)
+	types := []*LSym{}
 	for _, s := range syms {
 		if elf.ST_TYPE(s.Info) == elf.STT_NOTYPE || elf.ST_TYPE(s.Info) == elf.STT_SECTION {
 			continue
@@ -1157,6 +1159,20 @@ func ldshlibsyms(shlib string) {
 		if strings.HasPrefix(s.Name, "_") {
 			continue
 		}
+		if strings.HasPrefix(s.Name, "runtime.gcbits.0x") {
+			data := make([]byte, s.Size)
+			sect := f.Sections[s.Section]
+			if sect.Type == elf.SHT_PROGBITS {
+				n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
+				if uint64(n) != s.Size {
+					Diag("Error reading contents of %s: %v", s.Name, err)
+				}
+			}
+			bits[s.Value] = data
+		}
+		if elf.ST_BIND(s.Info) != elf.STB_GLOBAL {
+			continue
+		}
 		lsym := Linklookup(Ctxt, s.Name, 0)
 		if lsym.Type != 0 && lsym.Dupok == 0 {
 			Diag(
@@ -1165,6 +1181,32 @@ func ldshlibsyms(shlib string) {
 		}
 		lsym.Type = SDYNIMPORT
 		lsym.File = libpath
+		if strings.HasPrefix(lsym.Name, "type.") {
+			data := make([]byte, s.Size)
+			sect := f.Sections[s.Section]
+			if sect.Type == elf.SHT_PROGBITS {
+				n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
+				if uint64(n) != s.Size {
+					Diag("Error reading contents of %s: %v", s.Name, err)
+				}
+				lsym.P = data
+			}
+			if !strings.HasPrefix(lsym.Name, "type..") {
+				types = append(types, lsym)
+			}
+		}
+	}
+
+	for _, t := range types {
+		if decodetype_noptr(t) != 0 || decodetype_usegcprog(t) != 0 {
+			continue
+		}
+		addr := decode_inuxi(t.P[1*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize):], Thearch.Ptrsize)
+		tbits, ok := bits[addr]
+		if !ok {
+			Diag("bits not found for %s at %d", t.Name, addr)
+		}
+		t.bits = tbits
 	}
 
 	// We might have overwritten some functions above (this tends to happen for the
