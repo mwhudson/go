@@ -417,8 +417,14 @@ func symtab() {
 	// the definition of moduledata in runtime/symtab.go.
 	// This code uses several global variables that are set by pcln.go:pclntab.
 	moduledata := Linklookup(Ctxt, "runtime.firstmoduledata", 0)
+	var moduledatasize int64
+	if moduledata.Type == 0 {
+		ts := Linkrlookup(Ctxt, "type.runtime.moduledata", 0)
+		moduledatasize = decodetype_size(ts)
+	} else {
+		moduledatasize = moduledata.Size
+	}
 	moduledata.Type = SNOPTRDATA
-	moduledatasize := moduledata.Size
 	moduledata.Size = 0 // truncate symbol back to 0 bytes to reinitialize
 	moduledata.Reachable = true
 	moduledata.Local = true
