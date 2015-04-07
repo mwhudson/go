@@ -428,7 +428,7 @@ func gomcache() *mcache {
 //go:nosplit
 func reflect_typelinks() [][]*_type {
 	ret := [][]*_type{}
-	datap := &themoduledata
+	datap := &firstmoduledata
 	for datap != nil {
 		ret = append(ret, datap.typelinks)
 		datap = datap.next

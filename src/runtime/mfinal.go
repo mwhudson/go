@@ -289,7 +289,7 @@ func SetFinalizer(obj interface{}, finalizer interface{}) {
 		// The relevant segments are: noptrdata, data, bss, noptrbss.
 		// We cannot assume they are in any order or even contiguous,
 		// due to external linking.
-		datap := &themoduledata
+		datap := &firstmoduledata
 		for datap != nil {
 			if datap.noptrdata <= uintptr(e.data) && uintptr(e.data) < datap.enoptrdata ||
 				datap.data <= uintptr(e.data) && uintptr(e.data) < datap.edata ||

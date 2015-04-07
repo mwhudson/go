@@ -427,7 +427,7 @@ func wbshadowinit() {
 
 	mheap_.shadow_reserved = reserved
 
-	datap := &themoduledata
+	datap := &firstmoduledata
 	for datap != nil {
 		start := ^uintptr(0)
 		end := uintptr(0)
@@ -476,7 +476,7 @@ func wbshadowinit() {
 // shadowptr returns a pointer to the shadow value for addr.
 //go:nosplit
 func shadowptr(addr uintptr) *uintptr {
-	datap := &themoduledata
+	datap := &firstmoduledata
 	for datap != nil {
 		if datap.data_start <= addr && addr < datap.data_end {
 			return (*uintptr)(unsafe.Pointer(addr + datap.shadow_data))

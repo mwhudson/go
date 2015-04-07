@@ -28,7 +28,7 @@ func isgoexception(info *exceptionrecord, r *context) bool {
 	// Only handle exception if executing instructions in Go binary
 	// (not Windows library code).
 	// TODO(mwhudson): needs to loop to support shared libs
-	if r.eip < uint32(themoduledata.text) || uint32(themoduledata.etext) < r.eip {
+	if r.eip < uint32(firstmoduledata.text) || uint32(firstmoduledata.etext) < r.eip {
 		return false
 	}
 

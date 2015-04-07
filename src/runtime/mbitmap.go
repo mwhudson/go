@@ -746,7 +746,7 @@ func getgcmask(p unsafe.Pointer, t *_type, mask **byte, len *uintptr) {
 
 	const typeBitsPerByte = 8 / typeBitsWidth
 
-	datap := &themoduledata
+	datap := &firstmoduledata
 	// data
 	for datap != nil {
 		if datap.data <= uintptr(p) && uintptr(p) < datap.edata {

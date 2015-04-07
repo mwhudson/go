@@ -60,14 +60,14 @@ func markroot(desc *parfor, i uint32) {
 	// Note: if you add a case here, please also update heapdump.go:dumproots.
 	switch i {
 	case _RootData:
-		datap := &themoduledata
+		datap := &firstmoduledata
 		for datap != nil {
 			scanblock(datap.data, datap.edata-datap.data, datap.gcdatamask.bytedata, &gcw)
 			datap = datap.next
 		}
 
 	case _RootBss:
-		datap := &themoduledata
+		datap := &firstmoduledata
 		for datap != nil {
 			scanblock(datap.bss, datap.ebss-datap.bss, datap.gcbssmask.bytedata, &gcw)
 			datap = datap.next

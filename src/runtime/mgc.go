@@ -151,7 +151,7 @@ func gcinit() {
 
 	work.markfor = parforalloc(_MaxGcproc)
 	gcpercent = readgogc()
-	datap := &themoduledata
+	datap := &firstmoduledata
 	for datap != nil {
 		datap.gcdatamask = unrollglobgcprog((*byte)(unsafe.Pointer(datap.gcdata)), datap.edata-datap.data)
 		datap.gcbssmask = unrollglobgcprog((*byte)(unsafe.Pointer(datap.gcbss)), datap.ebss-datap.bss)
