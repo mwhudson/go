@@ -61,7 +61,7 @@ func ldpkg(f *Biobuf, pkg string, length int64, filename string, whence int) {
 	var p0, p1 int
 
 	if Debug['g'] != 0 {
-		return
+		goto ldcgo
 	}
 
 	if int64(int(length)) != length {
@@ -151,6 +151,7 @@ func ldpkg(f *Biobuf, pkg string, length int64, filename string, whence int) {
 		loadpkgdata(filename, pkg, data[p0:p1])
 	}
 
+ldcgo:
 	// __.PKGDEF has no cgo section - those are in the C compiler-generated object files.
 	if whence == Pkgdef {
 		return
