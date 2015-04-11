@@ -30,7 +30,12 @@
 
 package ld
 
-import "strings"
+import (
+	"crypto/sha1"
+	"path/filepath"
+	"sort"
+	"strings"
+)
 
 // Symbol table.
 
@@ -292,6 +297,20 @@ func Vputl(v uint64) {
 	Lputl(uint32(v >> 32))
 }
 
+type LibrarySorter struct{}
+
+func (LibrarySorter) Len() int {
+	return len(Ctxt.Library)
+}
+
+func (LibrarySorter) Less(a, b int) bool {
+	return Ctxt.Library[a].Pkg < Ctxt.Library[b].Pkg
+}
+
+func (LibrarySorter) Swap(a, b int) {
+	Ctxt.Library[a], Ctxt.Library[b] = Ctxt.Library[b], Ctxt.Library[a]
+}
+
 func symtab() {
 	dosymtype()
 
@@ -364,6 +383,21 @@ func symtab() {
 	symt.Reachable = true
 
 	ntypelinks := 0
+
+	if Buildmode == BuildmodeShared {
+		sort.Sort(LibrarySorter{})
+		h := sha1.New()
+		for _, l := range Ctxt.Library {
+			//println(l.Pkg)
+			//println(hex.EncodeToString(l.hash))
+			h.Write(l.hash)
+		}
+		abihash := Linklookup(Ctxt, "go..abihash.."+filepath.Base(outfile), 0)
+		abihash.Reachable = true
+		abihash.P = h.Sum(abihash.P)
+		abihash.Size = sha1.Size
+		abihash.Type = SRODATA
+	}
 
 	// assign specific types so that they sort together.
 	// within a type they sort by size, so the .* symbols

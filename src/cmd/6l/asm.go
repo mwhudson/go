@@ -89,17 +89,18 @@ func gentext() {
 	initfunc.Type = ld.STEXT
 	initfunc.Local = true
 	initfunc.Reachable = true
+	curfunc := initfunc
 	o := func(op ...uint8) {
 		for _, op1 := range op {
-			ld.Adduint8(ld.Ctxt, initfunc, op1)
+			ld.Adduint8(ld.Ctxt, curfunc, op1)
 		}
 	}
-	// 0000000000000000 <local.dso_init>:
+	// 0000000000000000 <go..addmoduledata>:
 	//    0:	48 8d 3d 00 00 00 00 	lea    0x0(%rip),%rdi        # 7 <local.dso_init+0x7>
 	// 			3: R_X86_64_PC32	runtime.firstmoduledata-0x4
 	o(0x48, 0x8d, 0x3d)
 	ld.Addpcrelplus(ld.Ctxt, initfunc, ld.Linklookup(ld.Ctxt, "runtime.firstmoduledata", 0), 0)
-	//    7:	e8 00 00 00 00       	callq  c <local.dso_init+0xc>
+	//    7:	e8 00 00 00 00       	callq  c <go..addmoduledata+0xc>
 	// 			8: R_X86_64_PLT32	runtime.addmoduledata-0x4
 	o(0xe8)
 	Addcall(ld.Ctxt, initfunc, addmoduledata)
@@ -116,6 +117,63 @@ func gentext() {
 	initarray_entry.Local = true
 	initarray_entry.Type = ld.SINITARR
 	ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
+
+	abort := ld.Linklookup(ld.Ctxt, "abort", 0)
+	abort.Reachable = true
+	abort.Type = ld.SDYNIMPORT
+	memcmp := ld.Linklookup(ld.Ctxt, "memcmp", 0)
+	memcmp.Reachable = true
+	memcmp.Type = ld.SDYNIMPORT
+
+	for i, shlib := range ld.Ctxt.Shlibs {
+		println("shlib", i, shlib.Path, shlib.Hash.Name)
+		shlib.Hash.Reachable = true
+		checkabifunc := ld.Linklookup(ld.Ctxt, fmt.Sprintf("go..abicheck..%d", i), 0)
+		checkabifunc.Type = ld.STEXT
+		checkabifunc.Local = true
+		checkabifunc.Reachable = true
+		localhashvalue := ld.Linklookup(ld.Ctxt, "local."+shlib.Hash.Name, 0)
+		localhashvalue.P = shlib.Hash.P
+		localhashvalue.Size = int64(len(shlib.Hash.P))
+		localhashvalue.Type = ld.SRODATA
+		localhashvalue.Reachable = true
+		localhashvalue.Local = true
+		curfunc = checkabifunc
+		// 0000000000000000 <go..abicheck..0>:
+		//    0:	48 8d 3d 00 00 00 00 	lea    0x0(%rip),%rdi        # 7 <go..abicheck..0+0x7>
+		// 			3: R_X86_64_PC32	local.sym-0x4
+		o(0x48, 0x8d, 0x3d)
+		ld.Addpcrelplus(ld.Ctxt, curfunc, localhashvalue, 0)
+		//    7:	48 8b 35 00 00 00 00 	mov    0x0(%rip),%rsi        # e <go..abicheck..0+0xe>
+		// 			a: R_X86_64_GOTPCREL	global.sym-0x4
+		o(0x48, 0x8b, 0x35)
+		ld.Addpcrelplus(ld.Ctxt, curfunc, shlib.Hash, 0)
+		curfunc.R[len(curfunc.R)-1].Type = ld.R_GOTPCREL
+		//    e:	48 c7 c2 14 00 00 00 	mov    $0x14,%rdx
+		o(0x48, 0xc7, 0xc2)
+		ld.Adduint32(ld.Ctxt, curfunc, uint32(len(shlib.Hash.P)))
+		//   15:	e8 00 00 00 00       	callq  1a <go..abicheck..0+0x1a>
+		// 			16: R_X86_64_PLT32	memcmp-0x4
+		o(0xe8)
+		Addcall(ld.Ctxt, curfunc, memcmp)
+		//   1a:	85 c0             	test   %eax,%eax
+		o(0x85, 0xc0)
+		//   1d:	74 05                	je     24 <go..abicheck..0+0x24>
+		o(0x74, 0x05)
+		//   1f:	e8 00 00 00 00       	callq  24 <go..abicheck..0+0x24>
+		// 			20: R_X86_64_PLT32	abort-0x4
+		o(0xe8)
+		Addcall(ld.Ctxt, curfunc, abort)
+		//   24:	c3                   	retq
+		o(0xc3)
+		initarray_entry = ld.Linklookup(ld.Ctxt, checkabifunc.Name+".init", 0)
+		initarray_entry.Reachable = true
+		initarray_entry.Local = true
+		initarray_entry.Type = ld.SINITARR
+		ld.Addaddr(ld.Ctxt, initarray_entry, checkabifunc)
+		ld.Ctxt.Etextp.Next = checkabifunc
+		ld.Ctxt.Etextp = checkabifunc
+	}
 }
 
 func adddynrela(rela *ld.LSym, s *ld.LSym, r *ld.Reloc) {

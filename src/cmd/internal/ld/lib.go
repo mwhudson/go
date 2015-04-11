@@ -33,7 +33,9 @@ package ld
 import (
 	"bytes"
 	"cmd/internal/obj"
+	"crypto/sha1"
 	"debug/elf"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -454,7 +456,7 @@ func loadlib() {
 		if Ctxt.Library[i].Shlib != "" {
 			ldshlibsyms(Ctxt.Library[i].Shlib)
 		} else {
-			objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+			objfile(Ctxt.Library[i])
 		}
 	}
 
@@ -497,7 +499,7 @@ func loadlib() {
 			if Ctxt.Library[i].Shlib != "" {
 				ldshlibsyms(Ctxt.Library[i].Shlib)
 			} else {
-				objfile(Ctxt.Library[i].File, Ctxt.Library[i].Pkg)
+				objfile(Ctxt.Library[i])
 			}
 		}
 	}
@@ -608,18 +610,18 @@ func nextar(bp *Biobuf, off int64, a *ArHdr) int64 {
 	return int64(arsize) + SAR_HDR
 }
 
-func objfile(file string, pkg string) {
-	pkg = pathtoprefix(pkg)
+func objfile(lib *Library) {
+	pkg := pathtoprefix(lib.Pkg)
 
 	if Debug['v'] > 1 {
-		fmt.Fprintf(&Bso, "%5.2f ldobj: %s (%s)\n", obj.Cputime(), file, pkg)
+		fmt.Fprintf(&Bso, "%5.2f ldobj: %s (%s)\n", obj.Cputime(), lib.File, pkg)
 	}
 	Bflush(&Bso)
 	var err error
 	var f *Biobuf
-	f, err = Bopenr(file)
+	f, err = Bopenr(lib.File)
 	if err != nil {
-		Diag("cannot open file %s: %v", file, err)
+		Diag("cannot open file %s: %v", lib.File, err)
 		Errorexit()
 	}
 
@@ -629,7 +631,7 @@ func objfile(file string, pkg string) {
 		l := Bseek(f, 0, 2)
 
 		Bseek(f, 0, 0)
-		ldobj(f, pkg, l, file, file, FileObj)
+		ldobj(f, pkg, l, lib.File, lib.File, FileObj)
 		Bterm(f)
 
 		return
@@ -642,7 +644,7 @@ func objfile(file string, pkg string) {
 	l := nextar(f, off, &arhdr)
 	var pname string
 	if l <= 0 {
-		Diag("%s: short read on archive file symbol header", file)
+		Diag("%s: short read on archive file symbol header", lib.File)
 		goto out
 	}
 
@@ -650,20 +652,31 @@ func objfile(file string, pkg string) {
 		off += l
 		l = nextar(f, off, &arhdr)
 		if l <= 0 {
-			Diag("%s: short read on archive file symbol header", file)
+			Diag("%s: short read on archive file symbol header", lib.File)
 			goto out
 		}
 	}
 
 	if !strings.HasPrefix(arhdr.name, pkgname) {
-		Diag("%s: cannot find package header", file)
+		Diag("%s: cannot find package header", lib.File)
 		goto out
+	}
+
+	if Buildmode == BuildmodeShared {
+		before := Boffset(f)
+		pkgdef_bytes := make([]byte, atolwhex(arhdr.size))
+		Bread(f, pkgdef_bytes)
+		hash := sha1.Sum(pkgdef_bytes)
+		for _, x := range hash {
+			lib.hash = append(lib.hash, x)
+		}
+		Bseek(f, before, 0)
 	}
 
 	off += l
 
 	if Debug['u'] != 0 {
-		ldpkg(f, pkg, atolwhex(arhdr.size), file, Pkgdef)
+		ldpkg(f, pkg, atolwhex(arhdr.size), lib.File, Pkgdef)
 	}
 
 	/*
@@ -684,16 +697,16 @@ func objfile(file string, pkg string) {
 			break
 		}
 		if l < 0 {
-			Diag("%s: malformed archive", file)
+			Diag("%s: malformed archive", lib.File)
 			Errorexit()
 			goto out
 		}
 
 		off += l
 
-		pname = fmt.Sprintf("%s(%s)", file, arhdr.name)
+		pname = fmt.Sprintf("%s(%s)", lib.File, arhdr.name)
 		l = atolwhex(arhdr.size)
-		ldobj(f, pkg, l, pname, file, ArchiveObj)
+		ldobj(f, pkg, l, pname, lib.File, ArchiveObj)
 	}
 
 out:
@@ -968,7 +981,7 @@ func hostlink() {
 
 	if Linkshared {
 		for _, shlib := range Ctxt.Shlibs {
-			dir, base := filepath.Split(shlib)
+			dir, base := filepath.Split(shlib.Path)
 			argv = append(argv, "-L"+dir)
 			if !rpath.set {
 				argv = append(argv, "-Wl,-rpath="+dir)
@@ -1129,6 +1142,16 @@ eof:
 	Diag("truncated object file: %s", pn)
 }
 
+func readsymboldata(f *elf.File, sym *elf.Symbol) []byte {
+	data := make([]byte, sym.Size)
+	sect := f.Sections[sym.Section]
+	n, err := sect.ReadAt(data, int64(sym.Value-sect.Offset))
+	if uint64(n) != sym.Size {
+		Diag("Error reading contents of %s: %v", sym.Name, err)
+	}
+	return data
+}
+
 func ldshlibsyms(shlib string) {
 	found := false
 	libpath := ""
@@ -1144,7 +1167,7 @@ func ldshlibsyms(shlib string) {
 		return
 	}
 	for _, processedname := range Ctxt.Shlibs {
-		if processedname == libpath {
+		if processedname.Path == libpath {
 			return
 		}
 	}
@@ -1166,6 +1189,7 @@ func ldshlibsyms(shlib string) {
 	}
 	bits := make(map[uint64][]byte)
 	types := []*LSym{}
+	var hash *LSym
 	for _, s := range syms {
 		if elf.ST_TYPE(s.Info) == elf.STT_NOTYPE || elf.ST_TYPE(s.Info) == elf.STT_SECTION {
 			continue
@@ -1177,15 +1201,7 @@ func ldshlibsyms(shlib string) {
 			continue
 		}
 		if strings.HasPrefix(s.Name, "runtime.gcbits.0x") {
-			data := make([]byte, s.Size)
-			sect := f.Sections[s.Section]
-			if sect.Type == elf.SHT_PROGBITS {
-				n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
-				if uint64(n) != s.Size {
-					Diag("Error reading contents of %s: %v", s.Name, err)
-				}
-			}
-			bits[s.Value] = data
+			bits[s.Value] = readsymboldata(f, &s)
 		}
 		if elf.ST_BIND(s.Info) != elf.STB_GLOBAL {
 			continue
@@ -1198,15 +1214,13 @@ func ldshlibsyms(shlib string) {
 		}
 		lsym.Type = SDYNIMPORT
 		lsym.File = libpath
+		if strings.HasPrefix(lsym.Name, "go..abihash..") {
+			lsym.P = readsymboldata(f, &s)
+			hash = lsym
+		}
 		if strings.HasPrefix(lsym.Name, "type.") {
-			data := make([]byte, s.Size)
-			sect := f.Sections[s.Section]
-			if sect.Type == elf.SHT_PROGBITS {
-				n, err := sect.ReadAt(data, int64(s.Value-sect.Offset))
-				if uint64(n) != s.Size {
-					Diag("Error reading contents of %s: %v", s.Name, err)
-				}
-				lsym.P = data
+			if f.Sections[s.Section].Type == elf.SHT_PROGBITS {
+				lsym.P = readsymboldata(f, &s)
 			}
 			if !strings.HasPrefix(lsym.Name, "type..") {
 				types = append(types, lsym)
@@ -1253,7 +1267,8 @@ func ldshlibsyms(shlib string) {
 		Ctxt.Etextp = last
 	}
 
-	Ctxt.Shlibs = append(Ctxt.Shlibs, libpath)
+	println(libpath, hex.EncodeToString(hash.P))
+	Ctxt.Shlibs = append(Ctxt.Shlibs, Shlib{Path: libpath, Hash: hash})
 }
 
 func mywhatsys() {
