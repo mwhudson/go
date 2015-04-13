@@ -119,7 +119,6 @@ debian/build.stamp:
 	${FOR_GO_ARCH} \
 		export GOARCH=$$arch; \
 		export GOOS=$$os; \
-		cd src && \
 		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -race std; \
 		cd ..; \
 	${FOR_GO_ARCH_END}
