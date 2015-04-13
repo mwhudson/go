@@ -480,8 +480,6 @@ func xsamefile(f1, f2 string) bool {
 	return os.SameFile(fi1, fi2)
 }
 
-func cpuid(info *[4]uint32, ax uint32)
-
 func cansse2() bool {
 	if gohostarch != "386" && gohostarch != "amd64" {
 		return false
