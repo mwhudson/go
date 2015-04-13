@@ -1,3 +1,11 @@
+golang (2:1.5a0-0~exp1ubuntu1~2.gbpa2a2e8) UNRELEASED; urgency=medium
+
+  ** SNAPSHOT build @a2a2e8ef0dfef6c2dab4cb395eb1deb482479eea **
+
+  * UNRELEASED
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Mon, 13 Apr 2015 14:23:45 +0200
+
 golang (2:1.4.1-1~exp1) experimental; urgency=low
 
   * New upstream version (https://golang.org/doc/go1.4)
