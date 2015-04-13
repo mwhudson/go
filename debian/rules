@@ -11,9 +11,9 @@ bindir := /bin
 # We loop over supported operating systems and architectures multiple times,
 # so these two variables contain a centralized version of that code.
 # The variables $$os and $$arch can be used inside such a loop.
-FOR_GO_ARCH := for os in $$(echo linux freebsd windows darwin netbsd); do \
+FOR_GO_ARCH := for os in $$(echo linux darwin); do \
 	archs="amd64 386"; \
-	[ "$$os" = "linux" ] || [ "$$os" = "freebsd" ] && archs="amd64 arm 386"; \
+	[ "$$os" = "linux" ] || [ "$$os" = "freebsd" ] && archs="amd64 arm arm64"; \
 	for arch in $$(echo $$archs); do
 FOR_GO_ARCH_END := done; done
 
@@ -104,9 +104,12 @@ override_dh_shlibdeps:
 
 debian/build.stamp:
 	rm -f debian/build.stamp
-	mkdir -p $(GOBIN)
+	export GOROOT_BOOTSTRAP=$$(mktemp -d) && \
+	mkdir -p $$GOROOT_BOOTSTRAP/bin && \
+	ln -s /usr/bin/go-5 $$GOROOT_BOOTSTRAP/bin/go && \
+	mkdir -p $(GOBIN) && \
 	# Build native tools first, then bootstrap all other GOOS/GOARCH combinations.
-	cd src && bash ./make.bash --no-banner
+	cd src && bash ./make.bash --no-banner && \
 	# For the race detector to work (go test -race), we need to install the
 	# std library with the race detector enabled. This will result in
 	# having an additional “architecture” directory, e.g. linux_amd64_race.
@@ -116,7 +119,7 @@ debian/build.stamp:
 	-${FOR_GO_ARCH} \
 		export GOARCH=$$arch; \
 		export GOOS=$$os; \
-		cd src && bash ./make.bash --no-clean; \
+		cd src && \
 		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -race std; \
 		cd ..; \
 	${FOR_GO_ARCH_END}
