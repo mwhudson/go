@@ -1,8 +1,10 @@
-golang (2:1.5a0-0~exp1ubuntu1~2.gbpa2a2e8) UNRELEASED; urgency=medium
+golang (2:1.5a0-0~exp1ubuntu1~3.gbpd46b19) UNRELEASED; urgency=medium
 
-  ** SNAPSHOT build @a2a2e8ef0dfef6c2dab4cb395eb1deb482479eea **
+  ** SNAPSHOT build @d46b19082091ab2639ebfc4bfa4028f72ba5d4ec **
 
   * UNRELEASED
+  * update
+  * updates for 1.5
 
  -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Mon, 13 Apr 2015 14:23:45 +0200
 
