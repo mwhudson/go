@@ -1,0 +1,17 @@
+From: Michael Hudson-Doyle <michael.hudson@canonical.com>
+Date: Mon, 13 Apr 2015 16:18:07 +0200
+Subject: add a VERSION
+
+Change-Id: I3c0e01b1e135965e28f0b43f3a93e2e855cf7628
+---
+ VERSION | 1 +
+ 1 file changed, 1 insertion(+)
+ create mode 100644 VERSION
+
+diff --git a/VERSION b/VERSION
+new file mode 100644
+index 0000000..e12e022
+--- /dev/null
++++ b/VERSION
+@@ -0,0 +1 @@
++1.5a0
