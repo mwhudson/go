@@ -108,15 +108,15 @@ debian/build.stamp:
 	mkdir -p $$GOROOT_BOOTSTRAP/bin && \
 	ln -s /usr/bin/go-5 $$GOROOT_BOOTSTRAP/bin/go && \
 	mkdir -p $(GOBIN) && \
-	# Build native tools first, then bootstrap all other GOOS/GOARCH combinations.
+	# Build native tools first, then bootstrap all other GOOS/GOARCH combinations. \
 	cd src && bash ./make.bash --no-banner && \
-	# For the race detector to work (go test -race), we need to install the
-	# std library with the race detector enabled. This will result in
-	# having an additional “architecture” directory, e.g. linux_amd64_race.
-	#
-	# The race detector currently only works on linux/amd64. The check within
-	# the following loop works precisely the same way src/race.bash does.
-	-${FOR_GO_ARCH} \
+	# For the race detector to work (go test -race), we need to install the \
+	# std library with the race detector enabled. This will result in \
+	# having an additional “architecture” directory, e.g. linux_amd64_race. \
+	# \
+	# The race detector currently only works on linux/amd64. The check within \
+	# the following loop works precisely the same way src/race.bash does. \
+	${FOR_GO_ARCH} \
 		export GOARCH=$$arch; \
 		export GOOS=$$os; \
 		cd src && \
