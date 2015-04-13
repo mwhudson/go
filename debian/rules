@@ -119,7 +119,7 @@ debian/build.stamp:
 	${FOR_GO_ARCH} \
 		echo "Building standard library and commands for $$os/$$arch"; \
 		export GOARCH=$$arch; \
-		export GOOS=$$os; go install -v std cmd; \
+		export GOOS=$$os; $(GOBIN)/go install -v std cmd; \
 		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -v -race std cmd; \
 		cd ..; \
 	${FOR_GO_ARCH_END}
