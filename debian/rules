@@ -117,9 +117,10 @@ debian/build.stamp:
 	# The race detector currently only works on linux/amd64. The check within \
 	# the following loop works precisely the same way src/race.bash does. \
 	${FOR_GO_ARCH} \
+		echo "Building standard library and commands for $$os/$$arch"; \
 		export GOARCH=$$arch; \
-		export GOOS=$$os; \
-		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -race std; \
+		export GOOS=$$os; go install -v std cmd; \
+		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -v -race std cmd; \
 		cd ..; \
 	${FOR_GO_ARCH_END}
 	>debian/build.stamp
