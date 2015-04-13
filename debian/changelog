@@ -1,12 +1,14 @@
-golang (2:1.5a0-0~exp1ubuntu1~4.gbp7d931f) UNRELEASED; urgency=medium
+golang (2:1.5a0-0~exp1ubuntu1~5.gbp72415c) UNRELEASED; urgency=medium
 
-  ** SNAPSHOT build @7d931f8e33c20c525c7e440557ef5611b2a14569 **
+  ** SNAPSHOT build @72415cf72653da381979aa745cf7055b848f0f62 **
 
   * UNRELEASED
   * update
   * updates for 1.5
   * snapshot
   * makefile rage
+  * makefile rage
+  * snapshot
 
  -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Mon, 13 Apr 2015 14:23:45 +0200
 
