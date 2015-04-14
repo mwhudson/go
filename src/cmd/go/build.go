@@ -309,6 +309,7 @@ var pkgsFilter = func(pkgs []*Package) []*Package { return pkgs }
 func buildModeInit() {
 	var codegenArg, ldBuildmode string
 	platform := goos + "/" + goarch
+	_, isgccgo := buildToolchain.(gccgoToolchain)
 	switch buildBuildmode {
 	case "archive":
 		pkgsFilter = pkgsNotMain
@@ -327,7 +328,9 @@ func buildModeInit() {
 		case "linux/amd64":
 			codegenArg = "-shared"
 		case "linux/arm":
-			buildAsmflags = append(buildAsmflags, "-shared")
+			if isgccgo {
+				buildAsmflags = append(buildAsmflags, "-shared")
+			}
 		case "android/arm":
 		default:
 			fatalf("-buildmode=c-shared not supported on %s\n", platform)
@@ -348,8 +351,12 @@ func buildModeInit() {
 		if *buildO != "" {
 			fatalf("-buildmode=shared and -o not supported together")
 		}
+		if isgccgo {
+			buildGccgoflags = append(buildGccgoflags, "-shared")
+		}
 		codegenArg = "-dynlink"
 		ldBuildmode = "shared"
+
 	default:
 		fatalf("buildmode=%s not supported", buildBuildmode)
 	}
@@ -360,14 +367,28 @@ func buildModeInit() {
 		}
 		codegenArg = "-dynlink"
 		// TODO(mwhudson): remove -w when that gets fixed in linker.
-		buildLdflags = append(buildLdflags, "-linkshared", "-w")
+		if !isgccgo {
+			buildLdflags = append(buildLdflags, "-linkshared", "-w")
+		} else {
+			buildGccgoflags = append(buildGccgoflags, "-fPIC")
+		}
 	}
 	if ldBuildmode != "" {
 		buildLdflags = append(buildLdflags, "-buildmode="+ldBuildmode)
 	}
 	if codegenArg != "" {
-		buildAsmflags = append(buildAsmflags, codegenArg)
-		buildGcflags = append(buildGcflags, codegenArg)
+		if isgccgo {
+			switch codegenArg {
+			case "-dynlink", "-shared":
+				codegenArg = "-fPIC"
+			default:
+				fatalf("unrecognized codegenArg %s", codegenArg)
+			}
+			buildGccgoflags = append(buildGccgoflags, codegenArg)
+		} else {
+			buildAsmflags = append(buildAsmflags, codegenArg)
+			buildGcflags = append(buildGcflags, codegenArg)
+		}
 		if buildContext.InstallSuffix != "" {
 			buildContext.InstallSuffix += "_"
 		}
@@ -499,6 +520,9 @@ func runInstall(cmd *Command, args []string) {
 		var libdir string
 		for _, p := range pkgs {
 			plibdir := p.build.ArchPkgRoot
+			if _, isgccgo := buildToolchain.(gccgoToolchain); isgccgo {
+				plibdir = filepath.Join(plibdir, "shlibs")
+			}
 			if libdir == "" {
 				libdir = plibdir
 			} else if libdir != plibdir {
@@ -517,6 +541,7 @@ func runInstall(cmd *Command, args []string) {
 			}
 			shlibnameaction := &action{}
 			shlibnameaction.f = (*builder).installShlibname
+			shlibnameaction.p = p
 			shlibnameaction.target = p.target[:len(p.target)-2] + ".shlibname"
 			a.deps = append(a.deps, shlibnameaction)
 			shlibnameaction.deps = append(shlibnameaction.deps, linkSharedAction)
@@ -1276,30 +1301,29 @@ func (b *builder) installShlibname(a *action) error {
 	if buildX {
 		b.showcmd("", "echo '%s' > %s # internal", filepath.Base(a1.target), a.target)
 	}
+	if _, isgccgo := buildToolchain.(gccgoToolchain); isgccgo {
+		goxfile := strings.TrimSuffix(a.target, "shlibname") + "gox"
+		args := []string{"objcopy", "-j", ".go_export", a.p.build.PkgObj, goxfile}
+		b.run(".", a.p.ImportPath, nil, args)
+	}
 	return nil
 }
 
-func (b *builder) linkShared(a *action) (err error) {
-	// TODO(mwhudson): obvious copy pasting from gcToolchain.ld, should make a few
-	// changes to that function and then call it. And support gccgo.
+func (b *builder) linkShared(a *action) error {
 	allactions := actionList(a)
-	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
-	// TODO(mwhudson): this does not check for cxx-ness, extldflags etc
-	ldflags := []string{"-installsuffix", buildContext.InstallSuffix}
-	ldflags = append(ldflags, buildLdflags...)
-	for _, d := range a.deps {
-		if d.target != "" { // omit unsafe etc
-			ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
-		}
-	}
-	return b.run(".", a.target, nil, buildToolExec, tool(archChar()+"l"), "-o", a.target, importArgs, ldflags)
+	allactions = allactions[:len(allactions)-1]
+	return buildToolchain.ldShared(b, a.deps, a.target, allactions)
 }
 
 // install is the action for installing a single package or executable.
 func (b *builder) install(a *action) (err error) {
 	defer func() {
 		if err != nil && err != errPrintedOutput {
-			err = fmt.Errorf("go install %s: %v", a.p.ImportPath, err)
+			p := a.target
+			if a.p != nil {
+				p = a.p.ImportPath
+			}
+			err = fmt.Errorf("go install %s: %v", p, err)
 		}
 	}()
 	a1 := a.deps[0]
@@ -1785,6 +1809,8 @@ type toolchain interface {
 	pack(b *builder, p *Package, objDir, afile string, ofiles []string) error
 	// ld runs the linker to create a package starting at mainpkg.
 	ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error
+	// ldShared runs the linker to create a package containing pkgs
+	ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error
 
 	compiler() string
 	linker() string
@@ -1825,6 +1851,10 @@ func (noToolchain) pack(b *builder, p *Package, objDir, afile string, ofiles []s
 }
 
 func (noToolchain) ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error {
+	return noCompiler()
+}
+
+func (noToolchain) ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error {
 	return noCompiler()
 }
 
@@ -2088,6 +2118,18 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 	ldflags = append(ldflags, buildLdflags...)
 	return b.run(".", p.ImportPath, nil, buildToolExec, tool(archChar()+"l"), "-o", out, importArgs, ldflags, mainpkg)
 }
+func (gcToolchain) ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error {
+	importArgs := b.includeArgs("-L", allactions)
+	// TODO(mwhudson): this does not check for cxx-ness, extldflags etc
+	ldflags := []string{"-installsuffix", buildContext.InstallSuffix}
+	ldflags = append(ldflags, buildLdflags...)
+	for _, d := range toplevelactions {
+		if d.target != "" { // omit unsafe etc
+			ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
+		}
+	}
+	return b.run(".", out, nil, buildToolExec, tool(archChar()+"l"), "-o", out, importArgs, ldflags)
+}
 
 func (gcToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {
 	return fmt.Errorf("%s: C source files not supported without cgo", mkAbs(p.Dir, cfile))
@@ -2225,6 +2267,14 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 		ldflags = append(ldflags, "-lobjc")
 	}
 	return b.run(".", p.ImportPath, nil, tools.linker(), "-o", out, ofiles, "-Wl,-(", ldflags, "-Wl,-)", buildGccgoflags)
+}
+
+func (tools gccgoToolchain) ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error {
+	args := []string{}
+	for _, a := range toplevelactions {
+		args = append(args, a.target)
+	}
+	return b.run(".", out, nil, tools.linker(), args, "-o", out, buildGccgoflags)
 }
 
 func (gccgoToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {
