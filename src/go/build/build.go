@@ -354,6 +354,7 @@ type Package struct {
 	Root          string   // root of Go tree where this package lives
 	SrcRoot       string   // package source root directory ("" if unknown)
 	PkgRoot       string   // package install root directory ("" if unknown)
+	ArchPkgRoot   string   // architecture dependent install root directory ("" if unknown)
 	BinDir        string   // command install directory ("" if unknown)
 	Goroot        bool     // package found in Go root
 	PkgObj        string   // installed .a file
@@ -462,18 +463,21 @@ func (ctxt *Context) Import(path string, srcDir string, mode ImportMode) (*Packa
 		return p, fmt.Errorf("import %q: invalid import path", path)
 	}
 
+	var archpkgroot string
 	var pkga string
 	var pkgerr error
 	switch ctxt.Compiler {
 	case "gccgo":
+		archpkgroot = "pkg/gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH
 		dir, elem := pathpkg.Split(p.ImportPath)
-		pkga = "pkg/gccgo_" + ctxt.GOOS + "_" + ctxt.GOARCH + "/" + dir + "lib" + elem + ".a"
+		pkga = archpkgroot + "/" + dir + "lib" + elem + ".a"
 	case "gc":
 		suffix := ""
 		if ctxt.InstallSuffix != "" {
 			suffix = "_" + ctxt.InstallSuffix
 		}
-		pkga = "pkg/" + ctxt.GOOS + "_" + ctxt.GOARCH + suffix + "/" + p.ImportPath + ".a"
+		archpkgroot = "pkg/" + ctxt.GOOS + "_" + ctxt.GOARCH + suffix
+		pkga = archpkgroot + "/" + p.ImportPath + ".a"
 	default:
 		// Save error for end of function.
 		pkgerr = fmt.Errorf("import %q: unknown compiler %q", path, ctxt.Compiler)
@@ -590,6 +594,7 @@ Found:
 		p.PkgRoot = ctxt.joinPath(p.Root, "pkg")
 		p.BinDir = ctxt.joinPath(p.Root, "bin")
 		if pkga != "" {
+			p.ArchPkgRoot = ctxt.joinPath(p.Root, archpkgroot)
 			p.PkgObj = ctxt.joinPath(p.Root, pkga)
 		}
 	}
