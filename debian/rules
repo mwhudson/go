@@ -11,8 +11,10 @@ bindir := /bin
 # We loop over supported operating systems and architectures multiple times,
 # so these two variables contain a centralized version of that code.
 # The variables $$os and $$arch can be used inside such a loop.
-FOR_GO_ARCH := for os in $$(echo linux); do \
-	archs="amd64"; \
+FOR_GO_ARCH := for os in $$(echo linux freebsd windows darwin netbsd); do \
+	archs="amd64 386"; \
+	[ "$$os" = "freebsd" ] && archs="amd64 arm 386"; \
+	[ "$$os" = "linux" ] && archs="amd64 arm arm64 386 ppc64 ppc64le"; \
 	for arch in $$(echo $$archs); do
 FOR_GO_ARCH_END := done; done
 
@@ -64,7 +66,7 @@ override_dh_install:
 	# runtime/cgo is only built for the native architecture, but the
 	# golang-go-OS-ARCH packages are built on one particular buildd, which
 	# might either be i386 or amd64.
-	# echo "listing of $$(pwd):"; ls -hlR .
+	echo "listing of $$(pwd):"; ls -hlR .
 	echo "listing of GOBIN: ($(GOBIN))"; ls -hlR $(GOBIN)
 	for file in $$(cd pkg/ && ls */runtime/cgo.a); do \
 		mkdir -p $(CURDIR)/debian/golang-go/usr/lib/go/pkg/$$(dirname $$file); \
