@@ -1,22 +1,11 @@
-golang (2:1.5a0-0~exp1ubuntu1~6.gbpcecf64) UNRELEASED; urgency=medium
+golang (2:1.5a0-0~exp1ubuntu1~7.gbpfbb499) UNRELEASED; urgency=medium
 
-  ** SNAPSHOT build @cecf64d1d2f65961af9dc1a71a0d128f075e6660 **
+  ** SNAPSHOT build @fbb4993ad3ed7df8028c23f5662757807bb6917d **
 
   * UNRELEASED
-  * update
-  * updates for 1.5
-  * snapshot
-  * makefile rage
-  * makefile rage
-  * snapshot
-  * snapshot
-  * cmd/dist: use gccgo as bootstrap compiler
-  * fixity
-  * remove annoying "debugging"
-  * add a VERSION
-  * oops
-  * i r idiot
-  * build-dep on gccgo
+  * updates to build with gccgo
+  * sundry updates for 1.5 changes
+  * add VERSION as we're building from git
 
  -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Mon, 13 Apr 2015 14:23:45 +0200
 
