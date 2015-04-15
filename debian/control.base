@@ -7,7 +7,7 @@ Uploaders: Michael Stapelberg <stapelberg@debian.org>,
            Tianon Gravi <admwiggin@gmail.com>
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=pkg-golang/golang.git
 Vcs-Git: git://anonscm.debian.org/pkg-golang/golang.git
-Build-Depends: debhelper (>= 7.4.10), bison, ed, mawk | awk, perl, netbase
+Build-Depends: debhelper (>= 7.4.10), bison, ed, mawk | awk, perl, netbase, gccgo-5
 Build-Depends-Indep: po-debconf
 Standards-Version: 3.9.3
 Homepage: http://golang.org/
