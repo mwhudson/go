@@ -1,4 +1,4 @@
-golang (2:1.5a0-0~exp1ubuntu1~7.gbpfbb499) UNRELEASED; urgency=medium
+golang (2:1.5~pre-snap1-0ubuntu1~7.gbpfbb499) vivid; urgency=medium
 
   ** SNAPSHOT build @fbb4993ad3ed7df8028c23f5662757807bb6917d **
 
