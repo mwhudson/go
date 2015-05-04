@@ -532,7 +532,6 @@ func runInstall(cmd *Command, args []string) {
 			}
 		}
 	}
-	dumpActionTree(a)
 	b.do(a)
 }
 
@@ -545,39 +544,6 @@ var (
 	archCharVal string
 	archCharErr error
 )
-
-func actionStr(a *action) string {
-	var r string
-	r += "t=" + a.target + " "
-	if a.p != nil {
-		r += "a.p=" + a.p.ImportPath
-	}
-	if a.f == nil {
-		r += " noop"
-	}
-	return r // + "\n objdir : " + a.objdir
-}
-
-func dumpActionTree(root *action) {
-	action2index := make(map[*action]int)
-	var dumpAction func(*action, string)
-	dumpAction = func(a *action, indent string) {
-		if i, ok := action2index[a]; ok {
-			fmt.Printf("   %s =%d\n", indent, i)
-			return
-		}
-		i := len(action2index)
-		action2index[a] = i
-		fmt.Printf("%2d %s %s\n", i, indent, actionStr(a))
-		for _, a1 := range a.deps {
-			//if a1.p != nil && a1.p.Standard {
-			//	continue
-			//}
-			dumpAction(a1, indent+" ")
-		}
-	}
-	dumpAction(root, "")
-}
 
 func init() {
 	goarch = buildContext.GOARCH
