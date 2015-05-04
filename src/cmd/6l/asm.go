@@ -381,6 +381,9 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 
 	case obj.R_PCREL:
 		if r.Siz == 4 {
+			if r.Xsym.Type == obj.SDYNIMPORT {
+				ld.Diag("PCREL against undefined %s", r.Sym.Name)
+			}
 			ld.Thearch.Vput(ld.R_X86_64_PC32 | uint64(elfsym)<<32)
 		} else {
 			return -1

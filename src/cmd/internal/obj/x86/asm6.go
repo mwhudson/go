@@ -3490,7 +3490,7 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					r = obj.Addrel(ctxt.Cursym)
 					r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
 					r.Sym = p.To.Sym
-					r.Type = obj.R_PCREL
+					r.Type = obj.R_CALL
 					r.Siz = 4
 					put4(ctxt, 0)
 					break
