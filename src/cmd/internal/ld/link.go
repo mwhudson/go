@@ -56,34 +56,30 @@ type LSym struct {
 	// ElfType is set for symbols read from shared libraries by ldshlibsyms. It
 	// is not set for symbols defined by the packages being linked or by symbols
 	// read by ldelf (and so is left as elf.STT_NOTYPE).
-	ElfType     elf.SymType
-	Dynid       int32
-	Plt         int32
-	Got         int32
-	Align       int32
-	Elfsym      int32
-	Args        int32
-	Locals      int32
-	Value       int64
-	Size        int64
-	Hash        *LSym
-	Allsym      *LSym
-	Next        *LSym
-	Sub         *LSym
-	Outer       *LSym
-	Gotype      *LSym
-	Reachparent *LSym
-	Queue       *LSym
-	File        string
-	Dynimplib   string
-	Dynimpvers  string
-	Sect        interface{}
-	Autom       *Auto
-	Pcln        *Pcln
-	P           []byte
-	R           []Reloc
-	Local       bool
-	gcmask      []byte
+	ElfType    elf.SymType
+	Dynid      int32
+	Plt        int32
+	Got        int32
+	Align      int32
+	Elfsym     int32
+	Args       int32
+	Locals     int32
+	Value      int64
+	Size       int64
+	Next       *LSym
+	Sub        *LSym
+	Outer      *LSym
+	Gotype     *LSym
+	File       string
+	Dynimplib  string
+	Dynimpvers string
+	Sect       interface{}
+	Autom      *Auto
+	Pcln       *Pcln
+	P          []byte
+	R          []Reloc
+	Local      bool
+	gcmask     []byte
 }
 
 type Reloc struct {
@@ -118,7 +114,6 @@ type Link struct {
 	Windows   int32
 	Goroot    string
 	Hash      map[symVer]*LSym
-	Allsym    *LSym
 	Nsymbol   int32
 	Tlsg      *LSym
 	Libdir    []string

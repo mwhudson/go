@@ -487,7 +487,7 @@ func initdynimport() *Dll {
 
 	dr = nil
 	var m *Imp
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+	for _, s := range Ctxt.Hash {
 		if !s.Reachable || s.Type != obj.SDYNIMPORT {
 			continue
 		}
@@ -706,7 +706,7 @@ func (x pescmp) Less(i, j int) bool {
 
 func initdynexport() {
 	nexport = 0
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+	for _, s := range Ctxt.Hash {
 		if !s.Reachable || s.Cgoexport&CgoExportDynamic == 0 {
 			continue
 		}

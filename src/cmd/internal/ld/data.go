@@ -973,7 +973,7 @@ func addinitarrdata(s *LSym) {
 }
 
 func dosymtype() {
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+	for _, s := range Ctxt.Hash {
 		if len(s.P) > 0 {
 			if s.Type == obj.SBSS {
 				s.Type = obj.SDATA
@@ -1209,7 +1209,7 @@ func dodata() {
 	var last *LSym
 	datap = nil
 
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+	for _, s := range Ctxt.Hash {
 		if !s.Reachable || s.Special != 0 {
 			continue
 		}
