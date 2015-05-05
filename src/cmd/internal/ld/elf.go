@@ -1909,8 +1909,12 @@ func Asmbelf(symo int64) {
 		eh.machine = EM_PPC64
 	}
 
+	elfreserve := int64(ELFRESERVE)
+	if Buildmode == BuildmodeShared {
+		elfreserve *= 3
+	}
 	startva := INITTEXT - int64(HEADR)
-	resoff := int64(ELFRESERVE)
+	resoff := elfreserve
 
 	var pph *ElfPhdr
 	var pnote *ElfPhdr
@@ -2336,8 +2340,8 @@ elfobj:
 		a += int64(elfwritegopkgnote())
 	}
 
-	if a > ELFRESERVE {
-		Diag("ELFRESERVE too small: %d > %d", a, ELFRESERVE)
+	if a > elfreserve {
+		Diag("ELFRESERVE too small: %d > %d", a, elfreserve)
 	}
 }
 
