@@ -32,26 +32,31 @@ package ld
 
 import (
 	"cmd/internal/obj"
+	"debug/elf"
 	"encoding/binary"
 )
 
 type LSym struct {
-	Name        string
-	Extname     string
-	Type        int16
-	Version     int16
-	Dupok       uint8
-	Cfunc       uint8
-	External    uint8
-	Nosplit     uint8
-	Reachable   bool
-	Cgoexport   uint8
-	Special     uint8
-	Stkcheck    uint8
-	Hide        uint8
-	Leaf        uint8
-	Localentry  uint8
-	Onlist      uint8
+	Name       string
+	Extname    string
+	Type       int16
+	Version    int16
+	Dupok      uint8
+	Cfunc      uint8
+	External   uint8
+	Nosplit    uint8
+	Reachable  bool
+	Cgoexport  uint8
+	Special    uint8
+	Stkcheck   uint8
+	Hide       uint8
+	Leaf       uint8
+	Localentry uint8
+	Onlist     uint8
+	// ElfType is set for symbols read from shared libraries by ldshlibsyms. It
+	// is not set for symbols defined by the packages being linked or by symbols
+	// read by ldelf.
+	ElfType     elf.SymType
 	Dynid       int32
 	Plt         int32
 	Got         int32
@@ -61,7 +66,6 @@ type LSym struct {
 	Locals      int32
 	Value       int64
 	Size        int64
-	Hash        *LSym
 	Allsym      *LSym
 	Next        *LSym
 	Sub         *LSym

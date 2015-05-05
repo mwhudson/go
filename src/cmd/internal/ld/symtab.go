@@ -32,6 +32,7 @@ package ld
 
 import (
 	"cmd/internal/obj"
+	"debug/elf"
 	"strings"
 )
 
@@ -107,7 +108,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 
 	case 'U':
 		type_ = STT_NOTYPE
-		if x == Ctxt.Tlsg {
+		if x.ElfType == elf.STT_TLS {
 			type_ = STT_TLS
 		}
 
