@@ -376,7 +376,7 @@ func heapBitsBulkBarrier(p, size uintptr) {
 	bits := (uintptr(*hbitp) | 0x100) >> h.shift
 	for i := uintptr(0); i < nptr; i++ {
 		if bits < 0x20 {
-			hbitp = subtractb(hbitp, 1)
+			hbitp = subtract1(hbitp)
 			bits = uintptr(*hbitp) | 0x100
 		}
 		if bits&bitPointer != 0 {
@@ -561,8 +561,6 @@ func heapBitsSweepSpan(base, size, n uintptr, f func(uintptr)) {
 	}
 }
 
-// TODO(rsc): Clean up the next two functions.
-
 // heapBitsSetType records that the new allocation [x, x+size)
 // holds in [x, x+dataSize) one or more values of type typ.
 // (The number of values is given by dataSize / typ.size.)
@@ -583,7 +581,7 @@ func heapBitsSweepSpan(base, size, n uintptr, f func(uintptr)) {
 // but if the start or end of x shares a bitmap byte with an adjacent
 // object, the GC marker is racing with updates to those object's mark bits.
 func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
-	const doubleCheck = false // slow but helpful; enable to test modifications to this function
+	const doubleCheck = false // slow but helpful; enable to test modifications to this code
 
 	// From here till marked label marking the object as allocated
 	// and storing type info in the GC bitmap.
@@ -614,33 +612,7 @@ func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
 		return
 	}
 
-	ptrmask := (*uint8)(unsafe.Pointer(typ.gc[0])) // pointer to unrolled mask
-	if typ.kind&kindGCProg != 0 {
-		nptr := typ.ptrdata / ptrSize
-		masksize := (nptr + 7) / 8
-		masksize++ // unroll flag in the beginning
-		if masksize > maxGCMask && typ.gc[1] != 0 {
-			// write barriers have not been updated to deal with this case yet.
-			throw("maxGCMask too small for now")
-			// If the mask is too large, unroll the program directly
-			// into the GC bitmap. It's 7 times slower than copying
-			// from the pre-unrolled mask, but saves 1/16 of type size
-			// memory for the mask.
-			systemstack(func() {
-				unrollgcproginplace_m(unsafe.Pointer(x), typ, size, dataSize)
-			})
-			return
-		}
-		// Check whether the program is already unrolled
-		// by checking if the unroll flag byte is set
-		maskword := uintptr(atomicloadp(unsafe.Pointer(ptrmask)))
-		if *(*uint8)(unsafe.Pointer(&maskword)) == 0 {
-			systemstack(func() {
-				unrollgcprog_m(typ)
-			})
-		}
-		ptrmask = add1(ptrmask) // skip the unroll flag byte
-	}
+	ptrmask := typ.gcdata // start of 1-bit pointer mask (or GC program, handled below)
 
 	// Heap bitmap bits for 2-word object are only 4 bits,
 	// so also shared with objects next to it; use atomic updates.
@@ -684,6 +656,36 @@ func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
 		endnb uintptr // number of valid bits in *endp
 		pbits uintptr // alternate source of bits
 	)
+
+	var w uintptr   // words processed
+	var nw uintptr  // number of words to process
+	hbitp := h.bitp // next heap bitmap byte to write
+	var hb uintptr  // bits being preapred for *h.bitp
+
+	// Handle GC program. Delayed until this part of the code
+	// so that we can use the same double-checking mechanism
+	// as the 1-bit case. Nothing above could have encountered
+	// GC programs: the cases were all too small.
+	if typ.kind&kindGCProg != 0 {
+		heapBitsSetTypeGCProg(x, typ.ptrdata, typ.size, dataSize, size, addb(typ.gcdata, 4))
+		if doubleCheck {
+			// Double-check the heap bits written by GC program
+			// by running the GC program to create a 1-bit pointer mask
+			// and then jumping to the double-check code below.
+			// This doesn't catch bugs shared between the 1-bit and 4-bit
+			// GC program execution, but it does catch mistakes specific
+			// to just one of those and bugs in heapBitsSetTypeGCProg's
+			// implementation of arrays.
+			lock(&debugPtrmask.lock)
+			if debugPtrmask.data == nil {
+				debugPtrmask.data = (*byte)(persistentalloc(1<<20, 1, &memstats.other_sys))
+			}
+			ptrmask = debugPtrmask.data
+			runGCProg(addb(typ.gcdata, 4), nil, ptrmask, 1)
+			goto Phase4
+		}
+		return
+	}
 
 	// Note about sizes:
 	//
@@ -777,8 +779,6 @@ func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
 		nb = 8
 	}
 
-	var w uintptr  // words processed
-	var nw uintptr // number of words to process
 	if typ.size == dataSize {
 		// Single entry: can stop once we reach the non-pointer data.
 		nw = typ.ptrdata / ptrSize
@@ -799,9 +799,6 @@ func heapBitsSetType(x, size, dataSize uintptr, typ *_type) {
 		// encoding doesn't take effect until the third word.
 		nw = 2
 	}
-
-	hbitp := h.bitp // next heap bitmap byte to write
-	var hb uintptr  // bits being preapred for *h.bitp
 
 	// Phase 1: Special case for leading byte (shift==0) or half-byte (shift==4).
 	// The leading byte is special because it contains the bits for words 0 and 1,
@@ -964,10 +961,11 @@ Phase3:
 		}
 	}
 
+Phase4:
 	// Phase 4: all done, but perhaps double check.
 	if doubleCheck {
 		end := heapBitsForAddr(x + size)
-		if hbitp != end.bitp || (w == nw+2) != (end.shift == 2) {
+		if typ.kind&kindGCProg == 0 && (hbitp != end.bitp || (w == nw+2) != (end.shift == 2)) {
 			println("ended at wrong bitmap byte for", *typ._string, "x", dataSize/typ.size)
 			print("typ.size=", typ.size, " typ.ptrdata=", typ.ptrdata, " dataSize=", dataSize, " size=", size, "\n")
 			print("w=", w, " nw=", nw, " b=", hex(b), " nb=", nb, " hb=", hex(hb), "\n")
@@ -983,15 +981,16 @@ Phase3:
 		nptr := typ.ptrdata / ptrSize
 		ndata := typ.size / ptrSize
 		count := dataSize / typ.size
-		for i := uintptr(0); i <= dataSize/ptrSize; i++ {
+		totalptr := ((count-1)*typ.size + typ.ptrdata) / ptrSize
+		for i := uintptr(0); i < size/ptrSize; i++ {
 			j := i % ndata
 			var have, want uint8
-			if i == dataSize/ptrSize && dataSize >= size {
-				break
-			}
 			have = (*h.bitp >> h.shift) & (bitPointer | bitMarked)
-			if i == dataSize/ptrSize || i/ndata == count-1 && j >= nptr {
-				want = 0 // dead marker
+			if i >= totalptr {
+				want = 0 // deadmarker
+				if typ.kind&kindGCProg != 0 && i < (totalptr+3)/4*4 {
+					want = bitMarked
+				}
 			} else {
 				if j < nptr && (*addb(ptrmask, j/8)>>(j%8))&1 != 0 {
 					want |= bitPointer
@@ -1005,177 +1004,472 @@ Phase3:
 			if have != want {
 				println("mismatch writing bits for", *typ._string, "x", dataSize/typ.size)
 				print("typ.size=", typ.size, " typ.ptrdata=", typ.ptrdata, " dataSize=", dataSize, " size=", size, "\n")
+				print("kindGCProg=", typ.kind&kindGCProg != 0, "\n")
 				print("w=", w, " nw=", nw, " b=", hex(b), " nb=", nb, " hb=", hex(hb), "\n")
 				h0 := heapBitsForAddr(x)
 				print("initial bits h0.bitp=", h0.bitp, " h0.shift=", h0.shift, "\n")
 				print("current bits h.bitp=", h.bitp, " h.shift=", h.shift, " *h.bitp=", hex(*h.bitp), "\n")
 				print("ptrmask=", ptrmask, " p=", p, " endp=", endp, " endnb=", endnb, " pbits=", hex(pbits), " b=", hex(b), " nb=", nb, "\n")
 				println("at word", i, "offset", i*ptrSize, "have", have, "want", want)
+				if typ.kind&kindGCProg != 0 {
+					println("GC program:")
+					dumpGCProg(addb(typ.gcdata, 4))
+				}
 				throw("bad heapBitsSetType")
 			}
 			h = h.next()
 		}
 	}
+
+	if ptrmask == debugPtrmask.data {
+		unlock(&debugPtrmask.lock)
+	}
 }
 
-// GC type info programs
+var debugPtrmask struct {
+	lock mutex
+	data *byte
+}
+
+// heapBitsSetTypeGCProg executes heapBitsSetType using a GC program.
+// elemSize is the size of the element that the GC program describes.
+// dataSize is the total size of the intended data, a multiple of elemSize.
+// allocSize is the total size of the allocated memory.
 //
-// TODO(rsc): Clean up and enable.
+// GC programs are only used for large allocations.
+// heapBitsSetType requires that allocSize is a multiple of 4 words,
+// so that the relevant bitmap bytes are not shared with surrounding
+// objects and need not be accessed with atomic instructions.
+func heapBitsSetTypeGCProg(x, progSize, elemSize, dataSize, allocSize uintptr, prog *byte) {
+	if ptrSize == 8 && allocSize%(4*ptrSize) != 0 {
+		// Alignment will be wrong.
+		throw("heapBitsSetTypeGCProg: small allocation")
+	}
+	h := heapBitsForAddr(x)
+	var totalBits uintptr
+	if elemSize == dataSize {
+		totalBits = runGCProg(prog, nil, h.bitp, 2)
+		if totalBits*ptrSize != progSize {
+			println("runtime: heapBitsSetTypeGCProg: total bits", totalBits, "but progSize", progSize)
+			throw("heapBitsSetTypeGCProg: unexpected bit count")
+		}
+	} else {
+		count := dataSize / elemSize
 
-const (
-	// GC type info programs.
-	// The programs allow to store type info required for GC in a compact form.
-	// Most importantly arrays take O(1) space instead of O(n).
-	// The program grammar is:
-	//
-	// Program = {Block} "insEnd"
-	// Block = Data | Array
-	// Data = "insData" DataSize DataBlock
-	// DataSize = int // size of the DataBlock in bit pairs, 1 byte
-	// DataBlock = binary // dense GC mask (2 bits per word) of size ]DataSize/4[ bytes
-	// Array = "insArray" ArrayLen Block "insArrayEnd"
-	// ArrayLen = int // length of the array, 8 bytes (4 bytes for 32-bit arch)
-	//
-	// Each instruction (insData, insArray, etc) is 1 byte.
-	// For example, for type struct { x []byte; y [20]struct{ z int; w *byte }; }
-	// the program looks as:
-	//
-	// insData 3 (typePointer typeScalar typeScalar)
-	//	insArray 20 insData 2 (typeScalar typePointer) insArrayEnd insEnd
-	//
-	// Total size of the program is 17 bytes (13 bytes on 32-bits).
-	// The corresponding GC mask would take 43 bytes (it would be repeated
-	// because the type has odd number of words).
-	insData = 1 + iota
-	insArray
-	insArrayEnd
-	insEnd
+		// Piece together program trailer to run after prog that does:
+		//	literal(0)
+		//	repeat(1, elemSize-progSize-1) // zeros to fill element size
+		//	repeat(elemSize, count-1) // repeat that element for count
+		// This zero-pads the data remaining in the first element and then
+		// repeats that first element to fill the array.
+		var trailer [40]byte
+		i := 0
+		if n := elemSize/ptrSize - progSize/ptrSize; n > 0 {
+			// literal(0)
+			trailer[i] = 0x01
+			i++
+			trailer[i] = 0
+			i++
+			if n > 1 {
+				// repeat(1, n-1)
+				trailer[i] = 0x81
+				i++
+				n--
+				for ; n >= 0x80; n >>= 7 {
+					trailer[i] = byte(n | 0x80)
+					i++
+				}
+				trailer[i] = byte(n)
+				i++
+			}
+		}
+		// repeat(elemSize/ptrSize, count-1)
+		trailer[i] = 0x80
+		i++
+		n := elemSize / ptrSize
+		for ; n >= 0x80; n >>= 7 {
+			trailer[i] = byte(n | 0x80)
+			i++
+		}
+		trailer[i] = byte(n)
+		i++
+		n = count
+		for ; n >= 0x80; n >>= 7 {
+			trailer[i] = byte(n | 0x80)
+			i++
+		}
+		trailer[i] = byte(n)
+		i++
+		trailer[i] = 0
+		i++
 
-	// 64 bytes cover objects of size 1024/512 on 64/32 bits, respectively.
-	maxGCMask = 65536 // TODO(rsc): change back to 64
-)
+		runGCProg(prog, &trailer[0], h.bitp, 2)
 
-// Recursively unrolls GC program in prog.
-// mask is where to store the result.
-// If inplace is true, store the result not in mask but in the heap bitmap for mask.
-// ppos is a pointer to position in mask, in bits.
-// sparse says to generate 4-bits per word mask for heap (1-bit for data/bss otherwise).
-//go:nowritebarrier
-func unrollgcprog1(maskp *byte, prog *byte, ppos *uintptr, inplace bool) *byte {
-	pos := *ppos
-	mask := (*[1 << 30]byte)(unsafe.Pointer(maskp))
+		// Even though we filled in the full array just now,
+		// record that we only filled in up to the ptrdata of the
+		// last element. This will cause the code below to
+		// memclr the dead section of the final array element,
+		// so that scanobject can stop early in the final element.
+		totalBits = (elemSize*(count-1) + progSize) / ptrSize
+	}
+	endProg := unsafe.Pointer(subtractb(h.bitp, (totalBits+3)/4))
+	endAlloc := unsafe.Pointer(subtractb(h.bitp, allocSize/heapBitmapScale))
+	memclr(add(endAlloc, 1), uintptr(endProg)-uintptr(endAlloc))
+}
+
+// progToPointerMask returns the 1-bit pointer mask output by the GC program prog.
+// size the size of the region described by prog, in bytes.
+// The resulting bitvector will have no more than size/ptrSize bits.
+func progToPointerMask(prog *byte, size uintptr) bitvector {
+	n := (size/ptrSize + 7) / 8
+	x := (*[1 << 30]byte)(persistentalloc(n+1, 1, &memstats.buckhash_sys))[:n+1]
+	x[len(x)-1] = 0xa1
+	n = runGCProg(prog, nil, &x[0], 1)
+	if x[len(x)-1] != 0xa1 {
+		throw("progToPointerMask: overflow")
+	}
+	return bitvector{int32(n), &x[0]}
+}
+
+// Packed GC pointer bitmaps, aka GC programs.
+//
+// For large types containing arrays, the type information has a
+// natural repetition that can be encoded to save space in the
+// binary and in the memory representation of the type information.
+//
+// The encoding is a simple Lempel-Ziv style bytecode machine
+// with the following instructions:
+//
+//	00000000: stop
+//	0nnnnnnn: emit n bits copied from the next (n+7)/8 bytes
+//	10000000 n c: repeat the previous n bits c times; n, c are varints
+//	1nnnnnnn c: repeat the previous n bits c times; c is a varint
+
+// runGCProg executes the GC program prog, and then trailer if non-nil,
+// writing to dst with entries of the given size.
+// If size == 1, dst is a 1-bit pointer mask laid out moving forward from dst.
+// If size == 2, dst is the 2-bit heap bitmap, and writes move backward
+// from dst (because the heap bitmap does). In this case, the caller guarantees
+// that only whole bytes in dst need to be written.
+//
+// runGCProg returns the number of 1- or 2-bit entries written to memory.
+func runGCProg(prog, trailer, dst *byte, size int) uintptr {
+	dstStart := dst
+
+	// Bits waiting to be written to memory.
+	var bits uintptr
+	var nbits uintptr
+
+	p := prog
+Run:
 	for {
-		switch *prog {
-		default:
-			throw("unrollgcprog: unknown instruction")
+		// Flush accumulated full bytes.
+		for ; nbits >= 8; nbits -= 8 {
+			if size == 1 {
+				*dst = uint8(bits)
+				dst = add1(dst)
+				bits >>= 8
+			} else {
+				v := bits&0xf | bitMarkedAll
+				*dst = uint8(v)
+				dst = subtract1(dst)
+				bits >>= 4
+				v = bits&0xf | bitMarkedAll
+				*dst = uint8(v)
+				dst = subtract1(dst)
+				bits >>= 4
+			}
+		}
 
-		case insData:
-			prog = add1(prog)
-			siz := int(*prog)
-			prog = add1(prog)
-			p := (*[1 << 30]byte)(unsafe.Pointer(prog))
-			for i := 0; i < siz; i++ {
-				v := p[i/8] >> (uint(i) % 8) & 1
-				if inplace {
-					throw("gc inplace")
-					const typeShift = 2
-					// Store directly into GC bitmap.
-					h := heapBitsForAddr(uintptr(unsafe.Pointer(&mask[pos])))
-					if h.shift == 0 {
-						*h.bitp = v << typeShift
-					} else {
-						*h.bitp |= v << (4 + typeShift)
-					}
-					pos += ptrSize
+		// Process one instruction.
+		inst := uintptr(*p)
+		p = add1(p)
+		n := inst & 0x7F
+		if inst&0x80 == 0 {
+			// Literal bits; n == 0 means end of program.
+			if n == 0 {
+				// Program is over; continue in trailer if present.
+				if trailer != nil {
+					//println("trailer")
+					p = trailer
+					trailer = nil
+					continue
+				}
+				//println("done")
+				break Run
+			}
+			//println("lit", n, dst)
+			nbyte := n / 8
+			for i := uintptr(0); i < nbyte; i++ {
+				bits |= uintptr(*p) << nbits
+				p = add1(p)
+				if size == 1 {
+					*dst = uint8(bits)
+					dst = add1(dst)
+					bits >>= 8
 				} else {
-					// 1 bit per word, for data/bss bitmap
-					mask[pos/8] |= v << (pos % 8)
-					pos++
+					v := bits&0xf | bitMarkedAll
+					*dst = uint8(v)
+					dst = subtract1(dst)
+					bits >>= 4
+					v = bits&0xf | bitMarkedAll
+					*dst = uint8(v)
+					dst = subtract1(dst)
+					bits >>= 4
 				}
 			}
-			prog = addb(prog, (uintptr(siz)+7)/8)
+			if n %= 8; n > 0 {
+				bits |= uintptr(*p) << nbits
+				p = add1(p)
+				nbits += n
+			}
+			continue
+		}
 
-		case insArray:
-			prog = (*byte)(add(unsafe.Pointer(prog), 1))
-			siz := uintptr(0)
-			for i := uintptr(0); i < ptrSize; i++ {
-				siz = (siz << 8) + uintptr(*(*byte)(add(unsafe.Pointer(prog), ptrSize-i-1)))
+		// Repeat. If n == 0, it is encoded in a varint in the next bytes.
+		if n == 0 {
+			for off := uint(0); ; off += 7 {
+				x := uintptr(*p)
+				p = add1(p)
+				n |= (x & 0x7F) << off
+				if x&0x80 == 0 {
+					break
+				}
 			}
-			prog = (*byte)(add(unsafe.Pointer(prog), ptrSize))
-			var prog1 *byte
-			for i := uintptr(0); i < siz; i++ {
-				prog1 = unrollgcprog1(&mask[0], prog, &pos, inplace)
-			}
-			if *prog1 != insArrayEnd {
-				throw("unrollgcprog: array does not end with insArrayEnd")
-			}
-			prog = (*byte)(add(unsafe.Pointer(prog1), 1))
+		}
 
-		case insArrayEnd, insEnd:
-			*ppos = pos
-			return prog
+		// Count is encoded in a varint in the next bytes.
+		c := uintptr(0)
+		for off := uint(0); ; off += 7 {
+			x := uintptr(*p)
+			p = add1(p)
+			c |= (x & 0x7F) << off
+			if x&0x80 == 0 {
+				break
+			}
+		}
+		c *= n // now total number of bits to copy
+
+		// If the number of bits being repeated is small, load them
+		// into a register and use that register for the entire loop
+		// instead of repeatedly reading from memory.
+		// Handling fewer than 8 bits here makes the general loop simpler.
+		// The cutoff is ptrSize*8 - 7 to guarantee that when we add
+		// the pattern to a bit buffer holding at most 7 bits (a partial byte)
+		// it will not overflow.
+		src := dst
+		const maxBits = ptrSize*8 - 7
+		if n <= maxBits {
+			pattern := bits
+			npattern := nbits
+
+			// Load bits from memory.
+			if size == 1 {
+				src = subtract1(src)
+				for npattern < n {
+					pattern <<= 8
+					pattern |= uintptr(*src)
+					src = subtract1(src)
+					npattern += 8
+				}
+			} else {
+				src = add1(src)
+				for npattern < n {
+					v := uintptr(*src)
+					src = add1(src)
+					pattern <<= 4
+					pattern |= v & 0xf
+					npattern += 4
+				}
+			}
+			if npattern > n {
+				pattern >>= npattern - n
+				npattern = n
+			}
+
+			// Replicate pattern to at most maxBits.
+			if false && npattern == 1 {
+				// One bit being repeated.
+				// If the bit is 1, make the pattern all 1s.
+				// If the bit is 0, the pattern is already all 0s,
+				// but we can claim that the number of bits
+				// in the word is equal to the number we need (c),
+				// because right shift of bits will zero fill.
+				if pattern == 1 {
+					pattern = 1<<maxBits - 1
+					npattern = maxBits
+				} else {
+					npattern = c
+				}
+			} else {
+				b := pattern
+				nb := npattern
+				if nb+nb <= maxBits {
+					for nb <= ptrSize*8 {
+						b |= b << nb
+						nb += nb
+					}
+					// TODO(rsc): Replace with table lookup or loop on systems without divide?
+					nb = maxBits / npattern * npattern
+					b &= 1<<nb - 1
+					pattern = b
+					npattern = nb
+				}
+			}
+
+			// Add pattern to bit buffer and flush bit buffer, c/npattern times.
+			for ; c >= npattern; c -= npattern {
+				bits |= pattern << nbits
+				nbits += npattern
+				if size == 1 {
+					for nbits >= 8 {
+						*dst = uint8(bits)
+						dst = add1(dst)
+						bits >>= 8
+						nbits -= 8
+					}
+				} else {
+					for nbits >= 4 {
+						*dst = uint8(bits&0xf | bitMarkedAll)
+						dst = subtract1(dst)
+						bits >>= 4
+						nbits -= 4
+					}
+				}
+			}
+
+			// Add final fragment to bit buffer.
+			if c > 0 {
+				pattern &= 1<<c - 1
+				bits |= pattern << nbits
+				nbits += c
+			}
+			continue
+		}
+
+		// Repeat; n too large to fit in a register.
+		off := n - nbits // n > nbits because n > maxBits
+		if size == 1 {
+			// Leading fragment.
+			src = subtractb(src, (off+7)/8)
+			if frag := off & 7; frag != 0 {
+				bits |= uintptr(*src) >> (8 - frag) << nbits
+				src = add1(src)
+				nbits += frag
+				c -= frag
+			}
+			// Main loop: load one byte, write another.
+			// The bits are rotating through the bit buffer.
+			for i := c / 8; i > 0; i-- {
+				bits |= uintptr(*src) << nbits
+				src = add1(src)
+				*dst = uint8(bits)
+				dst = add1(dst)
+				bits >>= 8
+			}
+			// Final fragment.
+			if c %= 8; c > 0 {
+				bits |= (uintptr(*src) & (1<<c - 1)) << nbits
+				nbits += c
+			}
+		} else {
+			// Leading fragment.
+			src = addb(src, (off+3)/4)
+			if frag := off & 3; frag != 0 {
+				bits |= (uintptr(*src) & 0xf) >> (4 - frag) << nbits
+				src = subtract1(src)
+				nbits += frag
+				c -= frag
+			}
+			// Main loop: load one byte, write another.
+			// The bits are rotating through the bit buffer.
+			for i := c / 4; i > 0; i-- {
+				bits |= (uintptr(*src) & 0xf) << nbits
+				src = subtract1(src)
+				*dst = uint8(bits&0xf | bitMarkedAll)
+				dst = subtract1(dst)
+				bits >>= 4
+			}
+			// Final fragment.
+			if c %= 4; c > 0 {
+				bits |= (uintptr(*src) & (1<<c - 1)) << nbits
+				nbits += c
+			}
 		}
 	}
-}
 
-// Unrolls GC program prog for data/bss, returns 1-bit GC mask.
-func unrollglobgcprog(prog *byte, size uintptr) bitvector {
-	masksize := round(round(size, ptrSize)/ptrSize, 8) / 8
-	mask := (*[1 << 30]byte)(persistentalloc(masksize+1, 0, &memstats.gc_sys))
-	mask[masksize] = 0xa1
-	pos := uintptr(0)
-	prog = unrollgcprog1(&mask[0], prog, &pos, false)
-	if pos != size/ptrSize {
-		print("unrollglobgcprog: bad program size, got ", pos, ", expect ", size/ptrSize, "\n")
-		throw("unrollglobgcprog: bad program size")
-	}
-	if *prog != insEnd {
-		throw("unrollglobgcprog: program does not end with insEnd")
-	}
-	if mask[masksize] != 0xa1 {
-		throw("unrollglobgcprog: overflow")
-	}
-	return bitvector{int32(masksize * 8), &mask[0]}
-}
-
-func unrollgcproginplace_m(v unsafe.Pointer, typ *_type, size, size0 uintptr) {
-	throw("unrollinplace")
-	// TODO(rsc): Update for 1-bit bitmaps.
-	// TODO(rsc): Explain why these non-atomic updates are okay.
-	pos := uintptr(0)
-	prog := (*byte)(unsafe.Pointer(uintptr(typ.gc[1])))
-	for pos != size0 {
-		unrollgcprog1((*byte)(v), prog, &pos, true)
-	}
-
-	// Mark first word as bitAllocated.
-	// Mark word after last as typeDead.
-	if size0 < size {
-		h := heapBitsForAddr(uintptr(v) + size0)
-		const typeMask = 0
-		const typeShift = 0
-		*h.bitp &^= typeMask << typeShift
-	}
-}
-
-var unroll mutex
-
-// Unrolls GC program in typ.gc[1] into typ.gc[0]
-//go:nowritebarrier
-func unrollgcprog_m(typ *_type) {
-	lock(&unroll)
-	mask := (*byte)(unsafe.Pointer(uintptr(typ.gc[0])))
-	if *mask == 0 {
-		pos := uintptr(8) // skip the unroll flag
-		prog := (*byte)(unsafe.Pointer(uintptr(typ.gc[1])))
-		prog = unrollgcprog1(mask, prog, &pos, false)
-		if *prog != insEnd {
-			throw("unrollgcprog: program does not end with insEnd")
+	// Write any final bits out, using full-byte writes, even for the final byte.
+	var totalBits uintptr
+	if size == 1 {
+		totalBits = (uintptr(unsafe.Pointer(dst))-uintptr(unsafe.Pointer(dstStart)))*8 + nbits
+		nbits += -nbits & 7
+		for ; nbits > 0; nbits -= 8 {
+			*dst = uint8(bits)
+			dst = add1(dst)
+			bits >>= 8
 		}
-		// atomic way to say mask[0] = 1
-		atomicor8(mask, 1)
+	} else {
+		totalBits = (uintptr(unsafe.Pointer(dstStart))-uintptr(unsafe.Pointer(dst)))*4 + nbits
+		nbits += -nbits & 3
+		for ; nbits > 0; nbits -= 4 {
+			v := bits&0xf | bitMarkedAll
+			*dst = uint8(v)
+			dst = subtract1(dst)
+			bits >>= 4
+		}
+		// Clear the mark bits in the first two entries.
+		// They are the actual mark and checkmark bits,
+		// not non-dead markers. It simplified the code
+		// above to set the marker in every bit written and
+		// then clear these two as a special case at the end.
+		*dstStart &^= bitMarked | bitMarked<<heapBitsShift
 	}
-	unlock(&unroll)
+	return totalBits
+}
+
+func dumpGCProg(p *byte) {
+	nptr := 0
+	for {
+		x := *p
+		p = add1(p)
+		if x == 0 {
+			print("\t", nptr, " end\n")
+			break
+		}
+		if x&0x80 == 0 {
+			print("\t", nptr, " lit ", x, ":")
+			n := int(x+7) / 8
+			for i := 0; i < n; i++ {
+				print(" ", hex(*p))
+				p = add1(p)
+			}
+			print("\n")
+			nptr += int(x)
+		} else {
+			nbit := int(x &^ 0x80)
+			if nbit == 0 {
+				for nb := uint(0); ; nb += 7 {
+					x := *p
+					p = add1(p)
+					nbit |= int(x&0x7f) << nb
+					if x&0x80 == 0 {
+						break
+					}
+				}
+			}
+			count := 0
+			for nb := uint(0); ; nb += 7 {
+				x := *p
+				p = add1(p)
+				count |= int(x&0x7f) << nb
+				if x&0x80 == 0 {
+					break
+				}
+			}
+			print("\t", nptr, " repeat ", nbit, " × ", count, "\n")
+			nptr += nbit * count
+		}
+	}
 }
 
 // Testing.

@@ -118,11 +118,11 @@ func writebarrierptr(dst *uintptr, src uintptr) {
 // Do not reapply.
 //go:nosplit
 func writebarrierptr_nostore(dst *uintptr, src uintptr) {
-	if !writeBarrierEnabled {
-		return
-	}
 	if src != 0 && (src < _PhysPageSize || src == poisonStack) {
 		systemstack(func() { throw("bad pointer in write barrier") })
+	}
+	if !writeBarrierEnabled {
+		return
 	}
 	writebarrierptr_nostore1(dst, src)
 }

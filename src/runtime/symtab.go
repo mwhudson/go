@@ -44,7 +44,8 @@ type moduledata struct {
 	data, edata           uintptr
 	bss, ebss             uintptr
 	noptrbss, enoptrbss   uintptr
-	end, gcdata, gcbss    uintptr
+	end                   uintptr
+	gcdata, gcbss         *byte
 
 	typelinks []*_type
 

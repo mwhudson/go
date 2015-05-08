@@ -49,6 +49,7 @@ var debugtab = []struct {
 	{"typeassert", &Debug_typeassert}, // print information about type assertion inlining
 	{"disablenil", &Disable_checknil}, // disable nil checks
 	{"wb", &Debug_wb},                 // print information about write barriers
+	{"gcprog", &Debug_gcprog},         // print dump of GC programs
 }
 
 // Our own isdigit, isspace, isalpha, isalnum that take care

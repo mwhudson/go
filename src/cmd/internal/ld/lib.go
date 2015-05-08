@@ -1177,7 +1177,7 @@ func ldshlibsyms(shlib string) {
 		if strings.HasPrefix(s.Name, "_") {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "runtime.gcbits.0x") {
+		if strings.HasPrefix(s.Name, "runtime.gcbits.") {
 			data := make([]byte, s.Size)
 			sect := f.Sections[s.Section]
 			if sect.Type == elf.SHT_PROGBITS {
