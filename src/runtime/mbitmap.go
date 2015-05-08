@@ -365,11 +365,27 @@ func heapBitsBulkBarrier(p, size uintptr) {
 		return
 	}
 
-	for i := uintptr(0); i < size; i += ptrSize {
-		if heapBitsForAddr(p + i).isPointer() {
-			x := (*uintptr)(unsafe.Pointer(p + i))
-			writebarrierptr_nostore(x, *x)
+	// Process nptr pointers, reloading bits from hbitp as needed.
+	// To avoid keeping an explicit bit count in addition to the bit buffer,
+	// we put a high bit in the bit buffer when loading it (0x100).
+	// When we see that the high bit has been shifted down 4 times,
+	// making the high bit 0x10 (aka bits < 0x20), we reload.
+	nptr := size / ptrSize
+	h := heapBitsForAddr(p)
+	hbitp := h.bitp
+	bits := (uintptr(*hbitp) | 0x100) >> h.shift
+	for i := uintptr(0); i < nptr; i++ {
+		if bits < 0x20 {
+			hbitp = subtractb(hbitp, 1)
+			bits = uintptr(*hbitp) | 0x100
 		}
+		if bits&bitPointer != 0 {
+			x := (*uintptr)(unsafe.Pointer(p + i*ptrSize))
+			writebarrierptr_nostore(x, *x)
+		} else if bits&bitMarked == 0 && i >= 2 {
+			break
+		}
+		bits >>= 1
 	}
 }
 
