@@ -236,7 +236,8 @@ var (
 
 var coutbuf struct {
 	*bufio.Writer
-	f *os.File
+	f   *os.File
+	pos int64
 }
 
 const (
@@ -366,6 +367,7 @@ func libinit() {
 
 	coutbuf.Writer = bufio.NewWriter(f)
 	coutbuf.f = f
+	coutbuf.pos = 0
 
 	if INITENTRY == "" {
 		switch Buildmode {
@@ -827,6 +829,7 @@ func hostlinksetup() {
 
 	coutbuf.Writer = bufio.NewWriter(f)
 	coutbuf.f = f
+	coutbuf.pos = 0
 }
 
 // hostobjCopy creates a copy of the object files in hostobj in a
@@ -1573,12 +1576,7 @@ func Cflush() {
 }
 
 func Cpos() int64 {
-	Cflush()
-	off, err := coutbuf.f.Seek(0, 1)
-	if err != nil {
-		Exitf("seeking in output [0, 1]: %v", err)
-	}
-	return off
+	return coutbuf.pos
 }
 
 func Cseek(p int64) {
@@ -1586,14 +1584,17 @@ func Cseek(p int64) {
 	if _, err := coutbuf.f.Seek(p, 0); err != nil {
 		Exitf("seeking in output [0, 1]: %v", err)
 	}
+	coutbuf.pos = p
 }
 
 func Cwrite(p []byte) {
 	coutbuf.Write(p)
+	coutbuf.pos += int64(len(p))
 }
 
 func Cput(c uint8) {
 	coutbuf.WriteByte(c)
+	coutbuf.pos += 1
 }
 
 func usage() {

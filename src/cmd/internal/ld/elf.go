@@ -1035,6 +1035,7 @@ func elfwriteinterp() int {
 	sh := elfshname(".interp")
 	Cseek(int64(sh.off))
 	coutbuf.WriteString(interp)
+	coutbuf.pos += int64(len(interp))
 	Cput(0)
 	return int(sh.size)
 }
