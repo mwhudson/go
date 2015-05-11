@@ -739,21 +739,6 @@ func goFilesPackage(gofiles []string) *Package {
 	return pkg
 }
 
-func readpkglist(shlibpath string) []*Package {
-	pkglistbytes, err := readnote(shlibpath, "GO\x00\x00", 1)
-	if err != nil {
-		fatalf("readnote failed: %v", err)
-	}
-	scanner := bufio.NewScanner(bytes.NewBuffer(pkglistbytes))
-	var pkgs []*Package
-	var stk importStack
-	for scanner.Scan() {
-		t := scanner.Text()
-		pkgs = append(pkgs, loadPackage(t, &stk))
-	}
-	return pkgs
-}
-
 // action returns the action for applying the given operation (mode) to the package.
 // depMode is the action to use when building dependencies.
 // action never looks for p in a shared library.
@@ -901,23 +886,26 @@ func (b *builder) libaction(libname string, pkgs []*Package, mode, depMode build
 		// was not passed on the command line and it is not present in
 		// another shared library, add it here.
 		seencgo := false
-		for _, p := range pkgs {
-			seencgo = seencgo || (p.Standard && p.ImportPath == "runtime/cgo")
-		}
-		if !seencgo {
-			var stk importStack
-			p := loadPackage("runtime/cgo", &stk)
-			if p.Error != nil {
-				fatalf("load runtime/cgo: %v", p.Error)
+		_, gccgo := buildToolchain.(gccgoToolchain)
+		if !gccgo {
+			for _, p := range pkgs {
+				seencgo = seencgo || (p.Standard && p.ImportPath == "runtime/cgo")
 			}
-			computeStale(p)
-			// If runtime/cgo is in another shared library, then that's
-			// also the shared library that contains runtime, so
-			// something will depend on it and so runtime/cgo's staleness
-			// will be checked when processing that library.
-			if p.Shlib == "" || p.Shlib == libname {
-				pkgs = append([]*Package{}, pkgs...)
-				pkgs = append(pkgs, p)
+			if !seencgo {
+				var stk importStack
+				p := loadPackage("runtime/cgo", &stk)
+				if p.Error != nil {
+					fatalf("load runtime/cgo: %v", p.Error)
+				}
+				computeStale(p)
+				// If runtime/cgo is in another shared library, then that's
+				// also the shared library that contains runtime, so
+				// something will depend on it and so runtime/cgo's staleness
+				// will be checked when processing that library.
+				if p.Shlib == "" || p.Shlib == libname {
+					pkgs = append([]*Package{}, pkgs...)
+					pkgs = append(pkgs, p)
+				}
 			}
 		}
 
@@ -925,6 +913,9 @@ func (b *builder) libaction(libname string, pkgs []*Package, mode, depMode build
 		var libdir string
 		for _, p := range pkgs {
 			plibdir := p.build.PkgTargetRoot
+			if gccgo {
+				plibdir = filepath.Join(plibdir, "shlibs")
+			}
 			if libdir == "" {
 				libdir = plibdir
 			} else if libdir != plibdir {
@@ -1471,68 +1462,10 @@ func (b *builder) installShlibname(a *action) error {
 	return nil
 }
 
-// setextld sets the appropriate linker flags for the specified compiler.
-func setextld(ldflags []string, compiler []string) []string {
-	for _, f := range ldflags {
-		if f == "-extld" || strings.HasPrefix(f, "-extld=") {
-			// don't override -extld if supplied
-			return ldflags
-		}
-	}
-	ldflags = append(ldflags, "-extld="+compiler[0])
-	if len(compiler) > 1 {
-		extldflags := false
-		add := strings.Join(compiler[1:], " ")
-		for i, f := range ldflags {
-			if f == "-extldflags" && i+1 < len(ldflags) {
-				ldflags[i+1] = add + " " + ldflags[i+1]
-				extldflags = true
-				break
-			} else if strings.HasPrefix(f, "-extldflags=") {
-				ldflags[i] = "-extldflags=" + add + " " + ldflags[i][len("-extldflags="):]
-				extldflags = true
-				break
-			}
-		}
-		if !extldflags {
-			ldflags = append(ldflags, "-extldflags="+add)
-		}
-	}
-	return ldflags
-}
-
 func (b *builder) linkShared(a *action) (err error) {
-	// TODO(mwhudson): obvious copy pasting from gcToolchain.ld, should make a few
-	// changes to that function and then call it. And support gccgo.
 	allactions := actionList(a)
-	importArgs := b.includeArgs("-L", allactions[:len(allactions)-1])
-	ldflags := []string{"-installsuffix", buildContext.InstallSuffix}
-	ldflags = append(ldflags, "-buildmode=shared")
-	ldflags = append(ldflags, buildLdflags...)
-	cxx := a.p != nil && (len(a.p.CXXFiles) > 0 || len(a.p.SwigCXXFiles) > 0)
-	for _, a := range allactions {
-		if a.p != nil && (len(a.p.CXXFiles) > 0 || len(a.p.SwigCXXFiles) > 0) {
-			cxx = true
-		}
-	}
-	// If the user has not specified the -extld option, then specify the
-	// appropriate linker. In case of C++ code, use the compiler named
-	// by the CXX environment variable or defaultCXX if CXX is not set.
-	// Else, use the CC environment variable and defaultCC as fallback.
-	var compiler []string
-	if cxx {
-		compiler = envList("CXX", defaultCXX)
-	} else {
-		compiler = envList("CC", defaultCC)
-	}
-	ldflags = setextld(ldflags, compiler)
-	for _, d := range a.deps {
-		if !strings.HasSuffix(d.target, ".a") { // omit unsafe etc and actions for other shared libraries
-			continue
-		}
-		ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
-	}
-	return b.run(".", a.target, nil, buildToolExec, tool(archChar()+"l"), "-o", a.target, importArgs, ldflags)
+	allactions = allactions[:len(allactions)-1]
+	return buildToolchain.ldShared(b, a.deps, a.target, allactions)
 }
 
 // install is the action for installing a single package or executable.
@@ -2056,8 +1989,10 @@ type toolchain interface {
 	// an archive from a set of object files.
 	// typically it is run in the object directory.
 	pack(b *builder, p *Package, objDir, afile string, ofiles []string) error
-	// ld runs the linker to create a package starting at mainpkg.
+	// ld runs the linker to create an executable starting at mainpkg.
 	ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error
+	// ldShared runs the linker to create a shared library containing the pkgs built by toplevelactions
+	ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error
 
 	compiler() string
 	linker() string
@@ -2098,6 +2033,10 @@ func (noToolchain) pack(b *builder, p *Package, objDir, afile string, ofiles []s
 }
 
 func (noToolchain) ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error {
+	return noCompiler()
+}
+
+func (noToolchain) ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error {
 	return noCompiler()
 }
 
@@ -2304,6 +2243,36 @@ func packInternal(b *builder, afile string, ofiles []string) error {
 	return dst.Close()
 }
 
+// setextld sets the appropriate linker flags for the specified compiler.
+func setextld(ldflags []string, compiler []string) []string {
+	for _, f := range ldflags {
+		if f == "-extld" || strings.HasPrefix(f, "-extld=") {
+			// don't override -extld if supplied
+			return ldflags
+		}
+	}
+	ldflags = append(ldflags, "-extld="+compiler[0])
+	if len(compiler) > 1 {
+		extldflags := false
+		add := strings.Join(compiler[1:], " ")
+		for i, f := range ldflags {
+			if f == "-extldflags" && i+1 < len(ldflags) {
+				ldflags[i+1] = add + " " + ldflags[i+1]
+				extldflags = true
+				break
+			} else if strings.HasPrefix(f, "-extldflags=") {
+				ldflags[i] = "-extldflags=" + add + " " + ldflags[i][len("-extldflags="):]
+				extldflags = true
+				break
+			}
+		}
+		if !extldflags {
+			ldflags = append(ldflags, "-extldflags="+add)
+		}
+	}
+	return ldflags
+}
+
 func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, mainpkg string, ofiles []string) error {
 	importArgs := b.includeArgs("-L", allactions)
 	cxx := len(p.CXXFiles) > 0 || len(p.SwigCXXFiles) > 0
@@ -2334,6 +2303,37 @@ func (gcToolchain) ld(b *builder, p *Package, out string, allactions []*action, 
 	ldflags = append(ldflags, "-buildmode="+ldBuildmode)
 	ldflags = append(ldflags, buildLdflags...)
 	return b.run(".", p.ImportPath, nil, buildToolExec, tool(archChar()+"l"), "-o", out, importArgs, ldflags, mainpkg)
+}
+
+func (gcToolchain) ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error {
+	importArgs := b.includeArgs("-L", allactions)
+	ldflags := []string{"-installsuffix", buildContext.InstallSuffix}
+	ldflags = append(ldflags, "-buildmode=shared")
+	ldflags = append(ldflags, buildLdflags...)
+	cxx := false
+	for _, a := range allactions {
+		if a.p != nil && (len(a.p.CXXFiles) > 0 || len(a.p.SwigCXXFiles) > 0) {
+			cxx = true
+		}
+	}
+	// If the user has not specified the -extld option, then specify the
+	// appropriate linker. In case of C++ code, use the compiler named
+	// by the CXX environment variable or defaultCXX if CXX is not set.
+	// Else, use the CC environment variable and defaultCC as fallback.
+	var compiler []string
+	if cxx {
+		compiler = envList("CXX", defaultCXX)
+	} else {
+		compiler = envList("CC", defaultCC)
+	}
+	ldflags = setextld(ldflags, compiler)
+	for _, d := range toplevelactions {
+		if !strings.HasSuffix(d.target, ".a") { // omit unsafe etc and actions for other shared libraries
+			continue
+		}
+		ldflags = append(ldflags, d.p.ImportPath+"="+d.target)
+	}
+	return b.run(".", out, nil, buildToolExec, tool(archChar()+"l"), "-o", out, importArgs, ldflags)
 }
 
 func (gcToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {
@@ -2412,6 +2412,7 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 	// and all LDFLAGS from cgo dependencies.
 	apackagesSeen := make(map[*Package]bool)
 	afiles := []string{}
+	shlibs := []string{}
 	xfiles := []string{}
 	ldflags := b.gccArchArgs()
 	cgoldflags := []string{}
@@ -2419,28 +2420,32 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 	cxx := len(p.CXXFiles) > 0 || len(p.SwigCXXFiles) > 0
 	objc := len(p.MFiles) > 0
 
-	// Prefer the output of an install action to the output of a build action,
-	// because the install action will delete the output of the build action.
-	// Iterate over the list backward (reverse dependency order) so that we
-	// always see the install before the build.
-	for i := len(allactions) - 1; i >= 0; i-- {
-		a := allactions[i]
-		if !a.p.Standard {
-			if a.p != nil && !apackagesSeen[a.p] {
-				apackagesSeen[a.p] = true
-				if a.p.fake && a.p.external {
-					// external _tests, if present must come before
-					// internal _tests. Store these on a seperate list
-					// and place them at the head after this loop.
-					xfiles = append(xfiles, a.target)
-				} else if a.p.fake {
-					// move _test files to the top of the link order
-					afiles = append([]string{a.target}, afiles...)
-				} else {
-					afiles = append(afiles, a.target)
-				}
+	act := b.action(modeBuild, modeBuild, p) // ahem
+
+	var walk func(*action)
+	walk = func(a *action) {
+		if a.p == nil && strings.HasSuffix(a.target, ".so") {
+			shlibs = append(shlibs, a.target)
+		} else if !a.p.Standard && !apackagesSeen[a.p] {
+			apackagesSeen[a.p] = true
+			if a.p.fake && a.p.external {
+				// external _tests, if present must come before
+				// internal _tests. Store these on a seperate list
+				// and place them at the head after this loop.
+				xfiles = append(xfiles, a.target)
+			} else if a.p.fake {
+				// move _test files to the top of the link order
+				afiles = append([]string{a.target}, afiles...)
+			} else {
+				afiles = append(afiles, a.target)
 			}
 		}
+		for _, a1 := range a.deps {
+			walk(a1)
+		}
+	}
+	for _, a1 := range act.deps {
+		walk(a1)
 	}
 	afiles = append(xfiles, afiles...)
 
@@ -2449,6 +2454,9 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 		// The go tool can dig up runtime/cgo from GOROOT and
 		// think that it should use its CgoLDFLAGS, but gccgo
 		// doesn't use runtime/cgo.
+		if a.p == nil {
+			continue
+		}
 		if !a.p.Standard {
 			cgoldflags = append(cgoldflags, a.p.CgoLDFLAGS...)
 		}
@@ -2483,6 +2491,16 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 	ldflags = append(ldflags, p.CgoLDFLAGS...)
 
 	ldflags = stringList("-Wl,-(", ldflags, "-Wl,-)")
+
+	for _, shlib := range shlibs {
+		ldflags = append(
+			ldflags,
+			"-L"+filepath.Dir(shlib),
+			"-Wl,-rpath="+filepath.Dir(shlib),
+			"-l"+strings.TrimSuffix(
+				strings.TrimPrefix(filepath.Base(shlib), "lib"),
+				".so"))
+	}
 
 	var realOut string
 	switch ldBuildmode {
@@ -2541,8 +2559,16 @@ func (tools gccgoToolchain) ld(b *builder, p *Package, out string, allactions []
 			return err
 		}
 	}
-
 	return nil
+}
+
+func (tools gccgoToolchain) ldShared(b *builder, toplevelactions []*action, out string, allactions []*action) error {
+	args := []string{"-o", out, "-shared", "-nostdlib", "-Wl,--whole-archive"}
+	for _, a := range toplevelactions {
+		args = append(args, a.target)
+	}
+	args = append(args, "-Wl,--no-whole-archive", "-shared", "-nostdlib", "-lgo", "-lgcc_s", "-lgcc")
+	return b.run(".", out, nil, tools.linker(), args, buildGccgoflags)
 }
 
 func (tools gccgoToolchain) cc(b *builder, p *Package, objdir, ofile, cfile string) error {

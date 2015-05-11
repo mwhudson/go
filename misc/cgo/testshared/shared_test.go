@@ -18,6 +18,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -182,17 +183,23 @@ func dynStrings(path string, flag elf.DynTag) []string {
 	return dynstrings
 }
 
-func AssertIsLinkedTo(t *testing.T, path, lib string) {
+func AssertIsLinkedToRegexp(t *testing.T, path string, re *regexp.Regexp) {
 	for _, dynstring := range dynStrings(path, elf.DT_NEEDED) {
-		if dynstring == lib {
+		if re.MatchString(dynstring) {
 			return
 		}
 	}
-	t.Errorf("%s is not linked to %s", path, lib)
+	t.Errorf("%s is not linked to anything matching %v", path, re)
+}
+
+func AssertIsLinkedTo(t *testing.T, path, lib string) {
+	AssertIsLinkedToRegexp(t, path, regexp.MustCompile(regexp.QuoteMeta(lib)))
 }
 
 func AssertHasRPath(t *testing.T, path, dir string) {
-	for _, dynstring := range dynStrings(path, elf.DT_RPATH) {
+	dynstrings := dynStrings(path, elf.DT_RPATH)
+	dynstrings = append(dynstrings, dynStrings(path, elf.DT_RUNPATH)...)
+	for _, dynstring := range dynstrings {
 		for _, rpath := range strings.Split(dynstring, ":") {
 			if filepath.Clean(rpath) == filepath.Clean(dir) {
 				return
@@ -222,6 +229,39 @@ func TestGOPathShlib(t *testing.T) {
 	AssertHasRPath(t, "./bin/exe", gopathInstallDir)
 	// And check it runs.
 	run(t, "executable linked to GOPATH library", "./bin/exe")
+}
+
+// Build with gccgo a GOPATH package into a shared library and an executable that
+// links against it.
+func TestGOPathShlibGccgo(t *testing.T) {
+	gccgoName := os.Getenv("GCCGO")
+	if gccgoName == "" {
+		gccgoName = "gccgo"
+	}
+	_, err := exec.LookPath(gccgoName)
+	if err != nil {
+		t.Skip("gccgo not found")
+	}
+
+	libgo_re := regexp.MustCompile("libgo.so.[0-9]+")
+
+	gccgoContext := build.Default
+	gccgoContext.InstallSuffix = suffix + "_fPIC"
+	gccgoContext.Compiler = "gccgo"
+	gccgoContext.GOPATH = os.Getenv("GOPATH")
+	depP, err := gccgoContext.Import("dep", ".", build.ImportComment)
+	if err != nil {
+		t.Fatalf("import failed: %v", err)
+	}
+	gccgoInstallDir := filepath.Join(depP.PkgTargetRoot, "shlibs")
+	goCmd(t, "install", "-compiler=gccgo", "-buildmode=shared", "-linkshared", "dep")
+	AssertIsLinkedToRegexp(t, filepath.Join(gccgoInstallDir, "libdep.so"), libgo_re)
+	goCmd(t, "install", "-compiler=gccgo", "-linkshared", "exe")
+	AssertIsLinkedToRegexp(t, "./bin/exe", libgo_re)
+	AssertIsLinkedTo(t, "./bin/exe", "libdep.so")
+	AssertHasRPath(t, "./bin/exe", gccgoInstallDir)
+	// And check it runs.
+	run(t, "gccgo-built", "./bin/exe")
 }
 
 // Testing rebuilding of shared libraries when they are stale is a bit more

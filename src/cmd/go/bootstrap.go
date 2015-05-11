@@ -40,3 +40,7 @@ func parseMetaGoImports(r io.Reader) ([]metaImport, error) {
 func readnote(a, b string, t int32) ([]byte, error) {
 	return nil, nil
 }
+
+func readpkglist(shlibpath string) (pkgs []*Package) {
+	return
+}
