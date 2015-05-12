@@ -107,7 +107,7 @@ func (w *Writer) Repeat(n, c int64) {
 	if w.debug != nil {
 		fmt.Fprintf(w.debug, "gcprog: repeat %d × %d\n", n, c)
 	}
-	if nbits < 128 {
+	if n < 128 {
 		w.byte(0x80 | byte(n))
 	} else {
 		w.byte(0x80)
