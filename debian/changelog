@@ -1,4 +1,4 @@
-golang (2:1.5~snap~upstream201505131327git350fd548b331ubuntu1) UNRELEASED; urgency=medium
+golang (2:1.5~snap2~upstream201505131327git350fd548b331ubuntu1) vivid; urgency=medium
 
   * Snapshot build.
 
