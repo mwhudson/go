@@ -1,3 +1,10 @@
+golang (2:1.5~snap3~upstream201505131327git350fd548b33) vivid; urgency=medium
+
+  * Enable shared libraries maybe
+  * Do not build so many cross packages (temporary thing for faster builds) 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Wed, 13 May 2015 16:10:56 +1200
+
 golang (2:1.5~snap2~upstream201505131327git350fd548b331ubuntu1) vivid; urgency=medium
 
   * Snapshot build.
