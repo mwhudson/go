@@ -62,7 +62,7 @@ override_dh_install:
 	${FOR_GO_ARCH_END}
 	[ "$(GOARCH)" = amd64 ] && { \
 		mv pkg/linux_amd64_dynlink/libstd.so $(CURDIR)/debian/usr/lib/$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null/)/libgo-std.so.1; \
-		ln -s ../../$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null/)/libgo-std.so.1 pkg/linux_amd64_dynlink/libstd.so
+		ln -s ../../$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null/)/libgo-std.so.1 pkg/linux_amd64_dynlink/libstd.so; \
 	}
 	# Install the native runtime/cgo.a to the golang-go package.
 	# runtime/cgo is only built for the native architecture, but the
