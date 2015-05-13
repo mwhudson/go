@@ -60,7 +60,7 @@ override_dh_install:
 		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && echo "pkg/linux_amd64_race /usr/lib/go/pkg" >> debian/golang-go-$$os-$$arch.install; \
 		echo "golang-go-$$os-$$arch: arch-independent-package-contains-binary-or-object" > debian/golang-go-$$os-$$arch.lintian-overrides; \
 	${FOR_GO_ARCH_END}
-	[ "$(GOARCH)" == amd64 ] && { \
+	[ "$(GOARCH)" = amd64 ] && { \
 		mv pkg/linux_amd64_dynlink/libstd.so $(CURDIR)/debian/usr/lib/$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null/)/libgo-std.so.1; \
 		ln -s ../../$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null/)/libgo-std.so.1 pkg/linux_amd64_dynlink/libstd.so
 	}
@@ -127,7 +127,7 @@ debian/build.stamp:
 		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -v -race std cmd; \
 		cd ..; \
 	${FOR_GO_ARCH_END}
-	[ "$(GOARCH)" == amd64 ] && $(GOBIN)/go install -v -buildmode=shared -ldflags '-extldflags "-Wl,-soname=libgo-std.so.1"' std
+	[ "$(GOARCH)" = amd64 ] && $(GOBIN)/go install -v -buildmode=shared -ldflags '-extldflags "-Wl,-soname=libgo-std.so.1"' std
 	>debian/build.stamp
 
 opt_no_act =
