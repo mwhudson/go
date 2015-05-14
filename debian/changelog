@@ -1,3 +1,15 @@
+golang (2:1.5~snap8~upstream201505131327git350fd548b33ubuntu1) vivid; urgency=medium
+
+  * I can't screw this up many more times, can I? 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Thu, 14 May 2015 12:08:39 +1200
+
+golang (2:1.5~snap7~upstream201505131327git350fd548b33) vivid; urgency=medium
+
+  * AAAA 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Thu, 14 May 2015 11:57:07 +1200
+
 golang (2:1.5~snap6~upstream201505131327git350fd548b33) vivid; urgency=medium
 
   * sigh sigh sigh 
