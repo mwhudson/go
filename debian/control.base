@@ -103,7 +103,7 @@ Description: Go programming language compiler - metapackage
 
 Package: golang-go-linux-amd64-shared-dev
 Architecture: amd64
-Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}, libgo-std1
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)
 Description: Go standard shared library support files for @OS@_@ARCH@

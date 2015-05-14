@@ -60,6 +60,7 @@ override_dh_install:
 		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && echo "pkg/linux_amd64_race /usr/lib/go/pkg" >> debian/golang-go-$$os-$$arch.install; \
 		echo "golang-go-$$os-$$arch: arch-independent-package-contains-binary-or-object" > debian/golang-go-$$os-$$arch.lintian-overrides; \
 	${FOR_GO_ARCH_END}
+	echo "pkg/linux_amd64_dynlink /usr/lib/go/pkg" >> debian/golang-go-linux-amd64-shared-dev.install
 	[ "$(GOARCH)" = amd64 ] && { \
 		mkdir -p $(CURDIR)/debian/libgo-std1/usr/lib/$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null); \
 		mv pkg/linux_amd64_dynlink/libstd.so $(CURDIR)/debian/libgo-std1/usr/lib/$$(dpkg-architecture -qDEB_HOST_MULTIARCH 2>/dev/null)/libgo-std.so.1; \
