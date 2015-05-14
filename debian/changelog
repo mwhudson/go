@@ -1,45 +1,10 @@
-golang (2:1.5~snap8~upstream201505131327git350fd548b33ubuntu1) vivid; urgency=medium
+golang (2:1.5~snap9~upstream201505131327git350fd548b33ubuntu2) vivid; urgency=medium
 
-  * I can't screw this up many more times, can I? 
-
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Thu, 14 May 2015 12:08:39 +1200
-
-golang (2:1.5~snap7~upstream201505131327git350fd548b33) vivid; urgency=medium
-
-  * AAAA 
-
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Thu, 14 May 2015 11:57:07 +1200
-
-golang (2:1.5~snap6~upstream201505131327git350fd548b33) vivid; urgency=medium
-
-  * sigh sigh sigh 
-
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Thu, 14 May 2015 11:16:31 +1200
-
-golang (2:1.5~snap5~upstream201505131327git350fd548b33) vivid; urgency=medium
-
-  * Sigh sigh. 
-
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Wed, 13 May 2015 16:36:28 +1200
-
-golang (2:1.5~snap4~upstream201505131327git350fd548b33) vivid; urgency=medium
-
-  * Sigh.
-
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Wed, 13 May 2015 16:27:07 +1200
-
-golang (2:1.5~snap3~upstream201505131327git350fd548b33) vivid; urgency=medium
-
+  * Snapshot of development release.
   * Enable shared libraries maybe
   * Do not build so many cross packages (temporary thing for faster builds) 
 
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Wed, 13 May 2015 16:10:56 +1200
-
-golang (2:1.5~snap2~upstream201505131327git350fd548b331ubuntu1) vivid; urgency=medium
-
-  * Snapshot build.
-
- -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Wed, 13 May 2015 13:28:21 +1200
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Thu, 14 May 2015 12:43:46 +1200
 
 golang (2:1.4.1-1~exp1) experimental; urgency=low
 

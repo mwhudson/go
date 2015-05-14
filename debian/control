@@ -102,6 +102,20 @@ Description: Go programming language compiler - metapackage
  This package is a metapackage that, when installed, guarantees
  that (most of) a full Go development environment is installed.
 
+Package: golang-go-linux-amd64-shared-dev
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Breaks: golang-go (<< 2:1.1-2)
+Replaces: golang-go (<< 2:1.1-2)
+Description: Go standard shared library support files for @OS@_@ARCH@
+
+Package: libgo-std1
+Architecture: amd64
+Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Breaks: golang-go (<< 2:1.1-2)
+Replaces: golang-go (<< 2:1.1-2)
+Description: Go standard shared library support files for @OS@_@ARCH@
+
 Package: golang-go-linux-amd64
 Architecture: i386 amd64 armel armhf
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
