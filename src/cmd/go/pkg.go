@@ -38,6 +38,7 @@ type Package struct {
 	Standard      bool   `json:",omitempty"` // is this package part of the standard Go library?
 	Stale         bool   `json:",omitempty"` // would 'go install' do anything for this package?
 	Root          string `json:",omitempty"` // Go root or Go path dir containing this package
+	PkgTargetRoot string `json:",omitempty"` // Architecture dependent install root directory
 	ConflictDir   string `json:",omitempty"` // Dir is hidden by this other directory
 
 	// Source files
@@ -112,6 +113,7 @@ func (p *Package) copyBuild(pp *build.Package) {
 	p.Name = pp.Name
 	p.Doc = pp.Doc
 	p.Root = pp.Root
+	p.PkgTargetRoot = pp.PkgTargetRoot
 	p.ConflictDir = pp.ConflictDir
 	// TODO? Target
 	p.Goroot = pp.Goroot

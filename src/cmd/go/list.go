@@ -40,6 +40,7 @@ syntax of package template.  The default output is equivalent to -f
         Goroot        bool   // is this package in the Go root?
         Standard      bool   // is this package part of the standard Go library?
         Stale         bool   // would 'go install' do anything for this package?
+	PkgTargetRoot string // Architecture dependent install root directory
         Root          string // Go root or Go path dir containing this package
 
         // Source files

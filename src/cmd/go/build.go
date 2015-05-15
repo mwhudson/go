@@ -782,7 +782,7 @@ func (b *builder) action1(mode buildMode, depMode buildMode, p *Package, looksha
 			b.actionCache[key] = a
 			return a
 		}
-		pkgs := readpkglist(filepath.Join(p.build.PkgTargetRoot, shlib))
+		pkgs := readpkglist(filepath.Join(p.PkgTargetRoot, shlib))
 		a = b.libaction(shlib, pkgs, modeInstall, depMode)
 		b.actionCache[key2] = a
 		b.actionCache[key] = a
@@ -924,7 +924,7 @@ func (b *builder) libaction(libname string, pkgs []*Package, mode, depMode build
 		// Figure out where the library will go.
 		var libdir string
 		for _, p := range pkgs {
-			plibdir := p.build.PkgTargetRoot
+			plibdir := p.PkgTargetRoot
 			if libdir == "" {
 				libdir = plibdir
 			} else if libdir != plibdir {
