@@ -1197,23 +1197,24 @@ func ldshlibsyms(shlib string) {
 		if s.Section == elf.SHN_UNDEF {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "_") {
+		name := unmangleSymbolName(s.Name)
+		if strings.HasPrefix(name, "_") {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "runtime.gcbits.") {
+		if strings.HasPrefix(name, "runtime.gcbits.") {
 			gcmasks[s.Value] = readelfsymboldata(f, &s)
 		}
-		if s.Name == "go.link.abihashbytes" {
+		if name == "go.link.abihashbytes" {
 			hash = readelfsymboldata(f, &s)
 		}
 		if elf.ST_BIND(s.Info) != elf.STB_GLOBAL {
 			continue
 		}
-		lsym := Linklookup(Ctxt, s.Name, 0)
+		lsym := Linklookup(Ctxt, name, 0)
 		if lsym.Type != 0 && lsym.Dupok == 0 {
 			Diag(
 				"Found duplicate symbol %s reading from %s, first found in %s",
-				s.Name, shlib, lsym.File)
+				name, shlib, lsym.File)
 		}
 		lsym.Type = obj.SDYNIMPORT
 		lsym.ElfType = elf.ST_TYPE(s.Info)

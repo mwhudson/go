@@ -41,18 +41,88 @@ import (
 
 // Symbol table.
 
+// shouldEscape returns if a character should be %-encoded in a symbol name.  See
+// mangleSymbolName below.
+func shouldEscape(c byte) bool {
+	if 'A' <= c && c <= 'Z' || 'a' <= c && c <= 'z' || '0' <= c && c <= '9' {
+		return false
+	}
+
+	switch c {
+	case '-', '_', '~', '.', '/', '(', ')', '[', ']', '*':
+		return false
+	}
+
+	return true
+}
+
+// mangleSymbolName converts its argument to a form that does not contain any "funny
+// characters": many other tools do not expect to find spaces and unicode in symbols
+// names (the program and dynamic linkers are fine, it is more things like DTrace and
+// perl scripts that parse the output of objdump). The mangling chosen is
+// percent-encoding much as seen in URLs but with a different set of characters that
+// are not encoded.
+func mangleSymbolName(s string) string {
+	hexCount := 0
+	for i := 0; i < len(s); i++ {
+		if shouldEscape(s[i]) {
+			hexCount++
+		}
+	}
+	t := make([]byte, len(s)+2*hexCount)
+	j := 0
+	for i := 0; i < len(s); i++ {
+		switch c := s[i]; {
+		case shouldEscape(c):
+			t[j] = '%'
+			t[j+1] = "0123456789ABCDEF"[c>>4]
+			t[j+2] = "0123456789ABCDEF"[c&15]
+			j += 3
+		default:
+			t[j] = s[i]
+			j++
+		}
+	}
+	return string(t)
+}
+
+func unhex(c byte) byte {
+	switch {
+	case '0' <= c && c <= '9':
+		return c - '0'
+	case 'a' <= c && c <= 'f':
+		return c - 'a' + 10
+	case 'A' <= c && c <= 'F':
+		return c - 'A' + 10
+	}
+	return 0
+}
+
+// unmangleSymbolName inverts the effect of mangleSymbolName above.
+func unmangleSymbolName(s string) string {
+	t := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == '%' {
+			t = append(t, unhex(s[i+1])<<4|unhex(s[i+2]))
+			i += 2
+		} else {
+			t = append(t, s[i])
+		}
+	}
+	return string(t)
+}
+
 func putelfstr(s string) int {
 	if len(Elfstrdat) == 0 && s != "" {
 		// first entry must be empty string
 		putelfstr("")
 	}
 
-	// When dynamically linking, we create LSym's by reading the names from
-	// the symbol tables of the shared libraries and so the names need to
-	// match exactly.  Tools like DTrace will have to wait for now.
 	if !DynlinkingGo() {
 		// Rewrite · to . for ASCII-only tools like DTrace (sigh)
 		s = strings.Replace(s, "·", ".", -1)
+	} else {
+		s = mangleSymbolName(s)
 	}
 
 	n := len(s) + 1
