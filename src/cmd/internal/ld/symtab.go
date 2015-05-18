@@ -35,11 +35,50 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 )
 
 // Symbol table.
+
+var okSymbols = regexp.MustCompile("^([-a-zA-Z0-9_.*/()]|\\[|\\])*$")
+
+func mangle(s string) string {
+	if okSymbols.MatchString(s) {
+		return s
+	}
+	r := "_G"
+	for _, ch := range s {
+		if okSymbols.MatchString(string(ch)) {
+			r += string(ch)
+		} else {
+			r += fmt.Sprintf("%%%x", ch)
+		}
+	}
+	return r
+}
+
+func unmangle(s string) string {
+	if !strings.HasPrefix(s, "_G") {
+		return s
+	}
+	r := ""
+	for i := 2; i < len(s); i++ {
+		if s[i] == '%' {
+			v, err := strconv.ParseUint(s[i+1:i+3], 16, 8)
+			if err != nil {
+				Exitf("argh %q %q, %v", s, s[i+1:i+3], err)
+			}
+			r += string(v)
+			i += 2
+		} else {
+			r += string(s[i])
+		}
+	}
+	return r
+}
 
 func putelfstr(s string) int {
 	if len(Elfstrdat) == 0 && s != "" {
@@ -53,6 +92,8 @@ func putelfstr(s string) int {
 	if !DynlinkingGo() {
 		// Rewrite · to . for ASCII-only tools like DTrace (sigh)
 		s = strings.Replace(s, "·", ".", -1)
+	} else {
+		s = mangle(s)
 	}
 
 	n := len(s) + 1
