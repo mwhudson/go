@@ -226,6 +226,16 @@ func TestGOPathShlib(t *testing.T) {
 	run(t, "executable linked to GOPATH library", "./bin/exe")
 }
 
+// Build a GOPATH package (dep) into a shared library that links against the goroot
+// runtime, another package (dep2) that links against the first, and and an
+// executable that links against dep2.
+func TestTwoGOPathShlibs(t *testing.T) {
+	goCmd(t, "install", "-buildmode=shared", "-linkshared", "dep")
+	goCmd(t, "install", "-buildmode=shared", "-linkshared", "dep2")
+	goCmd(t, "install", "-linkshared", "exe2")
+	run(t, "executable linked to GOPATH library", "./bin/exe2")
+}
+
 // Testing rebuilding of shared libraries when they are stale is a bit more
 // complicated that it seems like it should be. First, we make everything "old": but
 // only a few seconds old, or it might be older than 6g (or the runtime source) and

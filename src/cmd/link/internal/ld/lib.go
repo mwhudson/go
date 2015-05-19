@@ -36,6 +36,7 @@ import (
 	"cmd/internal/obj"
 	"crypto/sha1"
 	"debug/elf"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -982,15 +983,31 @@ func hostlink() {
 	argv = append(argv, fmt.Sprintf("%s/go.o", tmpdir))
 
 	if Linkshared {
-		for _, shlib := range Ctxt.Shlibs {
-			dir, base := filepath.Split(shlib.Path)
-			argv = append(argv, "-L"+dir)
-			if !rpath.set {
-				argv = append(argv, "-Wl,-rpath="+dir)
+		seen := make(map[string]bool)
+		addshlib := func(path string) {
+			dir, base := filepath.Split(path)
+			if !seen[dir] {
+				argv = append(argv, "-L"+dir)
+				if !rpath.set {
+					argv = append(argv, "-Wl,-rpath="+dir)
+				}
+				seen[dir] = true
 			}
 			base = strings.TrimSuffix(base, ".so")
 			base = strings.TrimPrefix(base, "lib")
-			argv = append(argv, "-l"+base)
+			if !seen[base] {
+				argv = append(argv, "-l"+base)
+				seen[base] = true
+			}
+		}
+		for _, shlib := range Ctxt.Shlibs {
+			addshlib(shlib.Path)
+			for _, dep := range shlib.Deps {
+				libpath := findshlib(dep)
+				if libpath != "" {
+					addshlib(libpath)
+				}
+			}
 		}
 	}
 
@@ -1046,6 +1063,56 @@ func hostlink() {
 		if err := os.Rename(combinedOutput, outfile); err != nil {
 			Ctxt.Cursym = nil
 			Exitf("%s: rename(%s, %s) failed: %v", os.Args[0], combinedOutput, outfile, err)
+		}
+	}
+
+	if Buildmode == BuildmodeShared {
+		// TODO(mwhudson): this is all horrible hack code, clean up
+		dump, err := os.Create(outfile + ".json")
+		if err != nil {
+			Exitf("creating %s failed: %v", outfile+".json", err)
+		}
+		defer func() {
+			err := dump.Close()
+			if err != nil {
+				Exitf("closing %s failed: %v", outfile+".json", err)
+			}
+		}()
+		shlibdata := &ShlibData{}
+		shlibdata.TypeData = make(map[string]*TypeData)
+		if err != nil {
+			Exitf("marhsalling shlibdata failed: %v", err)
+		}
+		for _, shlib := range Ctxt.Shlibs {
+			base := filepath.Base(shlib.Path)
+			shlibdata.Deps = append(shlibdata.Deps, base)
+		}
+		for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+			if !s.Reachable || s.Special != 0 || s.Type != obj.SRODATA {
+				continue
+			}
+			if !strings.HasPrefix(s.Name, "type.") {
+				continue
+			}
+			if strings.HasPrefix(s.Name, "type..") {
+				continue
+			}
+			td := &TypeData{Data: s.P}
+
+			if decodetype_usegcprog(s) == 0 {
+				mask := decodetype_gcmask(s)
+				td.Gcmask = mask
+			} else {
+				prog := decodetype_gcprog(s)
+				td.Gcprog = prog
+			}
+			shlibdata.TypeData[s.Name] = td
+		}
+		shlibdata.Hash = Linklookup(Ctxt, "go.link.abihashbytes", 0).P
+		data, err := json.Marshal(shlibdata)
+		_, err = dump.Write(data)
+		if err != nil {
+			Exitf("writing shlibdata failed: %v", err)
 		}
 	}
 }
@@ -1148,31 +1215,20 @@ func ldobj(f *obj.Biobuf, pkg string, length int64, pn string, file string, when
 	ldobjfile(Ctxt, f, pkg, eof-obj.Boffset(f), pn)
 }
 
-func readelfsymboldata(f *elf.File, sym *elf.Symbol) []byte {
-	data := make([]byte, sym.Size)
-	sect := f.Sections[sym.Section]
-	if sect.Type != elf.SHT_PROGBITS {
-		Diag("reading %s from non-PROGBITS section", sym.Name)
+func findshlib(shlib string) string {
+	for _, libdir := range Ctxt.Libdir {
+		libpath := filepath.Join(libdir, shlib)
+		if _, err := os.Stat(libpath); err == nil {
+			return libpath
+		}
 	}
-	n, err := sect.ReadAt(data, int64(sym.Value-sect.Offset))
-	if uint64(n) != sym.Size {
-		Diag("reading contents of %s: %v", sym.Name, err)
-	}
-	return data
+	Diag("cannot find shared library: %s", shlib)
+	return ""
 }
 
 func ldshlibsyms(shlib string) {
-	found := false
-	libpath := ""
-	for _, libdir := range Ctxt.Libdir {
-		libpath = filepath.Join(libdir, shlib)
-		if _, err := os.Stat(libpath); err == nil {
-			found = true
-			break
-		}
-	}
-	if !found {
-		Diag("cannot find shared library: %s", shlib)
+	libpath := findshlib(shlib)
+	if libpath == "" {
 		return
 	}
 	for _, processedlib := range Ctxt.Shlibs {
@@ -1191,45 +1247,21 @@ func ldshlibsyms(shlib string) {
 		return
 	}
 	defer f.Close()
-	syms, err := f.Symbols()
+	syms, err := f.DynamicSymbols()
 	if err != nil {
 		Diag("cannot read symbols from shared library: %s", libpath)
 		return
 	}
-	// If a package has a global variable of a type defined in another shared
-	// library, we need to know the gcmask used by the type, if any.  To support
-	// this, we read all the runtime.gcbits.* symbols, keep a map of address to
-	// gcmask, and after we're read all the symbols, read the addresses of the
-	// gcmasks symbols out of the type data to look up the gcmask for each type.
-	// This depends on the fact that the runtime.gcbits.* symbols are local (so
-	// the address is actually present in the type data and we don't have to
-	// search all relocations to find the ones which correspond to gcmasks) and
-	// also that the shared library we are linking against has not had the symbol
-	// table removed.
-	gcmasks := make(map[uint64][]byte)
-	types := []*LSym{}
-	var hash []byte
 	for _, s := range syms {
 		if elf.ST_TYPE(s.Info) == elf.STT_NOTYPE || elf.ST_TYPE(s.Info) == elf.STT_SECTION {
 			continue
 		}
-		if s.Section == elf.SHN_UNDEF {
-			continue
-		}
+		// TODO(mwhudson): is this still needed?
 		if strings.HasPrefix(s.Name, "_") {
 			continue
 		}
-		if strings.HasPrefix(s.Name, "runtime.gcbits.") {
-			gcmasks[s.Value] = readelfsymboldata(f, &s)
-		}
-		if s.Name == "go.link.abihashbytes" {
-			hash = readelfsymboldata(f, &s)
-		}
-		if elf.ST_BIND(s.Info) != elf.STB_GLOBAL {
-			continue
-		}
 		lsym := Linklookup(Ctxt, s.Name, 0)
-		if lsym.Type != 0 && lsym.Dupok == 0 {
+		if lsym.Type != 0 && lsym.Type != obj.SDYNIMPORT && lsym.Dupok == 0 {
 			Diag(
 				"Found duplicate symbol %s reading from %s, first found in %s",
 				s.Name, shlib, lsym.File)
@@ -1237,30 +1269,9 @@ func ldshlibsyms(shlib string) {
 		lsym.Type = obj.SDYNIMPORT
 		lsym.ElfType = elf.ST_TYPE(s.Info)
 		lsym.File = libpath
-		if strings.HasPrefix(lsym.Name, "type.") {
-			if f.Sections[s.Section].Type == elf.SHT_PROGBITS {
-				lsym.P = readelfsymboldata(f, &s)
-			}
-			if !strings.HasPrefix(lsym.Name, "type..") {
-				types = append(types, lsym)
-			}
-		}
 	}
-
-	for _, t := range types {
-		if decodetype_noptr(t) != 0 || decodetype_usegcprog(t) != 0 {
-			continue
-		}
-		addr := decodetype_gcprog_shlib(t)
-		tgcmask, ok := gcmasks[addr]
-		if !ok {
-			Diag("bits not found for %s at %d", t.Name, addr)
-		}
-		t.gcmask = tgcmask
-	}
-
 	// We might have overwritten some functions above (this tends to happen for the
-	// autogenerated type equality/hashing functions) and we don't want to generated
+	// autogenerated type equality/hashing functions) and we don't want to generate
 	// pcln table entries for these any more so unstitch them from the Textp linked
 	// list.
 	var last *LSym
@@ -1286,7 +1297,18 @@ func ldshlibsyms(shlib string) {
 		Ctxt.Etextp = last
 	}
 
-	Ctxt.Shlibs = append(Ctxt.Shlibs, Shlib{Path: libpath, Hash: hash})
+	s := &Shlib{Path: libpath}
+	jsonfile, err := os.Open(libpath + ".json")
+	if err != nil {
+		Diag("cannot open shared library json at %s: %v", libpath+".json", err)
+	}
+	defer jsonfile.Close()
+	data, err := ioutil.ReadAll(jsonfile)
+	json.Unmarshal(data, s)
+	for typeName, typeData := range s.TypeData {
+		Linklookup(Ctxt, typeName, 0).P = typeData.Data
+	}
+	Ctxt.Shlibs = append(Ctxt.Shlibs, s)
 }
 
 func mywhatsys() {

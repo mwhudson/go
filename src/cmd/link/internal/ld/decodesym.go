@@ -73,24 +73,28 @@ func decodetype_ptrdata(s *LSym) int64 {
 }
 
 // Type.commonType.gc
-func decodetype_gcprog(s *LSym) *LSym {
+func decodetype_gcprog(s *LSym) []byte {
 	if s.Type == obj.SDYNIMPORT {
-		// The gcprog for "type.$name" is calle "type..gcprog.$name".
-		x := "type..gcprog." + s.Name[5:]
-		return Linklookup(Ctxt, x, 0)
+		for _, shlib := range Ctxt.Shlibs {
+			data, ok := shlib.TypeData[s.Name]
+			if ok {
+				return data.Gcprog
+			}
+		}
+		Diag("no gcprog found for %s", s.Name)
 	}
-	return decode_reloc_sym(s, 2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
-}
-
-func decodetype_gcprog_shlib(s *LSym) uint64 {
-	return decode_inuxi(s.P[2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize):], Thearch.Ptrsize)
+	return decode_reloc_sym(s, 2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize)).P
 }
 
 func decodetype_gcmask(s *LSym) []byte {
 	if s.Type == obj.SDYNIMPORT {
-		// ldshlibsyms makes special efforts to read the value
-		// of gcmask for types defined in that shared library.
-		return s.gcmask
+		for _, shlib := range Ctxt.Shlibs {
+			data, ok := shlib.TypeData[s.Name]
+			if ok {
+				return data.Gcmask
+			}
+		}
+		Diag("no gcmask found for %s", s.Name)
 	}
 	mask := decode_reloc_sym(s, 2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
 	return mask.P
