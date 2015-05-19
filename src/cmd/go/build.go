@@ -952,7 +952,7 @@ func (b *builder) libaction(libname string, pkgs []*Package, mode, depMode build
 		}
 
 		if stale {
-			a.f = (*builder).install
+			a.f = (*builder).installShlib
 			buildAction := b.libaction(libname, pkgs, modeBuild, depMode)
 			a.deps = []*action{buildAction}
 			for _, p := range pkgs {
@@ -1469,6 +1469,16 @@ func (b *builder) installShlibname(a *action) error {
 		b.showcmd("", "echo '%s' > %s # internal", filepath.Base(a1.target), a.target)
 	}
 	return nil
+}
+
+func (b *builder) installShlib(a *action) error {
+	err := b.install(a)
+	if err != nil {
+		return err
+	}
+	a1 := a.deps[0]
+	perm := os.FileMode(0644)
+	return b.moveOrCopyFile(a, a.target+".json", a1.target+".json", perm)
 }
 
 // setextld sets the appropriate linker flags for the specified compiler.

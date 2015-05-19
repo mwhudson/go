@@ -116,7 +116,13 @@ type Auto struct {
 
 type Shlib struct {
 	Path string
-	Hash []byte
+	ShlibData
+}
+
+type ShlibData struct {
+	Gcmasks map[string][]byte
+	Deps    []string
+	Hash    []byte
 }
 
 type Link struct {
@@ -136,7 +142,7 @@ type Link struct {
 	Tlsg      *LSym
 	Libdir    []string
 	Library   []*Library
-	Shlibs    []Shlib
+	Shlibs    []*Shlib
 	Tlsoffset int
 	Diag      func(string, ...interface{})
 	Cursym    *LSym

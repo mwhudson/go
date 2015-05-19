@@ -82,15 +82,15 @@ func decodetype_gcprog(s *LSym) *LSym {
 	return decode_reloc_sym(s, 2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
 }
 
-func decodetype_gcprog_shlib(s *LSym) uint64 {
-	return decode_inuxi(s.P[2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize):], Thearch.Ptrsize)
-}
-
 func decodetype_gcmask(s *LSym) []byte {
 	if s.Type == obj.SDYNIMPORT {
-		// ldshlibsyms makes special efforts to read the value
-		// of gcmask for types defined in that shared library.
-		return s.gcmask
+		for _, shlib := range Ctxt.Shlibs {
+			mask, ok := shlib.Gcmasks[s.Name]
+			if ok {
+				return mask
+			}
+		}
+		Diag("no gcmask found for %s", s.Name)
 	}
 	mask := decode_reloc_sym(s, 2*int32(Thearch.Ptrsize)+8+1*int32(Thearch.Ptrsize))
 	return mask.P
