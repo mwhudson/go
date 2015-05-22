@@ -112,7 +112,9 @@ func gentext() {
 			n = fmt.Sprintf("%s.%s", s.Name, r.Sym.Name)
 
 			stub = ld.Linklookup(ld.Ctxt, n, 0)
-			stub.Reachable = stub.Reachable || s.Reachable
+			if stub.Reachable() || s.Reachable() {
+				stub.Flags |= ld.LSymFlagReachable
+			}
 			if stub.Size == 0 {
 				// Need outer to resolve .TOC.
 				stub.Outer = s

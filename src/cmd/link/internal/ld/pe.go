@@ -487,8 +487,8 @@ func initdynimport() *Dll {
 
 	dr = nil
 	var m *Imp
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
-		if !s.Reachable || s.Type != obj.SDYNIMPORT {
+	for _, s := range Ctxt.Allsym {
+		if !s.Reachable() || s.Type != obj.SDYNIMPORT {
 			continue
 		}
 		for d = dr; d != nil; d = d.next {
@@ -538,7 +538,7 @@ func initdynimport() *Dll {
 					dynName += fmt.Sprintf("@%d", m.argsize)
 				}
 				dynSym := Linklookup(Ctxt, dynName, 0)
-				dynSym.Reachable = true
+				dynSym.Flags |= LSymFlagReachable
 				dynSym.Type = obj.SHOSTOBJ
 				r := Addrel(m.s)
 				r.Sym = dynSym
@@ -553,7 +553,7 @@ func initdynimport() *Dll {
 		}
 	} else {
 		dynamic := Linklookup(Ctxt, ".windynamic", 0)
-		dynamic.Reachable = true
+		dynamic.Flags |= LSymFlagReachable
 		dynamic.Type = obj.SWINDOWS
 		for d := dr; d != nil; d = d.next {
 			for m = d.ms; m != nil; m = m.next {
@@ -706,8 +706,8 @@ func (x pescmp) Less(i, j int) bool {
 
 func initdynexport() {
 	nexport = 0
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
-		if !s.Reachable || s.Cgoexport&CgoExportDynamic == 0 {
+	for _, s := range Ctxt.Allsym {
+		if !s.Reachable() || s.Cgoexport&CgoExportDynamic == 0 {
 			continue
 		}
 		if nexport+1 > len(dexport) {
@@ -799,7 +799,7 @@ func perelocsect(sect *Section, first *LSym) int {
 	sect.Reloff = uint64(Cpos())
 	var sym *LSym
 	for sym = first; sym != nil; sym = sym.Next {
-		if !sym.Reachable {
+		if !sym.Reachable() {
 			continue
 		}
 		if uint64(sym.Value) >= sect.Vaddr {
@@ -811,7 +811,7 @@ func perelocsect(sect *Section, first *LSym) int {
 	var r *Reloc
 	var ri int
 	for ; sym != nil; sym = sym.Next {
-		if !sym.Reachable {
+		if !sym.Reachable() {
 			continue
 		}
 		if sym.Value >= int64(eaddr) {
@@ -902,7 +902,7 @@ func dope() {
 	/* relocation table */
 	rel := Linklookup(Ctxt, ".rel", 0)
 
-	rel.Reachable = true
+	rel.Flags |= LSymFlagReachable
 	rel.Type = obj.SELFROSECT
 
 	initdynimport()

@@ -1274,7 +1274,7 @@ func elfdynhash() {
 	nsym := Nelfsym
 	s := Linklookup(Ctxt, ".hash", 0)
 	s.Type = obj.SELFROSECT
-	s.Reachable = true
+	s.Flags |= LSymFlagReachable
 
 	i := nsym
 	nbucket := 1
@@ -1291,7 +1291,7 @@ func elfdynhash() {
 	var b int
 	var hc uint32
 	var name string
-	for sy := Ctxt.Allsym; sy != nil; sy = sy.Allsym {
+	for _, sy := range Ctxt.Allsym {
 		if sy.Dynid <= 0 {
 			continue
 		}
@@ -1537,7 +1537,7 @@ func elfrelocsect(sect *Section, first *LSym) {
 	sect.Reloff = uint64(Cpos())
 	var sym *LSym
 	for sym = first; sym != nil; sym = sym.Next {
-		if !sym.Reachable {
+		if !sym.Reachable() {
 			continue
 		}
 		if uint64(sym.Value) >= sect.Vaddr {
@@ -1549,7 +1549,7 @@ func elfrelocsect(sect *Section, first *LSym) {
 	var r *Reloc
 	var ri int
 	for ; sym != nil; sym = sym.Next {
-		if !sym.Reachable {
+		if !sym.Reachable() {
 			continue
 		}
 		if sym.Value >= int64(eaddr) {
@@ -1605,7 +1605,7 @@ func doelf() {
 	shstrtab := Linklookup(Ctxt, ".shstrtab", 0)
 
 	shstrtab.Type = obj.SELFROSECT
-	shstrtab.Reachable = true
+	shstrtab.Flags |= LSymFlagReachable
 
 	Addstring(shstrtab, "")
 	Addstring(shstrtab, ".text")
@@ -1724,7 +1724,7 @@ func doelf() {
 		s := Linklookup(Ctxt, ".dynsym", 0)
 
 		s.Type = obj.SELFROSECT
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		switch Thearch.Thechar {
 		case '6', '7', '9':
 			s.Size += ELF64SYMSIZE
@@ -1736,7 +1736,7 @@ func doelf() {
 		s = Linklookup(Ctxt, ".dynstr", 0)
 
 		s.Type = obj.SELFROSECT
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		if s.Size == 0 {
 			Addstring(s, "")
 		}
@@ -1749,35 +1749,35 @@ func doelf() {
 		default:
 			s = Linklookup(Ctxt, ".rel", 0)
 		}
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFROSECT
 
 		/* global offset table */
 		s = Linklookup(Ctxt, ".got", 0)
 
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFGOT // writable
 
 		/* ppc64 glink resolver */
 		if Thearch.Thechar == '9' {
 			s := Linklookup(Ctxt, ".glink", 0)
-			s.Reachable = true
+			s.Flags |= LSymFlagReachable
 			s.Type = obj.SELFRXSECT
 		}
 
 		/* hash */
 		s = Linklookup(Ctxt, ".hash", 0)
 
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFROSECT
 
 		s = Linklookup(Ctxt, ".got.plt", 0)
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFSECT // writable
 
 		s = Linklookup(Ctxt, ".plt", 0)
 
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		if Thearch.Thechar == '9' {
 			// In the ppc64 ABI, .plt is a data section
 			// written by the dynamic linker.
@@ -1794,21 +1794,21 @@ func doelf() {
 		default:
 			s = Linklookup(Ctxt, ".rel.plt", 0)
 		}
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFROSECT
 
 		s = Linklookup(Ctxt, ".gnu.version", 0)
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFROSECT
 
 		s = Linklookup(Ctxt, ".gnu.version_r", 0)
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFROSECT
 
 		/* define dynamic elf table */
 		s = Linklookup(Ctxt, ".dynamic", 0)
 
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		s.Type = obj.SELFSECT // writable
 
 		/*

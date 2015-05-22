@@ -2136,16 +2136,16 @@ func Dwarfemitdebugsections() {
 			sect = addmachodwarfsect(sect, ".debug_info")
 
 			infosym = Linklookup(Ctxt, ".debug_info", 0)
-			infosym.Hide = 1
+			infosym.Flags |= LSymFlagHide
 
 			abbrevsym = Linklookup(Ctxt, ".debug_abbrev", 0)
-			abbrevsym.Hide = 1
+			abbrevsym.Flags |= LSymFlagHide
 
 			linesym = Linklookup(Ctxt, ".debug_line", 0)
-			linesym.Hide = 1
+			linesym.Flags |= LSymFlagHide
 
 			framesym = Linklookup(Ctxt, ".debug_frame", 0)
-			framesym.Hide = 1
+			framesym.Flags |= LSymFlagHide
 		}
 	}
 
@@ -2322,16 +2322,16 @@ func dwarfaddshstrings(shstrtab *LSym) {
 		}
 
 		infosym = Linklookup(Ctxt, ".debug_info", 0)
-		infosym.Hide = 1
+		infosym.Flags |= LSymFlagHide
 
 		abbrevsym = Linklookup(Ctxt, ".debug_abbrev", 0)
-		abbrevsym.Hide = 1
+		abbrevsym.Flags |= LSymFlagHide
 
 		linesym = Linklookup(Ctxt, ".debug_line", 0)
-		linesym.Hide = 1
+		linesym.Flags |= LSymFlagHide
 
 		framesym = Linklookup(Ctxt, ".debug_frame", 0)
-		framesym.Hide = 1
+		framesym.Flags |= LSymFlagHide
 	}
 }
 

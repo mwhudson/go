@@ -449,11 +449,11 @@ func loadlib() {
 	switch Buildmode {
 	case BuildmodeCShared:
 		s := Linklookup(Ctxt, "runtime.islibrary", 0)
-		s.Dupok = 1
+		s.Flags |= LSymFlagDupok
 		Adduint8(Ctxt, s, 1)
 	case BuildmodeCArchive:
 		s := Linklookup(Ctxt, "runtime.isarchive", 0)
-		s.Dupok = 1
+		s.Flags |= LSymFlagDupok
 		Adduint8(Ctxt, s, 1)
 	}
 
@@ -528,7 +528,7 @@ func loadlib() {
 	if Linkmode == LinkInternal {
 		// Drop all the cgo_import_static declarations.
 		// Turns out we won't be needing them.
-		for s := Ctxt.Allsym; s != nil; s = s.Allsym {
+		for _, s := range Ctxt.Allsym {
 			if s.Type == obj.SHOSTOBJ {
 				// If a symbol was marked both
 				// cgo_import_static and cgo_import_dynamic,
@@ -556,7 +556,7 @@ func loadlib() {
 		tlsg.Type = obj.STLSBSS
 	}
 	tlsg.Size = int64(Thearch.Ptrsize)
-	tlsg.Reachable = true
+	tlsg.Flags |= LSymFlagReachable
 	Ctxt.Tlsg = tlsg
 
 	// Now that we know the link mode, trim the dynexp list.
@@ -1229,7 +1229,7 @@ func ldshlibsyms(shlib string) {
 			continue
 		}
 		lsym := Linklookup(Ctxt, s.Name, 0)
-		if lsym.Type != 0 && lsym.Dupok == 0 {
+		if lsym.Type != 0 && !lsym.Dupok() {
 			Diag(
 				"Found duplicate symbol %s reading from %s, first found in %s",
 				s.Name, shlib, lsym.File)
@@ -1418,7 +1418,7 @@ func dostkcheck() {
 			continue
 		}
 
-		if s.Nosplit != 0 {
+		if s.Nosplit() {
 			Ctxt.Cursym = s
 			ch.sym = s
 			stkcheck(&ch, 0)
@@ -1426,7 +1426,7 @@ func dostkcheck() {
 	}
 
 	for s := Ctxt.Textp; s != nil; s = s.Next {
-		if s.Nosplit == 0 {
+		if !s.Nosplit() {
 			Ctxt.Cursym = s
 			ch.sym = s
 			stkcheck(&ch, 0)
@@ -1441,10 +1441,10 @@ func stkcheck(up *Chain, depth int) int {
 	// Don't duplicate work: only need to consider each
 	// function at top of safe zone once.
 	if limit == obj.StackLimit-callsize() {
-		if s.Stkcheck != 0 {
+		if !s.Stkcheck() {
 			return 0
 		}
-		s.Stkcheck = 1
+		s.Flags |= LSymFlagStkcheck
 	}
 
 	if depth > 100 {
@@ -1453,7 +1453,7 @@ func stkcheck(up *Chain, depth int) int {
 		return -1
 	}
 
-	if s.External != 0 || s.Pcln == nil {
+	if s.External() || s.Pcln == nil {
 		// external function.
 		// should never be called directly.
 		// only diagnose the direct caller.
@@ -1553,7 +1553,7 @@ func stkprint(ch *Chain, limit int) {
 
 	if ch.up == nil {
 		// top of chain.  ch->sym != nil.
-		if ch.sym.Nosplit != 0 {
+		if ch.sym.Nosplit() {
 			fmt.Printf("\t%d\tassumed on entry to %s\n", ch.limit, name)
 		} else {
 			fmt.Printf("\t%d\tguaranteed after split check in %s\n", ch.limit, name)
@@ -1664,8 +1664,8 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 		put(s, s.Name, 'T', s.Value, s.Size, int(s.Version), nil)
 	}
 
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
-		if s.Hide != 0 || (s.Name[0] == '.' && s.Version == 0 && s.Name != ".rathole") {
+	for _, s := range Ctxt.Allsym {
+		if s.Hide() || (s.Name[0] == '.' && s.Version == 0 && s.Name != ".rathole") {
 			continue
 		}
 		switch s.Type & obj.SMASK {
@@ -1683,17 +1683,17 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 			obj.SGOSTRING,
 			obj.SGOFUNC,
 			obj.SWINDOWS:
-			if !s.Reachable {
+			if !s.Reachable() {
 				continue
 			}
 			put(s, s.Name, 'D', Symaddr(s), s.Size, int(s.Version), s.Gotype)
 
 		case obj.SBSS, obj.SNOPTRBSS:
-			if !s.Reachable {
+			if !s.Reachable() {
 				continue
 			}
 			if len(s.P) > 0 {
-				Diag("%s should not be bss (size=%d type=%d special=%d)", s.Name, int(len(s.P)), s.Type, s.Special)
+				Diag("%s should not be bss (size=%d type=%d special=%v)", s.Name, int(len(s.P)), s.Type, s.Special)
 			}
 			put(s, s.Name, 'B', Symaddr(s), s.Size, int(s.Version), s.Gotype)
 
@@ -1706,7 +1706,7 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 			}
 
 		case obj.SDYNIMPORT:
-			if !s.Reachable {
+			if !s.Reachable() {
 				continue
 			}
 			put(s, s.Extname, 'U', 0, 0, int(s.Version), nil)
@@ -1769,7 +1769,7 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 }
 
 func Symaddr(s *LSym) int64 {
-	if !s.Reachable {
+	if !s.Reachable() {
 		Diag("unreachable symbol in symaddr - %s", s.Name)
 	}
 	return s.Value
@@ -1779,9 +1779,9 @@ func xdefine(p string, t int, v int64) {
 	s := Linklookup(Ctxt, p, 0)
 	s.Type = int16(t)
 	s.Value = v
-	s.Reachable = true
-	s.Special = 1
-	s.Local = true
+	s.Flags |= LSymFlagReachable
+	s.Flags |= LSymFlagSpecial
+	s.Flags |= LSymFlagLocal
 }
 
 func datoff(addr int64) int64 {
@@ -1822,7 +1822,7 @@ func undefsym(s *LSym) {
 		if r.Sym.Type == obj.Sxxx || r.Sym.Type == obj.SXREF {
 			Diag("undefined: %s", r.Sym.Name)
 		}
-		if !r.Sym.Reachable {
+		if !r.Sym.Reachable() {
 			Diag("use of unreachable symbol: %s", r.Sym.Name)
 		}
 	}
@@ -1891,7 +1891,7 @@ func checkgo() {
 	for {
 		changed = 0
 		for s = Ctxt.Textp; s != nil; s = s.Next {
-			if s.Cfunc == 0 || (s.Cfunc == 2 && s.Nosplit != 0) {
+			if s.Cfunc == 0 || (s.Cfunc == 2 && s.Nosplit()) {
 				for i = 0; i < len(s.R); i++ {
 					r = &s.R[i]
 					if r.Sym == nil {
@@ -1914,16 +1914,16 @@ func checkgo() {
 	// Complain about Go-called C functions that can split the stack
 	// (that can be preempted for garbage collection or trigger a stack copy).
 	for s := Ctxt.Textp; s != nil; s = s.Next {
-		if s.Cfunc == 0 || (s.Cfunc == 2 && s.Nosplit != 0) {
+		if s.Cfunc == 0 || (s.Cfunc == 2 && s.Nosplit()) {
 			for i = 0; i < len(s.R); i++ {
 				r = &s.R[i]
 				if r.Sym == nil {
 					continue
 				}
 				if (r.Type == obj.R_CALL || r.Type == obj.R_CALLARM) && r.Sym.Type == obj.STEXT {
-					if s.Cfunc == 0 && r.Sym.Cfunc == 2 && r.Sym.Nosplit == 0 {
+					if s.Cfunc == 0 && r.Sym.Cfunc == 2 && r.Sym.Nosplit() {
 						fmt.Printf("Go %s calls C %s\n", s.Name, r.Sym.Name)
-					} else if s.Cfunc == 2 && s.Nosplit != 0 && r.Sym.Nosplit == 0 {
+					} else if s.Cfunc == 2 && s.Nosplit() && !r.Sym.Nosplit() {
 						fmt.Printf("Go calls C %s calls %s\n", s.Name, r.Sym.Name)
 					}
 				}

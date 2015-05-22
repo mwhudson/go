@@ -144,7 +144,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	// maybe one day STB_WEAK.
 	bind := STB_GLOBAL
 
-	if ver != 0 || (x.Type&obj.SHIDDEN != 0) || x.Local {
+	if ver != 0 || (x.Type&obj.SHIDDEN != 0) || x.Local() {
 		bind = STB_LOCAL
 	}
 
@@ -341,13 +341,13 @@ func symtab() {
 
 	s.Type = obj.SRODATA
 	s.Size = 0
-	s.Reachable = true
+	s.Flags |= LSymFlagReachable
 	xdefine("runtime.egcdata", obj.SRODATA, 0)
 
 	s = Linklookup(Ctxt, "runtime.gcbss", 0)
 	s.Type = obj.SRODATA
 	s.Size = 0
-	s.Reachable = true
+	s.Flags |= LSymFlagReachable
 	xdefine("runtime.egcbss", obj.SRODATA, 0)
 
 	// pseudo-symbols to mark locations of type, string, and go string data.
@@ -357,31 +357,31 @@ func symtab() {
 
 		s.Type = obj.STYPE
 		s.Size = 0
-		s.Reachable = true
+		s.Flags |= LSymFlagReachable
 		symtype = s
 	}
 
 	s = Linklookup(Ctxt, "go.string.*", 0)
 	s.Type = obj.SGOSTRING
-	s.Local = true
+	s.Flags |= LSymFlagLocal
 	s.Size = 0
-	s.Reachable = true
+	s.Flags |= LSymFlagReachable
 	symgostring := s
 
 	s = Linklookup(Ctxt, "go.func.*", 0)
 	s.Type = obj.SGOFUNC
-	s.Local = true
+	s.Flags |= LSymFlagLocal
 	s.Size = 0
-	s.Reachable = true
+	s.Flags |= LSymFlagReachable
 	symgofunc := s
 
 	symtypelink := Linklookup(Ctxt, "runtime.typelink", 0)
 
 	symt = Linklookup(Ctxt, "runtime.symtab", 0)
-	symt.Local = true
+	symt.Flags |= LSymFlagLocal
 	symt.Type = obj.SSYMTAB
 	symt.Size = 0
-	symt.Reachable = true
+	symt.Flags |= LSymFlagReachable
 
 	ntypelinks := 0
 
@@ -389,39 +389,39 @@ func symtab() {
 	// within a type they sort by size, so the .* symbols
 	// just defined above will be first.
 	// hide the specific symbols.
-	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
-		if !s.Reachable || s.Special != 0 || s.Type != obj.SRODATA {
+	for _, s := range Ctxt.Allsym {
+		if !s.Reachable() || s.Special() || s.Type != obj.SRODATA {
 			continue
 		}
 
 		if strings.HasPrefix(s.Name, "type.") && !DynlinkingGo() {
 			s.Type = obj.STYPE
-			s.Hide = 1
+			s.Flags |= LSymFlagHide
 			s.Outer = symtype
 		}
 
 		if strings.HasPrefix(s.Name, "go.typelink.") {
 			ntypelinks++
 			s.Type = obj.STYPELINK
-			s.Hide = 1
+			s.Flags |= LSymFlagHide
 			s.Outer = symtypelink
 		}
 
 		if strings.HasPrefix(s.Name, "go.string.") {
 			s.Type = obj.SGOSTRING
-			s.Hide = 1
+			s.Flags |= LSymFlagHide
 			s.Outer = symgostring
 		}
 
 		if strings.HasPrefix(s.Name, "go.func.") {
 			s.Type = obj.SGOFUNC
-			s.Hide = 1
+			s.Flags |= LSymFlagHide
 			s.Outer = symgofunc
 		}
 
 		if strings.HasPrefix(s.Name, "gcargs.") || strings.HasPrefix(s.Name, "gclocals.") || strings.HasPrefix(s.Name, "gclocals·") {
 			s.Type = obj.SGOFUNC
-			s.Hide = 1
+			s.Flags |= LSymFlagHide
 			s.Outer = symgofunc
 			s.Align = 4
 			liveness += (s.Size + int64(s.Align) - 1) &^ (int64(s.Align) - 1)
@@ -435,7 +435,7 @@ func symtab() {
 			h.Write(l.hash)
 		}
 		abihashgostr := Linklookup(Ctxt, "go.link.abihash."+filepath.Base(outfile), 0)
-		abihashgostr.Reachable = true
+		abihashgostr.Flags |= LSymFlagReachable
 		abihashgostr.Type = obj.SRODATA
 		var hashbytes []byte
 		addgostring(abihashgostr, "go.link.abihashbytes", string(h.Sum(hashbytes)))
@@ -448,8 +448,8 @@ func symtab() {
 	moduledata := Linklookup(Ctxt, "runtime.firstmoduledata", 0)
 	moduledata.Type = obj.SNOPTRDATA
 	moduledata.Size = 0 // truncate symbol back to 0 bytes to reinitialize
-	moduledata.Reachable = true
-	moduledata.Local = true
+	moduledata.Flags |= LSymFlagReachable
+	moduledata.Flags |= LSymFlagLocal
 	// The pclntab slice
 	Addaddr(Ctxt, moduledata, Linklookup(Ctxt, "runtime.pclntab", 0))
 	adduint(Ctxt, moduledata, uint64(Linklookup(Ctxt, "runtime.pclntab", 0).Size))
@@ -495,8 +495,8 @@ func symtab() {
 		addgostring(moduledata, "go.link.thismodulename", thismodulename)
 
 		modulehashes := Linklookup(Ctxt, "go.link.abihashes", 0)
-		modulehashes.Reachable = true
-		modulehashes.Local = true
+		modulehashes.Flags |= LSymFlagReachable
+		modulehashes.Flags |= LSymFlagLocal
 		modulehashes.Type = obj.SRODATA
 
 		for i, shlib := range Ctxt.Shlibs {
@@ -509,7 +509,7 @@ func symtab() {
 
 			// modulehashes[i].runtimehash
 			abihash := Linklookup(Ctxt, "go.link.abihash."+modulename, 0)
-			abihash.Reachable = true
+			abihash.Flags |= LSymFlagReachable
 			Addaddr(Ctxt, modulehashes, abihash)
 		}
 

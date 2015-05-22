@@ -35,6 +35,19 @@ import (
 	"debug/elf"
 	"encoding/binary"
 	"fmt"
+	"log"
+)
+
+const (
+	LSymFlagOnlist uint16 = 1 << iota
+	LSymFlagDupok
+	LSymFlagNosplit
+	LSymFlagExternal
+	LSymFlagReachable
+	LSymFlagSpecial
+	LSymFlagStkcheck
+	LSymFlagHide
+	LSymFlagLocal
 )
 
 type LSym struct {
@@ -42,49 +55,36 @@ type LSym struct {
 	Extname    string
 	Type       int16
 	Version    int16
-	Dupok      uint8
-	Cfunc      uint8
-	External   uint8
-	Nosplit    uint8
-	Reachable  bool
-	Cgoexport  uint8
-	Special    uint8
-	Stkcheck   uint8
-	Hide       uint8
-	Leaf       uint8
+	Flags      uint16
 	Localentry uint8
-	Onlist     uint8
+	Cfunc      uint8
+	Cgoexport  uint8
 	// ElfType is set for symbols read from shared libraries by ldshlibsyms. It
 	// is not set for symbols defined by the packages being linked or by symbols
 	// read by ldelf (and so is left as elf.STT_NOTYPE).
-	ElfType     elf.SymType
-	Dynid       int32
-	Plt         int32
-	Got         int32
-	Align       int32
-	Elfsym      int32
-	Args        int32
-	Locals      int32
-	Value       int64
-	Size        int64
-	Hash        *LSym
-	Allsym      *LSym
-	Next        *LSym
-	Sub         *LSym
-	Outer       *LSym
-	Gotype      *LSym
-	Reachparent *LSym
-	Queue       *LSym
-	File        string
-	Dynimplib   string
-	Dynimpvers  string
-	Sect        interface{}
-	Autom       *Auto
-	Pcln        *Pcln
-	P           []byte
-	R           []Reloc
-	Local       bool
-	gcmask      []byte
+	ElfType    elf.SymType
+	Dynid      int32
+	Plt        int32
+	Got        int32
+	Align      int32
+	Elfsym     int32
+	Args       int32
+	Locals     int32
+	Value      int64
+	Size       int64
+	Next       *LSym
+	Sub        *LSym
+	Outer      *LSym
+	Gotype     *LSym
+	File       string
+	Dynimplib  string
+	Dynimpvers string
+	Sect       interface{}
+	Autom      *Auto
+	Pcln       *Pcln
+	P          []byte
+	R          []Reloc
+	gcmask     []byte
 }
 
 func (s *LSym) String() string {
@@ -93,6 +93,22 @@ func (s *LSym) String() string {
 	}
 	return fmt.Sprintf("%s<%d>", s.Name, s.Version)
 }
+
+func (s *LSym) NoteOnlist() {
+	if s.Flags&LSymFlagOnlist != 0 {
+		log.Fatalf("symbol %s listed multiple times", s.Name)
+	}
+	s.Flags |= LSymFlagOnlist
+}
+
+func (s *LSym) Dupok() bool     { return s.Flags&LSymFlagDupok != 0 }
+func (s *LSym) Nosplit() bool   { return s.Flags&LSymFlagNosplit != 0 }
+func (s *LSym) External() bool  { return s.Flags&LSymFlagExternal != 0 }
+func (s *LSym) Reachable() bool { return s.Flags&LSymFlagReachable != 0 }
+func (s *LSym) Special() bool   { return s.Flags&LSymFlagSpecial != 0 }
+func (s *LSym) Stkcheck() bool  { return s.Flags&LSymFlagStkcheck != 0 }
+func (s *LSym) Hide() bool      { return s.Flags&LSymFlagHide != 0 }
+func (s *LSym) Local() bool     { return s.Flags&LSymFlagLocal != 0 }
 
 type Reloc struct {
 	Off     int32
@@ -131,8 +147,7 @@ type Link struct {
 	Windows   int32
 	Goroot    string
 	Hash      map[symVer]*LSym
-	Allsym    *LSym
-	Nsymbol   int32
+	Allsym    []*LSym
 	Tlsg      *LSym
 	Libdir    []string
 	Library   []*Library

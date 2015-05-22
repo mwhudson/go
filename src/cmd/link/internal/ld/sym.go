@@ -167,15 +167,7 @@ func linknewsym(ctxt *Link, symb string, v int) *LSym {
 	s.Plt = -1
 	s.Got = -1
 	s.Name = symb
-	s.Type = 0
 	s.Version = int16(v)
-	s.Value = 0
-	s.Size = 0
-	ctxt.Nsymbol++
-
-	s.Allsym = ctxt.Allsym
-	ctxt.Allsym = s
-
 	return s
 }
 
@@ -196,6 +188,7 @@ func _lookup(ctxt *Link, symb string, v int, creat int) *LSym {
 	s = linknewsym(ctxt, symb, v)
 	s.Extname = s.Name
 	ctxt.Hash[symVer{symb, v}] = s
+	ctxt.Allsym = append(ctxt.Allsym, s)
 	return s
 }
 

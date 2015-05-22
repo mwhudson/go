@@ -104,7 +104,7 @@ package ld
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// This file defines flags attached to various functions
+// This file defines.Flags attached to various functions
 // and data objects.  The compilers, assemblers, and linker must
 // all agree on these values.
 

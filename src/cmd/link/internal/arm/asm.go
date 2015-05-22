@@ -410,7 +410,7 @@ func addpltreloc(ctxt *ld.Link, plt *ld.LSym, got *ld.LSym, sym *ld.LSym, typ in
 	r.Type = int32(typ)
 	r.Add = int64(sym.Got) - 8
 
-	plt.Reachable = true
+	plt.Flags |= ld.LSymFlagReachable
 	plt.Size += 4
 	ld.Symgrow(ctxt, plt, plt.Size)
 

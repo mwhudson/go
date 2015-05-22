@@ -8,7 +8,6 @@ import (
 	"cmd/internal/obj"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 )
@@ -396,7 +395,7 @@ func ldpe(f *obj.Biobuf, pkg string, length int64, pn string) {
 		}
 
 		if s.Outer != nil {
-			if s.Dupok != 0 {
+			if s.Dupok() {
 				continue
 			}
 			Exitf("%s: duplicate symbol reference: %s in both %s and %s", pn, s.Name, s.Outer.Name, sect.sym.Name)
@@ -409,10 +408,10 @@ func ldpe(f *obj.Biobuf, pkg string, length int64, pn string) {
 		s.Size = 4
 		s.Outer = sect.sym
 		if sect.sym.Type == obj.STEXT {
-			if s.External != 0 && s.Dupok == 0 {
+			if s.External() && !s.Dupok() {
 				Diag("%s: duplicate definition of %s", pn, s.Name)
 			}
-			s.External = 1
+			s.Flags |= LSymFlagExternal
 		}
 	}
 
@@ -427,10 +426,7 @@ func ldpe(f *obj.Biobuf, pkg string, length int64, pn string) {
 			s.Sub = listsort(s.Sub, valuecmp, listsubp)
 		}
 		if s.Type == obj.STEXT {
-			if s.Onlist != 0 {
-				log.Fatalf("symbol %s listed multiple times", s.Name)
-			}
-			s.Onlist = 1
+			s.NoteOnlist()
 			if Ctxt.Etextp != nil {
 				Ctxt.Etextp.Next = s
 			} else {
@@ -438,10 +434,7 @@ func ldpe(f *obj.Biobuf, pkg string, length int64, pn string) {
 			}
 			Ctxt.Etextp = s
 			for s = s.Sub; s != nil; s = s.Sub {
-				if s.Onlist != 0 {
-					log.Fatalf("symbol %s listed multiple times", s.Name)
-				}
-				s.Onlist = 1
+				s.NoteOnlist()
 				Ctxt.Etextp.Next = s
 				Ctxt.Etextp = s
 			}
@@ -514,7 +507,7 @@ func readpesym(peobj *PeObj, i int, y **PeSym) (err error) {
 
 		case IMAGE_SYM_CLASS_NULL, IMAGE_SYM_CLASS_STATIC, IMAGE_SYM_CLASS_LABEL:
 			s = Linklookup(Ctxt, name, Ctxt.Version)
-			s.Dupok = 1
+			s.Flags |= LSymFlagDupok
 
 		default:
 			err = fmt.Errorf("%s: invalid symbol binding %d", sym.name, sym.sclass)

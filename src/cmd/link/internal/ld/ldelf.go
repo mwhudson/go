@@ -5,7 +5,6 @@ import (
 	"cmd/internal/obj"
 	"encoding/binary"
 	"fmt"
-	"log"
 	"sort"
 	"strings"
 )
@@ -635,7 +634,7 @@ func ldelf(f *obj.Biobuf, pkg string, length int64, pn string) {
 
 		s = sym.sym
 		if s.Outer != nil {
-			if s.Dupok != 0 {
+			if s.Dupok() {
 				continue
 			}
 			Exitf("%s: duplicate symbol reference: %s in both %s and %s", pn, s.Name, s.Outer.Name, sect.sym.Name)
@@ -651,10 +650,10 @@ func ldelf(f *obj.Biobuf, pkg string, length int64, pn string) {
 		s.Size = int64(sym.size)
 		s.Outer = sect.sym
 		if sect.sym.Type == obj.STEXT {
-			if s.External != 0 && s.Dupok == 0 {
+			if s.External() && !s.Dupok() {
 				Diag("%s: duplicate definition of %s", pn, s.Name)
 			}
-			s.External = 1
+			s.Flags |= LSymFlagExternal
 		}
 
 		if elfobj.machine == ElfMachPower64 {
@@ -678,10 +677,7 @@ func ldelf(f *obj.Biobuf, pkg string, length int64, pn string) {
 			s.Sub = listsort(s.Sub, valuecmp, listsubp)
 		}
 		if s.Type == obj.STEXT {
-			if s.Onlist != 0 {
-				log.Fatalf("symbol %s listed multiple times", s.Name)
-			}
-			s.Onlist = 1
+			s.NoteOnlist()
 			if Ctxt.Etextp != nil {
 				Ctxt.Etextp.Next = s
 			} else {
@@ -689,10 +685,7 @@ func ldelf(f *obj.Biobuf, pkg string, length int64, pn string) {
 			}
 			Ctxt.Etextp = s
 			for s = s.Sub; s != nil; s = s.Sub {
-				if s.Onlist != 0 {
-					log.Fatalf("symbol %s listed multiple times", s.Name)
-				}
-				s.Onlist = 1
+				s.NoteOnlist()
 				Ctxt.Etextp.Next = s
 				Ctxt.Etextp = s
 			}
@@ -894,7 +887,7 @@ func readelfsym(elfobj *ElfObj, i int, sym *ElfSym, needSym int) (err error) {
 				// comment #5 for details.
 				if s != nil && sym.other == 2 {
 					s.Type |= obj.SHIDDEN
-					s.Dupok = 1
+					s.Flags |= LSymFlagDupok
 				}
 			}
 

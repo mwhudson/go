@@ -213,7 +213,7 @@ func pclntab() {
 	funcdata_bytes := int64(0)
 	ftab := Linklookup(Ctxt, "runtime.pclntab", 0)
 	ftab.Type = obj.SPCLNTAB
-	ftab.Reachable = true
+	ftab.Flags |= LSymFlagReachable
 
 	// See golang.org/s/go12symtab for the format. Briefly:
 	//	8-byte header
@@ -379,8 +379,8 @@ const (
 func findfunctab() {
 	t := Linklookup(Ctxt, "runtime.findfunctab", 0)
 	t.Type = obj.SRODATA
-	t.Reachable = true
-	t.Local = true
+	t.Flags |= LSymFlagReachable
+	t.Flags |= LSymFlagLocal
 
 	// find min and max address
 	min := Ctxt.Textp.Value

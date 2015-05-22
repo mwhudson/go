@@ -104,7 +104,7 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 		if (s.Type == obj.SDATA || s.Type == obj.SBSS || s.Type == obj.SNOPTRBSS) && len(s.P) == 0 && len(s.R) == 0 {
 			goto overwrite
 		}
-		if s.Type != obj.SBSS && s.Type != obj.SNOPTRBSS && dupok == 0 && s.Dupok == 0 {
+		if s.Type != obj.SBSS && s.Type != obj.SNOPTRBSS && dupok == 0 && !s.Dupok() {
 			log.Fatalf("duplicate symbol %s (types %d and %d) in %s and %s", s.Name, s.Type, t, s.File, pn)
 		}
 		if len(s.P) > 0 {
@@ -116,7 +116,9 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 
 overwrite:
 	s.File = pkg
-	s.Dupok = uint8(dupok)
+	if dupok != 0 {
+		s.Flags |= LSymFlagDupok
+	}
 	if t == obj.SXREF {
 		log.Fatalf("bad sxref")
 	}
@@ -130,7 +132,9 @@ overwrite:
 	if s.Size < int64(size) {
 		s.Size = int64(size)
 	}
-	s.Local = local
+	if local {
+		s.Flags |= LSymFlagLocal
+	}
 	if typ != nil { // if bss sym defined multiple times, take type from any one def
 		s.Gotype = typ
 	}
@@ -166,9 +170,11 @@ overwrite:
 	if s.Type == obj.STEXT {
 		s.Args = int32(rdint(f))
 		s.Locals = int32(rdint(f))
-		s.Nosplit = uint8(rdint(f))
+		if rdint(f) != 0 {
+			s.Flags |= LSymFlagNosplit
+		}
 		v := int(rdint(f))
-		s.Leaf = uint8(v & 1)
+		//s.Leaf = uint8(v & 1)
 		s.Cfunc = uint8(v & 2)
 		n := int(rdint(f))
 		var a *Auto
@@ -211,10 +217,7 @@ overwrite:
 		}
 
 		if dup == nil {
-			if s.Onlist != 0 {
-				log.Fatalf("symbol %s listed multiple times", s.Name)
-			}
-			s.Onlist = 1
+			s.NoteOnlist()
 			if ctxt.Etextp != nil {
 				ctxt.Etextp.Next = s
 			} else {
@@ -232,13 +235,13 @@ overwrite:
 		if s.Type != 0 {
 			fmt.Fprintf(ctxt.Bso, "t=%d ", s.Type)
 		}
-		if s.Dupok != 0 {
+		if s.Dupok() {
 			fmt.Fprintf(ctxt.Bso, "dupok ")
 		}
 		if s.Cfunc != 0 {
 			fmt.Fprintf(ctxt.Bso, "cfunc ")
 		}
-		if s.Nosplit != 0 {
+		if s.Nosplit() {
 			fmt.Fprintf(ctxt.Bso, "nosplit ")
 		}
 		fmt.Fprintf(ctxt.Bso, "size=%d value=%d", int64(s.Size), int64(s.Value))
@@ -335,20 +338,20 @@ func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
 			x, _ := strconv.ParseUint(s.Name[5:], 16, 32)
 			i32 := int32(x)
 			s.Type = obj.SRODATA
-			s.Local = true
+			s.Flags |= LSymFlagLocal
 			Adduint32(ctxt, s, uint32(i32))
-			s.Reachable = false
+			s.Flags &= ^LSymFlagReachable
 		} else if strings.HasPrefix(s.Name, "$f64.") || strings.HasPrefix(s.Name, "$i64.") {
 			x, _ := strconv.ParseUint(s.Name[5:], 16, 64)
 			i64 := int64(x)
 			s.Type = obj.SRODATA
-			s.Local = true
+			s.Flags |= LSymFlagLocal
 			Adduint64(ctxt, s, uint64(i64))
-			s.Reachable = false
+			s.Flags &= ^LSymFlagReachable
 		}
 	}
 	if v == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
-		s.Local = true
+		s.Flags |= LSymFlagLocal
 	}
 	return s
 }
