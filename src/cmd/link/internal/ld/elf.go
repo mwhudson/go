@@ -1291,7 +1291,7 @@ func elfdynhash() {
 	var b int
 	var hc uint32
 	var name string
-	for sy := Ctxt.Allsym; sy != nil; sy = sy.Allsym {
+	for _, sy := range Ctxt.Allsym {
 		if sy.Dynid <= 0 {
 			continue
 		}
