@@ -983,15 +983,34 @@ func hostlink() {
 	argv = append(argv, fmt.Sprintf("%s/go.o", tmpdir))
 
 	if Linkshared {
-		for _, shlib := range Ctxt.Shlibs {
-			dir, base := filepath.Split(shlib.Path)
-			argv = append(argv, "-L"+dir)
-			if !rpath.set {
-				argv = append(argv, "-Wl,-rpath="+dir)
+		seen := make(map[string]bool)
+		addshlib := func(path string) {
+			dir, base := filepath.Split(path)
+			if !seen[dir] {
+				argv = append(argv, "-L"+dir)
+				if !rpath.set {
+					argv = append(argv, "-Wl,-rpath="+dir)
+				}
+				seen[dir] = true
 			}
 			base = strings.TrimSuffix(base, ".so")
 			base = strings.TrimPrefix(base, "lib")
-			argv = append(argv, "-l"+base)
+			if !seen[base] {
+				argv = append(argv, "-l"+base)
+				seen[base] = true
+			}
+		}
+		for _, shlib := range Ctxt.Shlibs {
+			addshlib(shlib.Path)
+			for _, dep := range shlib.Deps {
+				if dep == "" {
+					continue
+				}
+				libpath := findshlib(dep)
+				if libpath != "" {
+					addshlib(libpath)
+				}
+			}
 		}
 	}
 
@@ -1211,18 +1230,20 @@ func readnote(f *elf.File, name []byte, typ int32) ([]byte, error) {
 	return nil, nil
 }
 
-func ldshlibsyms(shlib string) {
-	found := false
-	libpath := ""
+func findshlib(shlib string) string {
 	for _, libdir := range Ctxt.Libdir {
-		libpath = filepath.Join(libdir, shlib)
+		libpath := filepath.Join(libdir, shlib)
 		if _, err := os.Stat(libpath); err == nil {
-			found = true
-			break
+			return libpath
 		}
 	}
-	if !found {
-		Diag("cannot find shared library: %s", shlib)
+	Diag("cannot find shared library: %s", shlib)
+	return ""
+}
+
+func ldshlibsyms(shlib string) {
+	libpath := findshlib(shlib)
+	if libpath == "" {
 		return
 	}
 	for _, processedlib := range Ctxt.Shlibs {
@@ -1248,6 +1269,13 @@ func ldshlibsyms(shlib string) {
 		return
 	}
 
+	depsbytes, err := readnote(f, ELF_NOTE_GO_NAME, ELF_NOTE_GODEPS_TAG)
+	if err != nil {
+		Diag("cannot read dep list from shared library %s: %v", libpath, err)
+		return
+	}
+	deps := strings.Split(string(depsbytes), "\n")
+
 	syms, err := f.Symbols()
 	if err != nil {
 		Diag("cannot read symbols from shared library: %s", libpath)
@@ -1269,12 +1297,6 @@ func ldshlibsyms(shlib string) {
 		if elf.ST_TYPE(s.Info) == elf.STT_NOTYPE || elf.ST_TYPE(s.Info) == elf.STT_SECTION {
 			continue
 		}
-		if s.Section == elf.SHN_UNDEF {
-			continue
-		}
-		if strings.HasPrefix(s.Name, "_") {
-			continue
-		}
 		if strings.HasPrefix(s.Name, "runtime.gcbits.") {
 			gcmasks[s.Value] = readelfsymboldata(f, &s)
 		}
@@ -1282,7 +1304,7 @@ func ldshlibsyms(shlib string) {
 			continue
 		}
 		lsym := Linklookup(Ctxt, s.Name, 0)
-		if lsym.Type != 0 && lsym.Dupok == 0 {
+		if lsym.Type != 0 && lsym.Type != obj.SDYNIMPORT && lsym.Dupok == 0 {
 			Diag(
 				"Found duplicate symbol %s reading from %s, first found in %s",
 				s.Name, shlib, lsym.File)
@@ -1339,7 +1361,7 @@ func ldshlibsyms(shlib string) {
 		Ctxt.Etextp = last
 	}
 
-	Ctxt.Shlibs = append(Ctxt.Shlibs, Shlib{Path: libpath, Hash: hash})
+	Ctxt.Shlibs = append(Ctxt.Shlibs, Shlib{Path: libpath, Hash: hash, Deps: deps})
 }
 
 func mywhatsys() {
