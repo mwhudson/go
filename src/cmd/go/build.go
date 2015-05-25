@@ -736,6 +736,7 @@ func readpkglist(shlibpath string) []*Package {
 	var stk importStack
 	for scanner.Scan() {
 		t := scanner.Text()
+		// TODO(mwhudson): check for errors here.
 		pkgs = append(pkgs, loadPackage(t, &stk))
 	}
 	return pkgs
