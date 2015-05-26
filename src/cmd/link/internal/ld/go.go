@@ -573,8 +573,9 @@ func Adddynsym(ctxt *Link, s *LSym) {
 	}
 }
 
-var markq []*LSym
-var reachparent map[*LSym]*LSym
+var markq *LSym
+
+var emarkq *LSym
 
 func mark1(s *LSym, parent *LSym) {
 	if s == nil || s.Reachable {
@@ -584,10 +585,13 @@ func mark1(s *LSym, parent *LSym) {
 		return
 	}
 	s.Reachable = true
-	if reachparent != nil {
-		reachparent[s] = parent
+	s.Reachparent = parent
+	if markq == nil {
+		markq = s
+	} else {
+		emarkq.Queue = s
 	}
-	markq = append(markq, s)
+	emarkq = s
 }
 
 func mark(s *LSym) {
@@ -598,8 +602,7 @@ func markflood() {
 	var a *Auto
 	var i int
 
-	for j := 0; j < len(markq); j++ {
-		s := markq[j]
+	for s := markq; s != nil; s = s.Queue {
 		if s.Type == obj.STEXT {
 			if Debug['v'] > 1 {
 				fmt.Fprintf(&Bso, "marktext %s\n", s.Name)
@@ -622,7 +625,6 @@ func markflood() {
 		mark1(s.Sub, s)
 		mark1(s.Outer, s)
 	}
-	markq = nil
 }
 
 var markextra = []string{
@@ -650,14 +652,10 @@ func deadcode() {
 		fmt.Fprintf(&Bso, "%5.2f deadcode\n", obj.Cputime())
 	}
 
-	if tracksym != "" {
-		reachparent = make(map[*LSym]*LSym)
-	}
-
 	if Buildmode == BuildmodeShared {
 		// Mark all symbols as reachable when building a
 		// shared library.
-		for _, s := range Ctxt.Allsym {
+		for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 			if s.Type != 0 {
 				mark(s)
 			}
@@ -680,7 +678,7 @@ func deadcode() {
 		markflood()
 
 		// keep each beginning with 'typelink.' if the symbol it points at is being kept.
-		for _, s := range Ctxt.Allsym {
+		for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 			if strings.HasPrefix(s.Name, "go.typelink.") {
 				s.Reachable = len(s.R) == 1 && s.R[0].Sym.Reachable
 			}
@@ -712,7 +710,7 @@ func deadcode() {
 		}
 	}
 
-	for _, s := range Ctxt.Allsym {
+	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 		if strings.HasPrefix(s.Name, "go.weak.") {
 			s.Special = 1 // do not lay out in data segment
 			s.Reachable = true
@@ -720,19 +718,16 @@ func deadcode() {
 		}
 	}
 
-	if tracksym == "" {
-		return
-	}
 	// record field tracking references
 	var buf bytes.Buffer
 	var p *LSym
-	for _, s := range Ctxt.Allsym {
+	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 		if strings.HasPrefix(s.Name, "go.track.") {
 			s.Special = 1 // do not lay out in data segment
 			s.Hide = 1
 			if s.Reachable {
 				buf.WriteString(s.Name[9:])
-				for p = reachparent[s]; p != nil; p = reachparent[p] {
+				for p = s.Reachparent; p != nil; p = p.Reachparent {
 					buf.WriteString("\t")
 					buf.WriteString(p.Name)
 				}
@@ -743,7 +738,10 @@ func deadcode() {
 			s.Value = 0
 		}
 	}
-	reachparent = nil
+
+	if tracksym == "" {
+		return
+	}
 	s := Linklookup(Ctxt, tracksym, 0)
 	if !s.Reachable {
 		return
@@ -756,7 +754,7 @@ func doweak() {
 
 	// resolve weak references only if
 	// target symbol will be in binary anyway.
-	for _, s := range Ctxt.Allsym {
+	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 		if strings.HasPrefix(s.Name, "go.weak.") {
 			t = Linkrlookup(Ctxt, s.Name[8:], int(s.Version))
 			if t != nil && t.Type != 0 && t.Reachable {
