@@ -34,8 +34,6 @@ type Node struct {
 
 	Sym *Sym // various
 
-	Opt interface{} // for optimization passes
-
 	// OLITERAL
 	Val Val
 

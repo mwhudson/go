@@ -259,7 +259,7 @@ func Jconv(n *Node, flag int) string {
 		fmt.Fprintf(&buf, " esc(%d)", n.Esc)
 	}
 
-	if e, ok := n.Opt.(*NodeEscState); ok && e.Escloopdepth != 0 {
+	if e, ok := n.Val.U.(*NodeEscState); ok && e.Escloopdepth != 0 {
 		fmt.Fprintf(&buf, " ld(%d)", e.Escloopdepth)
 	}
 
@@ -1538,7 +1538,7 @@ func nodedump(n *Node, flag int) string {
 	}
 
 	if n.Sym != nil && n.Op != ONAME {
-		fmt.Fprintf(&buf, " %v G%d", n.Sym, n.Name.Vargen)
+		fmt.Fprintf(&buf, " %v", n.Sym)
 	}
 
 	if n.Type != nil {

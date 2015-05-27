@@ -318,14 +318,14 @@ type NodeEscState struct {
 }
 
 func (e *EscState) nodeEscState(n *Node) *NodeEscState {
-	if nE, ok := n.Opt.(*NodeEscState); ok {
+	if nE, ok := n.Val.U.(*NodeEscState); ok {
 		return nE
 	}
-	if n.Opt != nil {
-		Fatal("nodeEscState: opt in use (%T)", n.Opt)
+	if n.Val.U != nil {
+		Fatal("nodeEscState: opt in use (%T)", n.Val.U)
 	}
 	nE := new(NodeEscState)
-	n.Opt = nE
+	n.Val.U = nE
 	e.opts = append(e.opts, n)
 	return nE
 }
@@ -458,7 +458,7 @@ func escAnalyze(all *NodeList, recursive bool) {
 		}
 	}
 	for _, x := range e.opts {
-		x.Opt = nil
+		x.Val.U = nil
 	}
 }
 
@@ -600,7 +600,6 @@ func esc(e *EscState, n *Node, up *Node) {
 
 	// Big stuff escapes unconditionally
 	// "Big" conditions that were scattered around in walk have been gathered here
-	nE := e.nodeEscState(n)
 	if n.Esc != EscHeap && n.Type != nil && (n.Type.Width > MaxStackVarSize ||
 		n.Op == ONEW && n.Type.Type.Width >= 1<<16 ||
 		n.Op == OMAKESLICE && !isSmallMakeSlice(n)) {
@@ -657,7 +656,7 @@ func esc(e *EscState, n *Node, up *Node) {
 			if Isfixedarray(n.Type) {
 				escassign(e, n.List.Next.N, n.Right)
 			} else {
-				escassign(e, n.List.Next.N, e.addDereference(n.Right))
+				escassignDereference(e, n.List.Next.N, n.Right)
 			}
 		}
 
@@ -788,17 +787,18 @@ func esc(e *EscState, n *Node, up *Node) {
 		} else {
 			// append(slice1, slice2...) -- slice2 itself does not escape, but contents do.
 			slice2 := n.List.Next.N
-			escassign(e, &e.theSink, e.addDereference(slice2)) // lose track of assign of dereference
+			escassignDereference(e, &e.theSink, slice2) // lose track of assign of dereference
 			if Debug['m'] > 2 {
 				Warnl(int(n.Lineno), "%v special treatment of append(slice1, slice2...) %v", curfnSym(n), Nconv(n, obj.FmtShort))
 			}
 		}
-		escassign(e, &e.theSink, e.addDereference(n.List.N)) // The original elements are now leaked, too
+		escassignDereference(e, &e.theSink, n.List.N) // The original elements are now leaked, too
 
 	case OCONV, OCONVNOP:
 		escassign(e, n, n.Left)
 
 	case OCONVIFACE:
+		nE := e.nodeEscState(n)
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
 		nE.Escloopdepth = e.loopdepth
@@ -809,6 +809,7 @@ func esc(e *EscState, n *Node, up *Node) {
 			// Slice itself is not leaked until proven otherwise
 			n.Esc = EscNone
 			e.noesc = list(e.noesc, n)
+			nE := e.nodeEscState(n)
 			nE.Escloopdepth = e.loopdepth
 		}
 
@@ -824,6 +825,7 @@ func esc(e *EscState, n *Node, up *Node) {
 		}
 
 	case OPTRLIT:
+		nE := e.nodeEscState(n)
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
 		nE.Escloopdepth = e.loopdepth
@@ -832,6 +834,7 @@ func esc(e *EscState, n *Node, up *Node) {
 		escassign(e, n, n.Left)
 
 	case OCALLPART:
+		nE := e.nodeEscState(n)
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
 		nE.Escloopdepth = e.loopdepth
@@ -840,6 +843,7 @@ func esc(e *EscState, n *Node, up *Node) {
 		escassign(e, &e.theSink, n.Left)
 
 	case OMAPLIT:
+		nE := e.nodeEscState(n)
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
 		nE.Escloopdepth = e.loopdepth
@@ -880,12 +884,14 @@ func esc(e *EscState, n *Node, up *Node) {
 		OSTRARRAYRUNE,
 		OSTRARRAYBYTE,
 		ORUNESTR:
+		nE := e.nodeEscState(n)
 		nE.Escloopdepth = e.loopdepth
 
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
 
 	case OADDSTR:
+		nE := e.nodeEscState(n)
 		nE.Escloopdepth = e.loopdepth
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
@@ -893,6 +899,7 @@ func esc(e *EscState, n *Node, up *Node) {
 	// Arguments of OADDSTR do not escape.
 
 	case OADDR:
+		nE := e.nodeEscState(n)
 		n.Esc = EscNone // until proven otherwise
 		e.noesc = list(e.noesc, n)
 
@@ -1194,6 +1201,9 @@ func describeEscape(em uint16) string {
 // calls arguments, where the flow is encoded in "note".
 func escassignfromtag(e *EscState, note *string, dsts *NodeList, src *Node) uint16 {
 	em := parsetag(note)
+	if src.Op == OLITERAL {
+		return em
+	}
 
 	if Debug['m'] > 2 {
 		fmt.Printf("%v::assignfromtag:: src=%v, em=%s\n",
@@ -1239,6 +1249,13 @@ func escassignfromtag(e *EscState, note *string, dsts *NodeList, src *Node) uint
 		Fatal("corrupt esc tag %q or messed up escretval list\n", note)
 	}
 	return em0
+}
+
+func escassignDereference(e *EscState, dst *Node, src *Node) {
+	if src.Op == OLITERAL {
+		return
+	}
+	escassign(e, dst, e.addDereference(src))
 }
 
 // e.addDereference constructs a suitable OIND note applied to src.
@@ -1581,6 +1598,9 @@ func funcOutputAndInput(dst, src *Node) bool {
 }
 
 func escwalk(e *EscState, level Level, dst *Node, src *Node) {
+	if src.Op == OLITERAL {
+		return
+	}
 	srcE := e.nodeEscState(src)
 	if srcE.Walkgen == e.walkgen {
 		// Esclevels are vectors, do not compare as integers,
