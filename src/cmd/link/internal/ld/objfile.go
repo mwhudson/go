@@ -53,6 +53,9 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 			break
 		}
 		v := int(rdint(f))
+		if v != 0 {
+			v = ctxt.Version
+		}
 		symtable = append(symtable, Linklookup(ctxt, expandpkg(s, pkg), v))
 	}
 	symtableEnd := obj.Boffset(f)
@@ -102,15 +105,7 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 		log.Fatalf("readsym out of sync")
 	}
 	t := int(rdint(f))
-	name := expandpkg(rdstring(f), pkg)
-	v := int(rdint(f))
-	if v != 0 && v != 1 {
-		log.Fatalf("invalid symbol version %d", v)
-	}
 	ind := rdint(f)
-	if name != symtable[ind].Name || int16(v) != symtable[ind].Version {
-		log.Fatal(name, symtable[ind].Name, v, symtable[ind].Version)
-	}
 	flags := int(rdint(f))
 	dupok := flags & 1
 	local := false
@@ -122,9 +117,6 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 	data := rddata(f)
 	nreloc := int(rdint(f))
 
-	if v != 0 {
-		v = ctxt.Version
-	}
 	s := symtable[ind]
 	var dup *LSym
 	if s.Type != 0 && s.Type != obj.SXREF {
@@ -158,7 +150,7 @@ overwrite:
 		log.Fatalf("bad sxref")
 	}
 	if t == 0 {
-		log.Fatalf("missing type for %s in %s", name, pn)
+		log.Fatalf("missing type for %s in %s", s.Name, pn)
 	}
 	if t == obj.SBSS && (s.Type == obj.SRODATA || s.Type == obj.SNOPTRBSS) {
 		t = int(s.Type)
@@ -347,32 +339,17 @@ func rddata(f *obj.Biobuf) []byte {
 	return p
 }
 
-var symbuf []byte
-
 func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
-	n := int(rdint(f))
-	if n == 0 {
-		rdint(f)
+	ind := int(rdint(f))
+	if ind == -1 {
 		return nil
 	}
-
-	if len(symbuf) < n {
-		symbuf = make([]byte, n)
-	}
-	obj.Bread(f, symbuf[:n])
-	p := string(symbuf[:n])
-	v := int(rdint(f))
-	ind := rdint(f)
-	if expandpkg(p, pkg) != symtable[ind].Name || int16(v) != symtable[ind].Version {
-		panic("rdsym")
-	}
-
-	if v != 0 {
-		v = ctxt.Version
+	if ind < 0 || ind >= len(symtable) {
+		fmt.Println(ind)
 	}
 	s := symtable[ind]
 
-	if v == 0 && s.Name[0] == '$' && s.Type == 0 {
+	if s.Version == 0 && s.Name[0] == '$' && s.Type == 0 {
 		if strings.HasPrefix(s.Name, "$f32.") {
 			x, _ := strconv.ParseUint(s.Name[5:], 16, 32)
 			i32 := int32(x)
@@ -389,7 +366,7 @@ func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
 			s.Reachable = false
 		}
 	}
-	if v == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
+	if s.Version == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
 		s.Local = true
 	}
 	return s

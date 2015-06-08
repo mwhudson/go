@@ -428,8 +428,6 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 
 	Bputc(b, 0xfe)
 	wrint(b, int64(s.Type))
-	wrstring(b, s.Name)
-	wrint(b, int64(s.Version))
 	wrint(b, int64(symindex(ctxt, s)))
 	flags := int64(s.Dupok)
 	if s.Local {
@@ -543,24 +541,18 @@ func symindex(ctxt *Link, s *LSym) int {
 
 func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
-		wrint(b, 0)
-		wrint(b, 0)
+		wrint(b, -1)
 		return
 	}
 
-	wrpath(ctxt, b, s.Name)
-	wrint(b, int64(s.Version))
 	wrint(b, int64(symindex(ctxt, s)))
 }
 
 func wrsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
-		wrint(b, 0)
-		wrint(b, 0)
+		wrint(b, -1)
 		return
 	}
 
-	wrstring(b, s.Name)
-	wrint(b, int64(s.Version))
 	wrint(b, int64(symindex(ctxt, s)))
 }
