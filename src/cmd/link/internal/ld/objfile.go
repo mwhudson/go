@@ -18,11 +18,6 @@ const (
 	endmagic   = "\xff\xffgo13ld"
 )
 
-type LSymFake struct {
-	name    string
-	version int64
-}
-
 var symtable []*LSym
 
 func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {

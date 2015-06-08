@@ -536,6 +536,7 @@ func symindex(ctxt *Link, s *LSym) int64 {
 }
 
 func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
+	// TODO(mwhudson): this cannot be right!
 	if s == nil {
 		wrint(b, -1)
 		return
