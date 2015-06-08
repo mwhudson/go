@@ -299,8 +299,6 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 		linkpcln(ctxt, s)
 	}
 
-	ctxt.symindex = make(map[*LSym]int)
-
 	// Emit header.
 	Bputc(b, 0)
 
@@ -428,7 +426,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 
 	Bputc(b, 0xfe)
 	wrint(b, int64(s.Type))
-	wrint(b, int64(symindex(ctxt, s)))
+	wrint(b, symindex(ctxt, s))
 	flags := int64(s.Dupok)
 	if s.Local {
 		flags |= 2
@@ -529,14 +527,12 @@ func wrdata(b *Biobuf, v []byte) {
 	b.Write(v)
 }
 
-func symindex(ctxt *Link, s *LSym) int {
-	if index, ok := ctxt.symindex[s]; ok {
-		return index
+func symindex(ctxt *Link, s *LSym) int64 {
+	if s.index == 0 {
+		s.index = len(ctxt.orderedsyms) + 1
+		ctxt.orderedsyms = append(ctxt.orderedsyms, s)
 	}
-	index := len(ctxt.symindex)
-	ctxt.symindex[s] = index
-	ctxt.orderedsyms = append(ctxt.orderedsyms, s)
-	return index
+	return int64(s.index - 1)
 }
 
 func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
@@ -545,7 +541,7 @@ func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 		return
 	}
 
-	wrint(b, int64(symindex(ctxt, s)))
+	wrint(b, symindex(ctxt, s))
 }
 
 func wrsym(ctxt *Link, b *Biobuf, s *LSym) {
@@ -554,5 +550,5 @@ func wrsym(ctxt *Link, b *Biobuf, s *LSym) {
 		return
 	}
 
-	wrint(b, int64(symindex(ctxt, s)))
+	wrint(b, symindex(ctxt, s))
 }

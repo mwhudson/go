@@ -314,6 +314,7 @@ type LSym struct {
 	Pcln   *Pcln
 	P      []byte
 	R      []Reloc
+	index  int
 }
 
 type Pcln struct {
@@ -507,7 +508,6 @@ type Link struct {
 	Version            int
 	Textp              *LSym
 	Etextp             *LSym
-	symindex           map[*LSym]int
 	orderedsyms        []*LSym
 }
 
