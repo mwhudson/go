@@ -39,7 +39,6 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	foo := obj.Boffset(f)
 
 	obj.Bseek(f, int64(symtableIndex)+symtableIndexIndex, 0)
-	fmt.Println(pn, int64(symtableIndex)+symtableIndexIndex, rdstring(f))
 	for {
 		s := rdstring(f)
 		if s == "" {
