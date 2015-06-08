@@ -30,23 +30,24 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
+	symtableIndexIndex := obj.Boffset(f)
 	symtableIndex := obj.Bgetc(f)
 	symtableIndex |= obj.Bgetc(f) << 8
 	symtableIndex |= obj.Bgetc(f) << 16
 	symtableIndex |= obj.Bgetc(f) << 24
-	fmt.Println(pn, symtableIndex)
 
 	foo := obj.Boffset(f)
 
-	obj.Bseek(f, int64(symtableIndex), 0)
+	obj.Bseek(f, int64(symtableIndex)+symtableIndexIndex, 0)
+	fmt.Println(pn, int64(symtableIndex)+symtableIndexIndex, rdstring(f))
 	for {
-		ind := rdint(f)
-		if ind < 0 {
+		s := rdstring(f)
+		if s == "" {
 			break
 		}
-		rdstring(f)
 		rdint(f)
 	}
+	symtableEnd := obj.Boffset(f)
 	obj.Bseek(f, foo, 0)
 
 	var lib string
@@ -74,15 +75,7 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	if string(buf1[:]) != "\xff\xfd" {
 		log.Fatalf("%s: invalid divider", pn)
 	}
-	for {
-		ind := rdint(f)
-		if ind < 0 {
-			break
-		}
-		rdstring(f)
-		rdint(f)
-	}
-
+	obj.Bseek(f, symtableEnd, 0)
 	buf = [8]uint8{}
 	obj.Bread(f, buf[:])
 	if string(buf[:]) != endmagic {
@@ -106,6 +99,7 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 	if v != 0 && v != 1 {
 		log.Fatalf("invalid symbol version %d", v)
 	}
+	rdint(f)
 	flags := int(rdint(f))
 	dupok := flags & 1
 	local := false
