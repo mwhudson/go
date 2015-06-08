@@ -27,9 +27,13 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
 	}
 	c := obj.Bgetc(f)
-	if c != 1 {
+	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
+	obj.Bgetc(f)
+	obj.Bgetc(f)
+	obj.Bgetc(f)
+	obj.Bgetc(f)
 
 	var lib string
 	for {
@@ -49,6 +53,21 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 			break
 		}
 		readsym(ctxt, f, pkg, pn)
+	}
+
+	buf1 := [2]uint8{}
+	obj.Bread(f, buf1[:])
+	if string(buf1[:]) != "\xff\xfd" {
+		log.Fatalf("%s: invalid divider", pn)
+	}
+
+	for {
+		ind := rdint(f)
+		if ind < 0 {
+			break
+		}
+		rdstring(f)
+		rdint(f)
 	}
 
 	buf = [8]uint8{}
@@ -325,6 +344,8 @@ func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
 	obj.Bread(f, symbuf[:n])
 	p := string(symbuf[:n])
 	v := int(rdint(f))
+	rdint(f)
+
 	if v != 0 {
 		v = ctxt.Version
 	}

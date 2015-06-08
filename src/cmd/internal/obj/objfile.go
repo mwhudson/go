@@ -21,6 +21,7 @@
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
 //	- byte 0xff (marks end of sequence)
+//	- divider: "\xff\xfd"
 //	- magic footer: "\xff\xffgo13ld"
 //
 // All integers are stored in a zigzag varint format.
@@ -298,12 +299,21 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 		linkpcln(ctxt, s)
 	}
 
+	ctxt.symindex = make(map[*LSym]int)
+
 	// Emit header.
 	Bputc(b, 0)
 
 	Bputc(b, 0)
 	fmt.Fprintf(b, "go13ld")
-	Bputc(b, 1) // version
+	Bputc(b, 2) // version
+
+	// symtableIndexIndex := Boffset(b)
+
+	Bputc(b, 0)
+	Bputc(b, 0)
+	Bputc(b, 0)
+	Bputc(b, 0)
 
 	// Emit autolib.
 	for _, pkg := range ctxt.Imports {
@@ -319,11 +329,33 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 		writesym(ctxt, b, s)
 	}
 
+	// Emit divider.
+	Bputc(b, 0xff)
+	Bputc(b, 0xfd)
+
+	// symtableIndex := Boffset(b)
+
+	for ind, s := range ctxt.orderedsyms {
+		wrint(b, int64(ind))
+		wrstring(b, s.Name)
+		wrint(b, int64(s.Version))
+	}
+	wrint(b, -1)
+
 	// Emit footer.
 	Bputc(b, 0xff)
-
 	Bputc(b, 0xff)
 	fmt.Fprintf(b, "go13ld")
+
+	// end := Boffset(b)
+
+	// Bseek(b, symtableIndexIndex, 0)
+	// Bputc(b, uint8((symtableIndex>>0)&0xff))
+	// Bputc(b, uint8((symtableIndex>>8)&0xff))
+	// Bputc(b, uint8((symtableIndex>>16)&0xff))
+	// Bputc(b, uint8((symtableIndex>>24)&0xff))
+
+	// Bseek(b, end, 0)
 }
 
 func writesym(ctxt *Link, b *Biobuf, s *LSym) {
@@ -406,7 +438,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 	}
 	wrint(b, flags)
 	wrint(b, s.Size)
-	wrsym(b, s.Gotype)
+	wrsym(ctxt, b, s.Gotype)
 	wrdata(b, s.P)
 
 	wrint(b, int64(len(s.R)))
@@ -418,8 +450,8 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		wrint(b, int64(r.Type))
 		wrint(b, r.Add)
 		wrint(b, 0) // Xadd, ignored
-		wrsym(b, r.Sym)
-		wrsym(b, nil) // Xsym, ignored
+		wrsym(ctxt, b, r.Sym)
+		wrsym(ctxt, b, nil) // Xsym, ignored
 	}
 
 	if s.Type == STEXT {
@@ -433,7 +465,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		}
 		wrint(b, int64(n))
 		for a := s.Autom; a != nil; a = a.Link {
-			wrsym(b, a.Asym)
+			wrsym(ctxt, b, a.Asym)
 			wrint(b, int64(a.Aoffset))
 			if a.Name == NAME_AUTO {
 				wrint(b, A_AUTO)
@@ -442,7 +474,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 			} else {
 				log.Fatalf("%s: invalid local variable type %d", s.Name, a.Name)
 			}
-			wrsym(b, a.Gotype)
+			wrsym(ctxt, b, a.Gotype)
 		}
 
 		pc := s.Pcln
@@ -455,7 +487,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		}
 		wrint(b, int64(len(pc.Funcdataoff)))
 		for i := 0; i < len(pc.Funcdataoff); i++ {
-			wrsym(b, pc.Funcdata[i])
+			wrsym(ctxt, b, pc.Funcdata[i])
 		}
 		for i := 0; i < len(pc.Funcdataoff); i++ {
 			wrint(b, pc.Funcdataoff[i])
@@ -500,6 +532,16 @@ func wrdata(b *Biobuf, v []byte) {
 	b.Write(v)
 }
 
+func symindex(ctxt *Link, s *LSym) int {
+	if index, ok := ctxt.symindex[s]; ok {
+		return index
+	}
+	index := len(ctxt.symindex)
+	ctxt.symindex[s] = index
+	ctxt.orderedsyms = append(ctxt.orderedsyms, s)
+	return index
+}
+
 func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
 		wrint(b, 0)
@@ -509,9 +551,10 @@ func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 
 	wrpath(ctxt, b, s.Name)
 	wrint(b, int64(s.Version))
+	wrint(b, int64(symindex(ctxt, s)))
 }
 
-func wrsym(b *Biobuf, s *LSym) {
+func wrsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
 		wrint(b, 0)
 		wrint(b, 0)
@@ -520,4 +563,5 @@ func wrsym(b *Biobuf, s *LSym) {
 
 	wrstring(b, s.Name)
 	wrint(b, int64(s.Version))
+	wrint(b, int64(symindex(ctxt, s)))
 }

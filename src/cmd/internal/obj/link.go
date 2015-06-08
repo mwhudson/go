@@ -507,6 +507,8 @@ type Link struct {
 	Version            int
 	Textp              *LSym
 	Etextp             *LSym
+	symindex           map[*LSym]int
+	orderedsyms        []*LSym
 }
 
 type SymVer struct {

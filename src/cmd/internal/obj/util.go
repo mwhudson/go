@@ -74,7 +74,7 @@ func Bseek(b *Biobuf, offset int64, whence int) int64 {
 	}
 	off, err := b.f.Seek(offset, whence)
 	if err != nil {
-		log.Fatalf("seeking in output: %v", err)
+		log.Fatalf("seeking in output: %v %v %v", err, offset, whence)
 	}
 	if b.r != nil {
 		b.r.Reset(b.f)
