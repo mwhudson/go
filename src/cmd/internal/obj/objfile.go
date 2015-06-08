@@ -352,6 +352,16 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	Bputc(b, uint8(((symtableIndex-symtableIndexIndex)>>24)&0xff))
 
 	Bseek(b, end, 0)
+
+	nsymbols := 0
+	nindexes := 0
+	for _, s := range ctxt.Hash {
+		nsymbols++
+		if s.index != 0 {
+			nindexes++
+		}
+	}
+	fmt.Printf("-- %d %d\n", nindexes, nsymbols)
 }
 
 func writesym(ctxt *Link, b *Biobuf, s *LSym) {
