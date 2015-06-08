@@ -18,6 +18,8 @@ const (
 	endmagic   = "\xff\xffgo13ld"
 )
 
+var symtable []*LSym
+
 func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	start := obj.Boffset(f)
 	ctxt.Version++
@@ -27,9 +29,33 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
 	}
 	c := obj.Bgetc(f)
-	if c != 1 {
+	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
+	symtableOffsetLocation := obj.Boffset(f)
+	symtableOffset := obj.Bgetc(f)
+	symtableOffset |= obj.Bgetc(f) << 8
+	symtableOffset |= obj.Bgetc(f) << 16
+	symtableOffset |= obj.Bgetc(f) << 24
+
+	// Seek further into the file to read the symbol table
+	obj.Bseek(f, int64(symtableOffset)-4, 1)
+	symtable = nil
+	for {
+		s := rdstring(f)
+		if s == "" {
+			break
+		}
+		v := int(rdint(f))
+		if v != 0 {
+			v = ctxt.Version
+		}
+		symtable = append(symtable, Linklookup(ctxt, expandpkg(s, pkg), v))
+	}
+	symtableEnd := obj.Boffset(f)
+
+	// And jump back
+	obj.Bseek(f, symtableOffsetLocation+4, 0)
 
 	var lib string
 	for {
@@ -51,6 +77,13 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 		readsym(ctxt, f, pkg, pn)
 	}
 
+	buf1 := [2]uint8{}
+	obj.Bread(f, buf1[:])
+	if string(buf1[:]) != "\xff\xfd" {
+		log.Fatalf("%s: invalid divider", pn)
+	}
+	// Don't need to read the symbol table again.
+	obj.Bseek(f, symtableEnd, 0)
 	buf = [8]uint8{}
 	obj.Bread(f, buf[:])
 	if string(buf[:]) != endmagic {
@@ -69,11 +102,7 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 		log.Fatalf("readsym out of sync")
 	}
 	t := int(rdint(f))
-	name := expandpkg(rdstring(f), pkg)
-	v := int(rdint(f))
-	if v != 0 && v != 1 {
-		log.Fatalf("invalid symbol version %d", v)
-	}
+	ind := rdint(f)
 	flags := int(rdint(f))
 	dupok := flags & 1
 	local := false
@@ -85,10 +114,7 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 	data := rddata(f)
 	nreloc := int(rdint(f))
 
-	if v != 0 {
-		v = ctxt.Version
-	}
-	s := Linklookup(ctxt, name, v)
+	s := symtable[ind]
 	var dup *LSym
 	if s.Type != 0 && s.Type != obj.SXREF {
 		if (t == obj.SDATA || t == obj.SBSS || t == obj.SNOPTRBSS) && len(data) == 0 && nreloc == 0 {
@@ -121,7 +147,7 @@ overwrite:
 		log.Fatalf("bad sxref")
 	}
 	if t == 0 {
-		log.Fatalf("missing type for %s in %s", name, pn)
+		log.Fatalf("missing type for %s in %s", s.Name, pn)
 	}
 	if t == obj.SBSS && (s.Type == obj.SRODATA || s.Type == obj.SNOPTRBSS) {
 		t = int(s.Type)
@@ -310,27 +336,14 @@ func rddata(f *obj.Biobuf) []byte {
 	return p
 }
 
-var symbuf []byte
-
 func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
-	n := int(rdint(f))
-	if n == 0 {
-		rdint(f)
+	ind := int(rdint(f))
+	if ind == -1 {
 		return nil
 	}
+	s := symtable[ind]
 
-	if len(symbuf) < n {
-		symbuf = make([]byte, n)
-	}
-	obj.Bread(f, symbuf[:n])
-	p := string(symbuf[:n])
-	v := int(rdint(f))
-	if v != 0 {
-		v = ctxt.Version
-	}
-	s := Linklookup(ctxt, expandpkg(p, pkg), v)
-
-	if v == 0 && s.Name[0] == '$' && s.Type == 0 {
+	if s.Version == 0 && s.Name[0] == '$' && s.Type == 0 {
 		if strings.HasPrefix(s.Name, "$f32.") {
 			x, _ := strconv.ParseUint(s.Name[5:], 16, 32)
 			i32 := int32(x)
@@ -347,7 +360,7 @@ func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
 			s.Reachable = false
 		}
 	}
-	if v == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
+	if s.Version == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
 		s.Local = true
 	}
 	return s
