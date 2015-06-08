@@ -30,10 +30,24 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
-	obj.Bgetc(f)
-	obj.Bgetc(f)
-	obj.Bgetc(f)
-	obj.Bgetc(f)
+	symtableIndex := obj.Bgetc(f)
+	symtableIndex |= obj.Bgetc(f) << 8
+	symtableIndex |= obj.Bgetc(f) << 16
+	symtableIndex |= obj.Bgetc(f) << 24
+	fmt.Println(pn, symtableIndex)
+
+	foo := obj.Boffset(f)
+
+	obj.Bseek(f, int64(symtableIndex), 0)
+	for {
+		ind := rdint(f)
+		if ind < 0 {
+			break
+		}
+		rdstring(f)
+		rdint(f)
+	}
+	obj.Bseek(f, foo, 0)
 
 	var lib string
 	for {
@@ -60,7 +74,6 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	if string(buf1[:]) != "\xff\xfd" {
 		log.Fatalf("%s: invalid divider", pn)
 	}
-
 	for {
 		ind := rdint(f)
 		if ind < 0 {

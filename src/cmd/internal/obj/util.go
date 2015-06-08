@@ -51,7 +51,11 @@ func Bopenr(name string) (*Biobuf, error) {
 }
 
 func Binitw(w io.Writer) *Biobuf {
-	return &Biobuf{w: bufio.NewWriter(w)}
+	r := &Biobuf{w: bufio.NewWriter(w)}
+	if f, ok := w.(*os.File); ok {
+		r.f = f
+	}
+	return r
 }
 
 func (b *Biobuf) Write(p []byte) (int, error) {

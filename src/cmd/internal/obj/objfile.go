@@ -308,7 +308,7 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	fmt.Fprintf(b, "go13ld")
 	Bputc(b, 2) // version
 
-	// symtableIndexIndex := Boffset(b)
+	symtableIndexIndex := Boffset(b)
 
 	Bputc(b, 0)
 	Bputc(b, 0)
@@ -333,7 +333,7 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	Bputc(b, 0xff)
 	Bputc(b, 0xfd)
 
-	// symtableIndex := Boffset(b)
+	symtableIndex := Boffset(b)
 
 	for ind, s := range ctxt.orderedsyms {
 		wrint(b, int64(ind))
@@ -347,15 +347,17 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	Bputc(b, 0xff)
 	fmt.Fprintf(b, "go13ld")
 
-	// end := Boffset(b)
+	end := Boffset(b)
 
-	// Bseek(b, symtableIndexIndex, 0)
-	// Bputc(b, uint8((symtableIndex>>0)&0xff))
-	// Bputc(b, uint8((symtableIndex>>8)&0xff))
-	// Bputc(b, uint8((symtableIndex>>16)&0xff))
-	// Bputc(b, uint8((symtableIndex>>24)&0xff))
+	Bseek(b, symtableIndexIndex, 0)
+	Bputc(b, uint8((symtableIndex>>0)&0xff))
+	Bputc(b, uint8((symtableIndex>>8)&0xff))
+	Bputc(b, uint8((symtableIndex>>16)&0xff))
+	Bputc(b, uint8((symtableIndex>>24)&0xff))
 
-	// Bseek(b, end, 0)
+	fmt.Println(symtableIndex)
+
+	Bseek(b, end, 0)
 }
 
 func writesym(ctxt *Link, b *Biobuf, s *LSym) {
