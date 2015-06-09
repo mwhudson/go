@@ -20,26 +20,49 @@ const (
 
 var symtable []*LSym
 
-func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
-	start := obj.Boffset(f)
+type Membuf struct {
+	data []byte
+	pos  int
+}
+
+func (b *Membuf) read(n int) []byte {
+	p := b.pos
+	b.pos += n
+	return b.data[p : p+n : p+n]
+}
+
+func (b *Membuf) readinto(buf []byte) {
+	copy(buf, b.data[b.pos:])
+	b.pos += len(buf)
+}
+
+func (b *Membuf) getc() int {
+	c := int(b.data[b.pos])
+	b.pos++
+	return c
+}
+
+func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) {
+	start := obj.Boffset(ff)
 	ctxt.Version++
-	var buf [8]uint8
-	obj.Bread(f, buf[:])
-	if string(buf[:]) != startmagic {
+	f := &Membuf{data: make([]byte, length)}
+	obj.Bread(ff, f.data)
+	buf := f.read(8)
+	if string(buf) != startmagic {
 		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
 	}
-	c := obj.Bgetc(f)
+	c := f.getc()
 	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
-	symtableOffsetLocation := obj.Boffset(f)
-	symtableOffset := obj.Bgetc(f)
-	symtableOffset |= obj.Bgetc(f) << 8
-	symtableOffset |= obj.Bgetc(f) << 16
-	symtableOffset |= obj.Bgetc(f) << 24
+	symtableOffsetLocation := f.pos
+	symtableOffset := f.getc()
+	symtableOffset |= f.getc() << 8
+	symtableOffset |= f.getc() << 16
+	symtableOffset |= f.getc() << 24
 
 	// Seek further into the file to read the symbol table
-	obj.Bseek(f, int64(symtableOffset)-4, 1)
+	f.pos += symtableOffset - 4
 	symtable = nil
 	for {
 		s := rdstring(f)
@@ -52,10 +75,10 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 		}
 		symtable = append(symtable, Linklookup(ctxt, expandpkg(s, pkg), v))
 	}
-	symtableEnd := obj.Boffset(f)
+	symtableEnd := f.pos
 
 	// And jump back
-	obj.Bseek(f, symtableOffsetLocation+4, 0)
+	f.pos = symtableOffsetLocation + 4
 
 	var lib string
 	for {
@@ -67,38 +90,31 @@ func ldobjfile(ctxt *Link, f *obj.Biobuf, pkg string, length int64, pn string) {
 	}
 
 	for {
-		c, err := f.Peek(1)
-		if err != nil {
-			log.Fatalf("%s: peeking: %v", pn, err)
-		}
-		if c[0] == 0xff {
+		c := f.data[f.pos]
+		if c == 0xff {
 			break
 		}
 		readsym(ctxt, f, pkg, pn)
 	}
 
-	buf1 := [2]uint8{}
-	obj.Bread(f, buf1[:])
-	if string(buf1[:]) != "\xff\xfd" {
+	if string(f.read(2)) != "\xff\xfd" {
 		log.Fatalf("%s: invalid divider", pn)
 	}
 	// Don't need to read the symbol table again.
-	obj.Bseek(f, symtableEnd, 0)
-	buf = [8]uint8{}
-	obj.Bread(f, buf[:])
-	if string(buf[:]) != endmagic {
+	f.pos = symtableEnd
+	if string(f.read(8)) != endmagic {
 		log.Fatalf("%s: invalid file end", pn)
 	}
 
-	if obj.Boffset(f) != start+length {
-		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(f)), int64(start+length))
+	if obj.Boffset(ff) != start+length {
+		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(ff)), int64(start+length))
 	}
 }
 
 var readsym_ndup int
 
-func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
-	if obj.Bgetc(f) != 0xfe {
+func readsym(ctxt *Link, f *Membuf, pkg string, pn string) {
+	if f.getc() != 0xfe {
 		log.Fatalf("readsym out of sync")
 	}
 	t := int(rdint(f))
@@ -304,7 +320,7 @@ overwrite:
 	}
 }
 
-func rdint(f *obj.Biobuf) int64 {
+func rdint(f *Membuf) int64 {
 	var c int
 
 	uv := uint64(0)
@@ -312,7 +328,7 @@ func rdint(f *obj.Biobuf) int64 {
 		if shift >= 64 {
 			log.Fatalf("corrupt input")
 		}
-		c = obj.Bgetc(f)
+		c = f.getc()
 		uv |= uint64(c&0x7F) << uint(shift)
 		if c&0x80 == 0 {
 			break
@@ -322,21 +338,16 @@ func rdint(f *obj.Biobuf) int64 {
 	return int64(uv>>1) ^ (int64(uint64(uv)<<63) >> 63)
 }
 
-func rdstring(f *obj.Biobuf) string {
-	n := rdint(f)
-	p := make([]byte, n)
-	obj.Bread(f, p)
-	return string(p)
+func rdstring(f *Membuf) string {
+	return string(rddata(f))
 }
 
-func rddata(f *obj.Biobuf) []byte {
+func rddata(f *Membuf) []byte {
 	n := rdint(f)
-	p := make([]byte, n)
-	obj.Bread(f, p)
-	return p
+	return f.read(int(n))
 }
 
-func rdsym(ctxt *Link, f *obj.Biobuf, pkg string) *LSym {
+func rdsym(ctxt *Link, f *Membuf, pkg string) *LSym {
 	ind := int(rdint(f))
 	if ind == -1 {
 		return nil
