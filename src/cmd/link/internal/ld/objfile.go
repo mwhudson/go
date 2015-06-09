@@ -31,11 +31,6 @@ func (b *Membuf) read(n int) []byte {
 	return b.data[p : p+n : p+n]
 }
 
-func (b *Membuf) readinto(buf []byte) {
-	copy(buf, b.data[b.pos:])
-	b.pos += len(buf)
-}
-
 func (b *Membuf) getc() int {
 	c := int(b.data[b.pos])
 	b.pos++
@@ -370,9 +365,6 @@ func rdsym(ctxt *Link, f *Membuf, pkg string) *LSym {
 			Adduint64(ctxt, s, uint64(i64))
 			s.Reachable = false
 		}
-	}
-	if s.Version == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
-		s.Local = true
 	}
 	return s
 }
