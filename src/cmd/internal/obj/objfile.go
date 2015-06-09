@@ -452,9 +452,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		wrint(b, int64(r.Siz))
 		wrint(b, int64(r.Type))
 		wrint(b, r.Add)
-		wrint(b, 0) // Xadd, ignored
 		wrsym(ctxt, b, r.Sym)
-		wrsym(ctxt, b, nil) // Xsym, ignored
 	}
 
 	if s.Type == STEXT {

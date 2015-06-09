@@ -131,7 +131,7 @@ type Link struct {
 	Bso       *obj.Biobuf
 	Windows   int32
 	Goroot    string
-	Hash      map[symVer]*LSym
+	Hash      map[string]*LSym
 	Allsym    *LSym
 	Nsymbol   int32
 	Tlsg      *LSym

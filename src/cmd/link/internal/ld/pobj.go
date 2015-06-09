@@ -116,6 +116,7 @@ func Ldmain() {
 	obj.Flagstr("cpuprofile", "write cpu profile to `file`", &cpuprofile)
 	obj.Flagstr("memprofile", "write memory profile to `file`", &memprofile)
 	obj.Flagint64("memprofilerate", "set runtime.MemProfileRate to `rate`", &memprofilerate)
+	obj.Flagstr("trace", "write trace `file`", &tracefile)
 
 	// Clumsy hack to preserve old two-argument -X name val syntax for old scripts.
 	// Rewrite that syntax into new syntax -X name=val.
@@ -248,7 +249,7 @@ func Ldmain() {
 	archive()
 	if Debug['v'] != 0 {
 		fmt.Fprintf(&Bso, "%5.2f cpu time\n", obj.Cputime())
-		fmt.Fprintf(&Bso, "%d symbols\n", Ctxt.Nsymbol)
+		fmt.Fprintf(&Bso, "%d symbols %d\n", Ctxt.Nsymbol, len(Ctxt.Hash))
 		fmt.Fprintf(&Bso, "%d liveness data\n", liveness)
 	}
 

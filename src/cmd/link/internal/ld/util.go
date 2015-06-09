@@ -115,6 +115,7 @@ var (
 	cpuprofile     string
 	memprofile     string
 	memprofilerate int64
+	tracefile      string
 )
 
 func startProfile() {
@@ -143,6 +144,17 @@ func startProfile() {
 			}
 		})
 	}
+	// if tracefile != "" {
+	// 	f, err := os.Create(tracefile)
+	// 	if err != nil {
+	// 		log.Fatalf("testing: %s", err)
+	// 		return
+	// 	}
+	// 	if err := pprof.StartTrace(f); err != nil {
+	// 		log.Fatalf("testing: can't start tracing: %s", err)
+	// 	}
+	// 	AtExit(pprof.StopTrace)
+	// }
 }
 
 func artrim(x []byte) string {
