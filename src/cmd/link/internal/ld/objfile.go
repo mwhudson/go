@@ -7,6 +7,7 @@ package ld
 import (
 	"bytes"
 	"cmd/internal/obj"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"strconv"
@@ -31,11 +32,6 @@ func (b *Membuf) read(n int) []byte {
 	return b.data[p : p+n : p+n]
 }
 
-func (b *Membuf) readinto(buf []byte) {
-	copy(buf, b.data[b.pos:])
-	b.pos += len(buf)
-}
-
 func (b *Membuf) getc() int {
 	c := int(b.data[b.pos])
 	b.pos++
@@ -56,10 +52,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
 	symtableOffsetLocation := f.pos
-	symtableOffset := f.getc()
-	symtableOffset |= f.getc() << 8
-	symtableOffset |= f.getc() << 16
-	symtableOffset |= f.getc() << 24
+	symtableOffset := int(binary.LittleEndian.Uint32(f.read(4)))
 
 	// Seek further into the file to read the symbol table
 	f.pos += symtableOffset - 4
@@ -321,21 +314,7 @@ overwrite:
 }
 
 func rdint(f *Membuf) int64 {
-	var c int
-
-	uv := uint64(0)
-	for shift := 0; ; shift += 7 {
-		if shift >= 64 {
-			log.Fatalf("corrupt input")
-		}
-		c = f.getc()
-		uv |= uint64(c&0x7F) << uint(shift)
-		if c&0x80 == 0 {
-			break
-		}
-	}
-
-	return int64(uv>>1) ^ (int64(uint64(uv)<<63) >> 63)
+	return int64(binary.LittleEndian.Uint64(f.read(8)))
 }
 
 func rdstring(f *Membuf) string {
@@ -370,9 +349,6 @@ func rdsym(ctxt *Link, f *Membuf, pkg string) *LSym {
 			Adduint64(ctxt, s, uint64(i64))
 			s.Reachable = false
 		}
-	}
-	if s.Version == 0 && strings.HasPrefix(s.Name, "runtime.gcbits.") {
-		s.Local = true
 	}
 	return s
 }
