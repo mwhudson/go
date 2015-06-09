@@ -64,7 +64,7 @@ var headers = []struct {
 
 func linknew(arch *LinkArch) *Link {
 	ctxt := new(Link)
-	ctxt.Hash = make(map[string]*LSym, 170000)
+	ctxt.Hash = make(map[symVer]*LSym, 100000)
 	ctxt.Arch = arch
 	ctxt.Version = obj.HistVersion
 	ctxt.Goroot = obj.Getgoroot()
@@ -179,8 +179,13 @@ func linknewsym(ctxt *Link, symb string, v int) *LSym {
 	return s
 }
 
+type symVer struct {
+	sym string
+	ver int
+}
+
 func _lookup(ctxt *Link, symb string, v int, creat int) *LSym {
-	s := ctxt.Hash[symb]
+	s := ctxt.Hash[symVer{symb, v}]
 	if s != nil {
 		return s
 	}
@@ -190,7 +195,7 @@ func _lookup(ctxt *Link, symb string, v int, creat int) *LSym {
 
 	s = linknewsym(ctxt, symb, v)
 	s.Extname = s.Name
-	ctxt.Hash[symb] = s
+	ctxt.Hash[symVer{symb, v}] = s
 	return s
 }
 

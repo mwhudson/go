@@ -67,7 +67,6 @@ type LSym struct {
 	Locals      int32
 	Value       int64
 	Size        int64
-	Hash        *LSym
 	Allsym      *LSym
 	Next        *LSym
 	Sub         *LSym
@@ -131,7 +130,7 @@ type Link struct {
 	Bso       *obj.Biobuf
 	Windows   int32
 	Goroot    string
-	Hash      map[string]*LSym
+	Hash      map[symVer]*LSym
 	Allsym    *LSym
 	Nsymbol   int32
 	Tlsg      *LSym

@@ -74,11 +74,10 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		v := int(rdint(myf))
 		var s *LSym
 		if v != 0 {
-			s = linknewsym(Ctxt, name, ctxt.Version)
-			s.Extname = s.Name
 		} else {
-			s = Linklookup(Ctxt, name, 0)
+			v = Ctxt.Version
 		}
+		s = Linklookup(Ctxt, name, v)
 		symtable = append(symtable, s)
 	}
 	symtableEnd := myf.pos
