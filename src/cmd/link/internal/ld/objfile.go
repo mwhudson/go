@@ -5,7 +5,6 @@
 package ld
 
 import (
-	"bytes"
 	"cmd/internal/obj"
 	"fmt"
 	"log"
@@ -25,9 +24,15 @@ type MyBioBuf struct {
 	pos  int
 }
 
-func (b *MyBioBuf) read(buf []byte) {
-	copy(buf, b.data[b.pos:])
+func (b *MyBioBuf) read(n int) []byte {
+	p := b.pos
 	// fmt.Printf("reading %d bytes %q @ %d\n", len(buf), buf, b.pos)
+	b.pos += n
+	return b.data[p : p+n]
+}
+
+func (b *MyBioBuf) readinto(buf []byte) {
+	copy(buf, b.data[b.pos:])
 	b.pos += len(buf)
 }
 
@@ -43,9 +48,8 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	ctxt.Version++
 	myf := &MyBioBuf{data: make([]byte, length)}
 	obj.Bread(ff, myf.data)
-	var buf [8]uint8
-	myf.read(buf[:])
-	if string(buf[:]) != startmagic {
+	buf := myf.read(8)
+	if string(buf) != startmagic {
 		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
 	}
 	c := myf.getc()
@@ -99,16 +103,12 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		readsym(ctxt, myf, pkg, pn)
 	}
 
-	buf1 := [2]uint8{}
-	myf.read(buf1[:])
-	if string(buf1[:]) != "\xff\xfd" {
+	if string(myf.read(2)) != "\xff\xfd" {
 		log.Fatalf("%s: invalid divider", pn)
 	}
 	// Don't need to read the symbol table again.
 	myf.pos = symtableEnd
-	buf = [8]uint8{}
-	myf.read(buf[:])
-	if string(buf[:]) != endmagic {
+	if string(myf.read(8)) != endmagic {
 		log.Fatalf("%s: invalid file end", pn)
 	}
 
@@ -185,10 +185,9 @@ overwrite:
 	if dup != nil && typ != nil {
 		dup.Gotype = typ
 	}
-	s.P = data
+	s.P = data[:len(data):len(data)]
 	if nreloc > 0 {
 		s.R = make([]Reloc, nreloc)
-		s.R = s.R[:nreloc]
 		var r *Reloc
 		for i := 0; i < nreloc; i++ {
 			r = &s.R[i]
@@ -200,13 +199,13 @@ overwrite:
 		}
 	}
 
-	if len(s.P) > 0 && dup != nil && len(dup.P) > 0 && strings.HasPrefix(s.Name, "gclocals·") {
-		// content-addressed garbage collection liveness bitmap symbol.
-		// double check for hash collisions.
-		if !bytes.Equal(s.P, dup.P) {
-			log.Fatalf("dupok hash collision for %s in %s and %s", s.Name, s.File, pn)
-		}
-	}
+	//if len(s.P) > 0 && dup != nil && len(dup.P) > 0 && strings.HasPrefix(s.Name, "gclocals·") {
+	//	// content-addressed garbage collection liveness bitmap symbol.
+	//	// double check for hash collisions.
+	//	if !bytes.Equal(s.P, dup.P) {
+	//		log.Fatalf("dupok hash collision for %s in %s and %s", s.Name, s.File, pn)
+	//	}
+	//}
 
 	if s.Type == obj.STEXT {
 		s.Args = int32(rdint(myf))
@@ -341,24 +340,13 @@ func rdint(myf *MyBioBuf) int64 {
 	return int64(uv>>1) ^ (int64(uint64(uv)<<63) >> 63)
 }
 
-var stringbuf = make([]byte, 1024)
-
 func rdstring(myf *MyBioBuf) string {
-	n := rdint(myf)
-	if int(n) < len(stringbuf) {
-		myf.read(stringbuf[:n])
-		return string(stringbuf[:n])
-	}
-	p := make([]byte, n)
-	myf.read(p)
-	return string(p)
+	return string(rddata(myf))
 }
 
 func rddata(myf *MyBioBuf) []byte {
 	n := rdint(myf)
-	p := make([]byte, n)
-	myf.read(p)
-	return p
+	return myf.read(int(n))
 }
 
 func rdsym(ctxt *Link, myf *MyBioBuf) *LSym {
