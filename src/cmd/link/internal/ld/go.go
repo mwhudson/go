@@ -616,7 +616,7 @@ func markflood() {
 			mark1(s.R[i].Sym, s)
 		}
 		if s.Pcln != nil {
-			for i = 0; i < s.Pcln.Nfuncdata; i++ {
+			for i = 0; i < len(s.Pcln.Funcdata); i++ {
 				mark1(s.Pcln.Funcdata[i], s)
 			}
 		}
