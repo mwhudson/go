@@ -121,7 +121,7 @@ func readsym(ctxt *Link, f *Membuf, pkg string, pn string) {
 		local = true
 	}
 	size := int(rdint(f))
-	typ := rdsym(ctxt, f, pkg)
+	typ := rdsym(ctxt, f)
 	data := rddata(f)
 	nreloc := int(rdint(f))
 
@@ -175,10 +175,8 @@ overwrite:
 		dup.Gotype = typ
 	}
 	s.P = data
-	s.P = s.P[:len(data)]
 	if nreloc > 0 {
 		s.R = make([]Reloc, nreloc)
-		s.R = s.R[:nreloc]
 		var r *Reloc
 		for i := 0; i < nreloc; i++ {
 			r = &s.R[i]
@@ -186,7 +184,7 @@ overwrite:
 			r.Siz = uint8(rdint(f))
 			r.Type = int32(rdint(f))
 			r.Add = rdint(f)
-			r.Sym = rdsym(ctxt, f, pkg)
+			r.Sym = rdsym(ctxt, f)
 		}
 	}
 
@@ -209,10 +207,10 @@ overwrite:
 		var a *Auto
 		for i := 0; i < n; i++ {
 			a = new(Auto)
-			a.Asym = rdsym(ctxt, f, pkg)
+			a.Asym = rdsym(ctxt, f)
 			a.Aoffset = int32(rdint(f))
 			a.Name = int16(rdint(f))
-			a.Gotype = rdsym(ctxt, f, pkg)
+			a.Gotype = rdsym(ctxt, f)
 			a.Link = s.Autom
 			s.Autom = a
 		}
@@ -231,7 +229,7 @@ overwrite:
 		pc.Funcdata = make([]*LSym, n)
 		pc.Funcdataoff = make([]int64, n)
 		for i := 0; i < n; i++ {
-			pc.Funcdata[i] = rdsym(ctxt, f, pkg)
+			pc.Funcdata[i] = rdsym(ctxt, f)
 		}
 		for i := 0; i < n; i++ {
 			pc.Funcdataoff[i] = rdint(f)
@@ -239,7 +237,7 @@ overwrite:
 		n = int(rdint(f))
 		pc.File = make([]*LSym, n)
 		for i := 0; i < n; i++ {
-			pc.File[i] = rdsym(ctxt, f, pkg)
+			pc.File[i] = rdsym(ctxt, f)
 		}
 
 		if dup == nil {
@@ -337,7 +335,7 @@ func rddata(f *Membuf) []byte {
 	return f.read(int(n))
 }
 
-func rdsym(ctxt *Link, f *Membuf, pkg string) *LSym {
+func rdsym(ctxt *Link, f *Membuf) *LSym {
 	ind := int(rdint(f))
 	if ind == -1 {
 		return nil
