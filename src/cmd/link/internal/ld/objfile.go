@@ -57,6 +57,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	// Seek further into the file to read the symbol table
 	f.pos += symtableOffset - 4
 	symtable = nil
+	replacer := strings.NewReplacer(`"".`, pkg+".")
 	for {
 		s := rdstring(f)
 		if s == "" {
@@ -66,7 +67,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		if v != 0 {
 			v = ctxt.Version
 		}
-		symtable = append(symtable, Linklookup(ctxt, expandpkg(s, pkg), v))
+		symtable = append(symtable, Linklookup(ctxt, replacer.Replace(s), v))
 	}
 	symtableEnd := f.pos
 
@@ -110,9 +111,9 @@ func readsym(ctxt *Link, f *Membuf, pkg string, pn string) {
 	if f.getc() != 0xfe {
 		log.Fatalf("readsym out of sync")
 	}
-	t := int(rdint(f))
+	t := f.getc()
 	ind := rdint(f)
-	flags := int(rdint(f))
+	flags := f.getc()
 	dupok := flags & 1
 	local := false
 	if flags&2 != 0 {
@@ -180,7 +181,7 @@ overwrite:
 			r = &s.R[i]
 			r.Off = int32(rdint(f))
 			r.Siz = uint8(rdint(f))
-			r.Type = int32(rdint(f))
+			r.Type = int32(f.getc())
 			r.Add = rdint(f)
 			r.Sym = rdsym(ctxt, f)
 		}
@@ -197,8 +198,8 @@ overwrite:
 	if s.Type == obj.STEXT {
 		s.Args = int32(rdint(f))
 		s.Locals = int32(rdint(f))
-		s.Nosplit = uint8(rdint(f))
-		v := int(rdint(f))
+		s.Nosplit = uint8(f.getc())
+		v := f.getc()
 		s.Leaf = uint8(v & 1)
 		s.Cfunc = uint8(v & 2)
 		n := int(rdint(f))
@@ -207,7 +208,7 @@ overwrite:
 			a = new(Auto)
 			a.Asym = rdsym(ctxt, f)
 			a.Aoffset = int32(rdint(f))
-			a.Name = int16(rdint(f))
+			a.Name = int16(f.getc())
 			a.Gotype = rdsym(ctxt, f)
 			a.Link = s.Autom
 			s.Autom = a

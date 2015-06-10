@@ -433,13 +433,13 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 	}
 
 	Bputc(b, 0xfe)
-	wrint(b, int64(s.Type))
+	Bputc(b, byte(s.Type))
 	wrint(b, symindex(ctxt, s))
-	flags := int64(s.Dupok)
+	flags := byte(s.Dupok)
 	if s.Local {
 		flags |= 2
 	}
-	wrint(b, flags)
+	Bputc(b, flags)
 	wrint(b, s.Size)
 	wrsym(ctxt, b, s.Gotype)
 	wrdata(b, s.P)
@@ -450,7 +450,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		r = &s.R[i]
 		wrint(b, int64(r.Off))
 		wrint(b, int64(r.Siz))
-		wrint(b, int64(r.Type))
+		Bputc(b, byte(r.Type))
 		wrint(b, r.Add)
 		wrsym(ctxt, b, r.Sym)
 	}
@@ -458,8 +458,8 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s.Type == STEXT {
 		wrint(b, int64(s.Args))
 		wrint(b, int64(s.Locals))
-		wrint(b, int64(s.Nosplit))
-		wrint(b, int64(s.Leaf)|int64(s.Cfunc)<<1)
+		Bputc(b, byte(s.Nosplit))
+		Bputc(b, byte(int64(s.Leaf)|int64(s.Cfunc)<<1))
 		n := 0
 		for a := s.Autom; a != nil; a = a.Link {
 			n++
@@ -469,9 +469,9 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 			wrsym(ctxt, b, a.Asym)
 			wrint(b, int64(a.Aoffset))
 			if a.Name == NAME_AUTO {
-				wrint(b, A_AUTO)
+				Bputc(b, A_AUTO)
 			} else if a.Name == NAME_PARAM {
-				wrint(b, A_PARAM)
+				Bputc(b, A_PARAM)
 			} else {
 				log.Fatalf("%s: invalid local variable type %d", s.Name, a.Name)
 			}
