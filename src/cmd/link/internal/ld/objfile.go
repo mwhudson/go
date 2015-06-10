@@ -7,6 +7,7 @@ package ld
 import (
 	"bytes"
 	"cmd/internal/obj"
+	"encoding/binary"
 	"fmt"
 	"log"
 	"strconv"
@@ -51,10 +52,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
 	symtableOffsetLocation := f.pos
-	symtableOffset := f.getc()
-	symtableOffset |= f.getc() << 8
-	symtableOffset |= f.getc() << 16
-	symtableOffset |= f.getc() << 24
+	symtableOffset := int(binary.LittleEndian.Uint32(f.read(4)))
 
 	// Seek further into the file to read the symbol table
 	f.pos += symtableOffset - 4
