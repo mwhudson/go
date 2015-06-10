@@ -170,15 +170,9 @@ type Pcln struct {
 	Pcfile      Pcdata
 	Pcline      Pcdata
 	Pcdata      []Pcdata
-	Npcdata     int
 	Funcdata    []*LSym
 	Funcdataoff []int64
-	Nfuncdata   int
 	File        []*LSym
-	Nfile       int
-	Mfile       int
-	Lastfile    *LSym
-	Lastindex   int
 }
 
 type Pcdata struct {
