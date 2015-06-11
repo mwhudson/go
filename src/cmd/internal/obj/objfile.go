@@ -342,7 +342,7 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 		} else {
 			wrstring(b, filepath.ToSlash(s.Name))
 		}
-		wrint(b, int64(s.Version))
+		Bputc(b, byte(s.Version))
 	}
 	wrstring(b, "")
 

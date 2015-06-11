@@ -62,7 +62,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		if s == "" {
 			break
 		}
-		v := int(rdint(f))
+		v := f.getc()
 		if v != 0 {
 			v = ctxt.Version
 		}
