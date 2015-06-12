@@ -12,7 +12,6 @@ import (
 func TestLineHist(t *testing.T) {
 	ctxt := new(Link)
 	ctxt.Hash = make(map[SymVer]*LSym)
-	ctxt.Filter = make(map[uint32]struct{})
 
 	ctxt.LineHist.Push(1, "a.c")
 	ctxt.LineHist.Push(3, "a.h")

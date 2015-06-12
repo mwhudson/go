@@ -66,15 +66,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		if v != 0 {
 			v = ctxt.Version
 		}
-		hash := binary.LittleEndian.Uint32(f.read(4))
-		t := replacer.Replace(s)
-		if t != s {
-			hash = uint32(1)
-			for i, c := range t {
-				hash *= (uint32(c)<<(uint32(i)%32) + 1)
-			}
-		}
-		symtable = append(symtable, LinklookupHash(ctxt, t, v, hash))
+		symtable = append(symtable, Linklookup(ctxt, replacer.Replace(s), v))
 	}
 	symtableEnd := f.pos
 

@@ -65,7 +65,6 @@ var headers = []struct {
 func linknew(arch *LinkArch) *Link {
 	ctxt := new(Link)
 	ctxt.Hash = make(map[symVer]*LSym, 100000)
-	ctxt.Filter = make(map[uint32]struct{}, 100000)
 	ctxt.Arch = arch
 	ctxt.Version = obj.HistVersion
 	ctxt.Goroot = obj.Getgoroot()
@@ -182,38 +181,17 @@ type symVer struct {
 }
 
 func _lookup(ctxt *Link, symb string, v int, creat int) *LSym {
-	hash := uint32(1)
-	for i, s := range symb {
-		hash *= (uint32(s)<<(uint32(i)%32) + 1)
-	}
-	if _, ok := ctxt.Filter[hash]; ok {
-		s := ctxt.Hash[symVer{symb, v}]
-		if s != nil {
-			return s
-		}
+	s := ctxt.Hash[symVer{symb, v}]
+	if s != nil {
+		return s
 	}
 	if creat == 0 {
 		return nil
 	}
 
-	s := linknewsym(ctxt, symb, v)
+	s = linknewsym(ctxt, symb, v)
 	s.Extname = s.Name
 	ctxt.Hash[symVer{symb, v}] = s
-	ctxt.Filter[hash] = struct{}{}
-	return s
-}
-
-func LinklookupHash(ctxt *Link, name string, v int, hash uint32) *LSym {
-	if _, ok := ctxt.Filter[hash]; ok {
-		s := ctxt.Hash[symVer{name, v}]
-		if s != nil {
-			return s
-		}
-	}
-	s := linknewsym(ctxt, name, v)
-	s.Extname = s.Name
-	ctxt.Hash[symVer{name, v}] = s
-	ctxt.Filter[hash] = struct{}{}
 	return s
 }
 
