@@ -316,6 +316,7 @@ type LSym struct {
 	R      []Reloc
 	index  int
 	ispath bool
+	Hash   uint32
 }
 
 type Pcln struct {
@@ -477,6 +478,7 @@ type Link struct {
 	Goroot_final       string
 	Enforce_data_order int32
 	Hash               map[SymVer]*LSym
+	Filter             map[uint32]struct{}
 	LineHist           LineHist
 	Imports            []string
 	Plist              *Plist

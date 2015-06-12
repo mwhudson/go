@@ -130,6 +130,7 @@ type Link struct {
 	Windows   int32
 	Goroot    string
 	Hash      map[symVer]*LSym
+	Filter    map[uint32]struct{}
 	Allsym    *LSym
 	Nsymbol   int32
 	Tlsg      *LSym

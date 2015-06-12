@@ -343,6 +343,10 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 			wrstring(b, filepath.ToSlash(s.Name))
 		}
 		Bputc(b, byte(s.Version))
+		Bputc(b, uint8((s.Hash>>0)&0xff))
+		Bputc(b, uint8((s.Hash>>8)&0xff))
+		Bputc(b, uint8((s.Hash>>16)&0xff))
+		Bputc(b, uint8((s.Hash>>24)&0xff))
 	}
 	wrstring(b, "")
 

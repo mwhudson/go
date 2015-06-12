@@ -125,6 +125,11 @@ func gcsymdup(s *Sym) {
 		Fatal("cannot rosymdup %s with relocations", ls.Name)
 	}
 	ls.Name = fmt.Sprintf("gclocals·%x", md5.Sum(ls.P))
+	hash := uint32(1)
+	for i, s := range ls.Name {
+		hash *= (uint32(s)<<(uint32(i)%32) + 1)
+	}
+	ls.Hash = hash
 	ls.Dupok = 1
 }
 

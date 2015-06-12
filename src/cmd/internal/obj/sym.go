@@ -79,6 +79,7 @@ func Headstr(v int) string {
 func Linknew(arch *LinkArch) *Link {
 	ctxt := new(Link)
 	ctxt.Hash = make(map[SymVer]*LSym)
+	ctxt.Filter = make(map[uint32]struct{})
 	ctxt.Arch = arch
 	ctxt.Version = HistVersion
 	ctxt.Goroot = Getgoroot()
@@ -179,18 +180,29 @@ func Linknew(arch *LinkArch) *Link {
 }
 
 func _lookup(ctxt *Link, symb string, v int, create bool) *LSym {
-	s := ctxt.Hash[SymVer{symb, v}]
-	if s != nil || !create {
-		return s
+	hash := uint32(1)
+	for i, s := range symb {
+		hash *= (uint32(s)<<(uint32(i)%32) + 1)
+	}
+	if _, ok := ctxt.Filter[hash]; ok {
+		s := ctxt.Hash[SymVer{symb, v}]
+		if s != nil {
+			return s
+		}
+	}
+	if !create {
+		return nil
 	}
 
-	s = &LSym{
+	s := &LSym{
 		Name:    symb,
 		Type:    0,
 		Version: int16(v),
 		Value:   0,
 		Size:    0,
+		Hash:    hash,
 	}
+	ctxt.Filter[hash] = struct{}{}
 	ctxt.Hash[SymVer{symb, v}] = s
 
 	return s
