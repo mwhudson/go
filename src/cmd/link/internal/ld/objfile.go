@@ -21,27 +21,43 @@ const (
 var symtable []*LSym
 
 type Membuf struct {
-	data []byte
-	pos  int
+	gendata     []byte
+	pos         int
+	stringblock string
+	stringpos   int
+	datablock   []byte
+	datapos     int
 }
 
 func (b *Membuf) read(n int) []byte {
 	p := b.pos
 	b.pos += n
-	return b.data[p : p+n : p+n]
+	return b.gendata[p : p+n : p+n]
 }
 
 func (b *Membuf) getc() int {
-	c := int(b.data[b.pos])
+	c := int(b.gendata[b.pos])
 	b.pos++
 	return c
+}
+
+func (b *Membuf) data(n int) []byte {
+	p := b.datapos
+	b.datapos += n
+	return b.datablock[p : p+n : p+n]
+}
+
+func (b *Membuf) string(n int) string {
+	p := b.stringpos
+	b.stringpos += n
+	return b.stringblock[p : p+n]
 }
 
 func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) {
 	start := obj.Boffset(ff)
 	ctxt.Version++
-	f := &Membuf{data: make([]byte, length)}
-	obj.Bread(ff, f.data)
+	f := &Membuf{gendata: make([]byte, length)}
+	obj.Bread(ff, f.gendata)
 	buf := f.read(8)
 	if string(buf) != startmagic {
 		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
@@ -50,11 +66,48 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
-	symtableOffsetLocation := f.pos
-	symtableOffset := int(binary.LittleEndian.Uint32(f.read(4)))
+	offsetBase := f.pos
 
-	// Seek further into the file to read the symbol table
-	f.pos += symtableOffset - 4
+	symtableOffset := int(binary.LittleEndian.Uint32(f.read(4)))
+	stringblockOffset := int(binary.LittleEndian.Uint32(f.read(4)))
+	datablockOffset := int(binary.LittleEndian.Uint32(f.read(4)))
+
+	// We need to read the string block before we read the symbol table
+	f.pos = offsetBase + stringblockOffset
+	stringblockLength := int(binary.LittleEndian.Uint32(f.read(4)))
+	f.stringblock = string(f.read(stringblockLength))
+	if string(f.read(2)) != "\xff\xfd" {
+		log.Fatalf("%s: invalid divider after string block", pn)
+	}
+
+	// Need to read data block before reading symbols
+	f.pos = offsetBase + datablockOffset
+	datablockLength := int(binary.LittleEndian.Uint32(f.read(4)))
+	f.datablock = f.read(datablockLength)
+
+	if string(f.read(8)) != endmagic {
+		log.Fatalf("%s: invalid file end", pn)
+	}
+
+	if obj.Boffset(ff) != start+length {
+		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(ff)), int64(start+length))
+	}
+
+	// read imports
+	f.pos = offsetBase + 12
+
+	var lib string
+	for {
+		lib = rdstring(f)
+		if lib == "" {
+			break
+		}
+		addlib(ctxt, pkg, pn, lib)
+	}
+	eoImports := f.pos
+
+	// Now read the symbol table
+	f.pos = offsetBase + symtableOffset
 	symtable = nil
 	replacer := strings.NewReplacer(`"".`, pkg+".")
 	for {
@@ -66,24 +119,36 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		if v != 0 {
 			v = ctxt.Version
 		}
-		symtable = append(symtable, Linklookup(ctxt, replacer.Replace(s), v))
-	}
-	symtableEnd := f.pos
+		sym := Linklookup(ctxt, replacer.Replace(s), v)
+		symtable = append(symtable, sym)
 
-	// And jump back
-	f.pos = symtableOffsetLocation + 4
-
-	var lib string
-	for {
-		lib = rdstring(f)
-		if lib == "" {
-			break
+		if v == 0 && s[0] == '$' && sym.Type == 0 {
+			if strings.HasPrefix(s, "$f32.") {
+				x, _ := strconv.ParseUint(s[5:], 16, 32)
+				i32 := int32(x)
+				sym.Type = obj.SRODATA
+				sym.Local = true
+				Adduint32(ctxt, sym, uint32(i32))
+				sym.Reachable = false
+			} else if strings.HasPrefix(s, "$f64.") || strings.HasPrefix(s, "$i64.") {
+				x, _ := strconv.ParseUint(s[5:], 16, 64)
+				i64 := int64(x)
+				sym.Type = obj.SRODATA
+				sym.Local = true
+				Adduint64(ctxt, sym, uint64(i64))
+				sym.Reachable = false
+			}
 		}
-		addlib(ctxt, pkg, pn, lib)
 	}
 
+	if string(f.read(2)) != "\xff\xfd" {
+		log.Fatalf("%s: invalid divider after symbol table", pn)
+	}
+
+	// Finally, read symbol data
+	f.pos = eoImports
 	for {
-		c := f.data[f.pos]
+		c := f.gendata[f.pos]
 		if c == 0xff {
 			break
 		}
@@ -93,15 +158,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	if string(f.read(2)) != "\xff\xfd" {
 		log.Fatalf("%s: invalid divider", pn)
 	}
-	// Don't need to read the symbol table again.
-	f.pos = symtableEnd
-	if string(f.read(8)) != endmagic {
-		log.Fatalf("%s: invalid file end", pn)
-	}
 
-	if obj.Boffset(ff) != start+length {
-		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(ff)), int64(start+length))
-	}
 }
 
 var readsym_ndup int
@@ -272,12 +329,20 @@ func rdint(f *Membuf) int64 {
 }
 
 func rdstring(f *Membuf) string {
-	return string(rddata(f))
+	n := rdint(f)
+	data := f.read(int(n))
+	r := string(data)
+	n1 := rdint(f)
+	r1 := f.string(int(n1))
+	return r
 }
 
 func rddata(f *Membuf) []byte {
 	n := rdint(f)
-	return f.read(int(n))
+	r := f.read(int(n))
+	n1 := rdint(f)
+	r1 := f.data(int(n1))
+	return r
 }
 
 func rdsym(ctxt *Link, f *Membuf) *LSym {
@@ -287,22 +352,5 @@ func rdsym(ctxt *Link, f *Membuf) *LSym {
 	}
 	s := symtable[ind]
 
-	if s.Version == 0 && s.Name[0] == '$' && s.Type == 0 {
-		if strings.HasPrefix(s.Name, "$f32.") {
-			x, _ := strconv.ParseUint(s.Name[5:], 16, 32)
-			i32 := int32(x)
-			s.Type = obj.SRODATA
-			s.Local = true
-			Adduint32(ctxt, s, uint32(i32))
-			s.Reachable = false
-		} else if strings.HasPrefix(s.Name, "$f64.") || strings.HasPrefix(s.Name, "$i64.") {
-			x, _ := strconv.ParseUint(s.Name[5:], 16, 64)
-			i64 := int64(x)
-			s.Type = obj.SRODATA
-			s.Local = true
-			Adduint64(ctxt, s, uint64(i64))
-			s.Reachable = false
-		}
-	}
 	return s
 }

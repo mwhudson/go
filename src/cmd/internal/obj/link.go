@@ -510,6 +510,10 @@ type Link struct {
 	Textp              *LSym
 	Etextp             *LSym
 	orderedsyms        []*LSym
+	orderedstrings     []string
+	stringlength       int
+	ordereddata        [][]byte
+	datalength         int
 }
 
 type SymVer struct {

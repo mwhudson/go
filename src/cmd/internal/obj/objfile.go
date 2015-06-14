@@ -17,23 +17,31 @@
 //
 //	- magic header: "\x00\x00go13ld"
 //	- byte 2 - version number
-//      - 4 bytes containg relative offset to symbol table
+//      - three little-endian 32-bit offsets from after the version number to:
+//        - the symbol table
+//        - the data block
+//        - the string block
 //	- sequence of strings giving dependencies (imported packages)
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
 //	- byte 0xff (marks end of sequence)
 //	- divider: "\xff\xfd"
 //	- symbol table: name (string), version (int) pairs, empty name terminates
+//	- divider: "\xff\xfd"
+//      - data block: int32 int length, that many bytes
+//	- divider: "\xff\xfd"
+//      - string block: int32 length, that many bytes
 //	- magic footer: "\xff\xffgo13ld"
 //
 // All integers are stored in a zigzag varint format.
 // See golang.org/s/go12symtab for a definition.
 //
-// Data blocks and strings are both stored as an integer
-// followed by that many bytes.
+// Data blocks and strings are both stored as a size: reading them
+// consumes a number of bytes from the data or string block,
+// respecitively.
 //
-// A symbol reference is a string name followed by a version.
-// An empty name corresponds to a nil LSym* pointer.
+// A symbol reference is an index into the symbol table.
+// A nil LSym* pointer is written as -1.
 //
 // Each symbol is laid out as the following fields (taken from LSym*):
 //
@@ -111,6 +119,13 @@ import (
 )
 
 var outfile string
+
+func putle32(b *Biobuf, x int) {
+	Bputc(b, uint8((x>>0)&0xff))
+	Bputc(b, uint8((x>>8)&0xff))
+	Bputc(b, uint8((x>>16)&0xff))
+	Bputc(b, uint8((x>>24)&0xff))
+}
 
 // The Go and C compilers, and the assembler, call writeobj to write
 // out a Go object file.  The linker does not call this; the linker
@@ -308,18 +323,22 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	fmt.Fprintf(b, "go13ld")
 	Bputc(b, 2) // version
 
-	symtableOffsetLocation := Boffset(b)
+	offsetsLocation := Boffset(b)
 
-	Bputc(b, 0)
-	Bputc(b, 0)
-	Bputc(b, 0)
-	Bputc(b, 0)
+	// Symbol table location
+	putle32(b, 0)
+
+	// String table location
+	putle32(b, 0)
+
+	// Data table location
+	putle32(b, 0)
 
 	// Emit autolib.
 	for _, pkg := range ctxt.Imports {
-		wrstring(b, pkg)
+		wrstring(ctxt, b, pkg)
 	}
-	wrstring(b, "")
+	wrstring(ctxt, b, "")
 
 	// Emit symbols.
 	for s := text; s != nil; s = s.Next {
@@ -333,18 +352,40 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	Bputc(b, 0xff)
 	Bputc(b, 0xfd)
 
-	symtableOffset := Boffset(b) - symtableOffsetLocation
+	symtableOffset := Boffset(b) - offsetsLocation
 
 	// Emit symbol table
 	for _, s := range ctxt.orderedsyms {
 		if !s.ispath {
-			wrstring(b, s.Name)
+			wrstring(ctxt, b, s.Name)
 		} else {
-			wrstring(b, filepath.ToSlash(s.Name))
+			wrstring(ctxt, b, filepath.ToSlash(s.Name))
 		}
 		Bputc(b, byte(s.Version))
 	}
-	wrstring(b, "")
+	wrstring(ctxt, b, "")
+
+	Bputc(b, 0xff)
+	Bputc(b, 0xfd)
+
+	stringblockOffset := Boffset(b) - offsetsLocation
+
+	// Emit string block
+	putle32(b, ctxt.stringlength)
+	for _, str := range ctxt.orderedstrings {
+		b.w.WriteString(str)
+	}
+
+	Bputc(b, 0xff)
+	Bputc(b, 0xfd)
+
+	datablockOffset := Boffset(b) - offsetsLocation
+
+	// Emit data block
+	putle32(b, ctxt.datalength)
+	for _, data := range ctxt.ordereddata {
+		b.Write(data)
+	}
 
 	// Emit footer.
 	Bputc(b, 0xff)
@@ -353,11 +394,11 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 
 	end := Boffset(b)
 
-	Bseek(b, symtableOffsetLocation, 0)
-	Bputc(b, uint8((symtableOffset>>0)&0xff))
-	Bputc(b, uint8((symtableOffset>>8)&0xff))
-	Bputc(b, uint8((symtableOffset>>16)&0xff))
-	Bputc(b, uint8((symtableOffset>>24)&0xff))
+	Bseek(b, offsetsLocation, 0)
+
+	putle32(b, int(symtableOffset))
+	putle32(b, int(stringblockOffset))
+	putle32(b, int(datablockOffset))
 
 	Bseek(b, end, 0)
 }
@@ -442,7 +483,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 	Bputc(b, flags)
 	wrint(b, s.Size)
 	wrsym(ctxt, b, s.Gotype)
-	wrdata(b, s.P)
+	wrdata(ctxt, b, s.P)
 
 	wrint(b, int64(len(s.R)))
 	var r *Reloc
@@ -479,12 +520,12 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		}
 
 		pc := s.Pcln
-		wrdata(b, pc.Pcsp.P)
-		wrdata(b, pc.Pcfile.P)
-		wrdata(b, pc.Pcline.P)
+		wrdata(ctxt, b, pc.Pcsp.P)
+		wrdata(ctxt, b, pc.Pcfile.P)
+		wrdata(ctxt, b, pc.Pcline.P)
 		wrint(b, int64(len(pc.Pcdata)))
 		for i := 0; i < len(pc.Pcdata); i++ {
-			wrdata(b, pc.Pcdata[i].P)
+			wrdata(ctxt, b, pc.Pcdata[i].P)
 		}
 		wrint(b, int64(len(pc.Funcdataoff)))
 		for i := 0; i < len(pc.Funcdataoff); i++ {
@@ -517,20 +558,20 @@ func wrint(b *Biobuf, sval int64) {
 	b.Write(varintbuf[:len(varintbuf)-len(p)])
 }
 
-func wrstring(b *Biobuf, s string) {
+func wrstring(ctxt *Link, b *Biobuf, s string) {
 	wrint(b, int64(len(s)))
 	b.w.WriteString(s)
+	ctxt.orderedstrings = append(ctxt.orderedstrings, s)
+	ctxt.stringlength += len(s)
+	wrint(b, int64(len(s)))
 }
 
-// wrpath writes a path just like a string, but on windows, it
-// translates '\\' to '/' in the process.
-func wrpath(ctxt *Link, b *Biobuf, p string) {
-	wrstring(b, filepath.ToSlash(p))
-}
-
-func wrdata(b *Biobuf, v []byte) {
+func wrdata(ctxt *Link, b *Biobuf, v []byte) {
 	wrint(b, int64(len(v)))
 	b.Write(v)
+	ctxt.ordereddata = append(ctxt.ordereddata, v)
+	ctxt.datalength += len(v)
+	wrint(b, int64(len(v)))
 }
 
 func symindex(ctxt *Link, s *LSym) int64 {
