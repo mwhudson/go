@@ -53,48 +53,68 @@ func (b *Membuf) string(n int) string {
 	return b.stringblock[p : p+n]
 }
 
+func bgeti32(ff *obj.Biobuf) int {
+	var buf [4]byte
+	obj.Bread(ff, buf[:])
+	return int(binary.LittleEndian.Uint32(buf[:]))
+}
+
+func bcheckdiv(ff *obj.Biobuf, pn, where string) {
+	var div [2]byte
+	obj.Bread(ff, div[:])
+	if string(div[:]) != "\xff\xfd" {
+		log.Fatalf("%s: invalid divider %s", pn, where)
+	}
+}
+
 func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) {
 	start := obj.Boffset(ff)
 	ctxt.Version++
-	f := &Membuf{gendata: make([]byte, length)}
-	obj.Bread(ff, f.gendata)
-	buf := f.read(8)
-	if string(buf) != startmagic {
-		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5], buf[6], buf[7])
+	var header [9]byte
+	obj.Bread(ff, header[:])
+	if string(header[:8]) != startmagic {
+		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, header[0], header[1], header[2], header[3], header[4], header[5], header[6], header[7])
 	}
-	c := f.getc()
+	c := header[8]
 	if c != 2 {
 		log.Fatalf("%s: invalid file version number %d", pn, c)
 	}
-	offsetBase := f.pos
 
-	symtableOffset := int(binary.LittleEndian.Uint32(f.read(4)))
-	stringblockOffset := int(binary.LittleEndian.Uint32(f.read(4)))
-	datablockOffset := int(binary.LittleEndian.Uint32(f.read(4)))
+	offsetBase := obj.Boffset(ff)
+
+	var offsets [12]byte
+	obj.Bread(ff, offsets[:])
+
+	symtableOffset := int(binary.LittleEndian.Uint32(offsets[:4]))
+	stringblockOffset := int(binary.LittleEndian.Uint32(offsets[4:8]))
+	datablockOffset := int(binary.LittleEndian.Uint32(offsets[8:12]))
+
+	f := &Membuf{gendata: make([]byte, stringblockOffset)}
+	obj.Bread(ff, f.gendata)
 
 	// We need to read the string block before we read the symbol table
-	f.pos = offsetBase + stringblockOffset
-	stringblockLength := int(binary.LittleEndian.Uint32(f.read(4)))
-	f.stringblock = string(f.read(stringblockLength))
-	if string(f.read(2)) != "\xff\xfd" {
-		log.Fatalf("%s: invalid divider after string block", pn)
-	}
+	obj.Bseek(ff, offsetBase+int64(stringblockOffset), 0)
+	stringblockLength := bgeti32(ff)
+	stringdata := make([]byte, stringblockLength)
+	obj.Bread(ff, stringdata)
+	f.stringblock = string(stringdata)
+	bcheckdiv(ff, pn, "after string block")
 
 	// Need to read data block before reading symbols
-	f.pos = offsetBase + datablockOffset
-	datablockLength := int(binary.LittleEndian.Uint32(f.read(4)))
-	f.datablock = f.read(datablockLength)
+	obj.Bseek(ff, offsetBase+int64(datablockOffset), 0)
+	datablockLength := bgeti32(ff)
+	f.datablock = make([]byte, datablockLength)
+	obj.Bread(ff, f.datablock)
 
-	if string(f.read(8)) != endmagic {
+	var tail [8]byte
+	obj.Bread(ff, tail[:])
+	if string(tail[:]) != endmagic {
 		log.Fatalf("%s: invalid file end", pn)
 	}
 
 	if obj.Boffset(ff) != start+length {
 		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(ff)), int64(start+length))
 	}
-
-	// read imports
-	f.pos = offsetBase + 12
 
 	var lib string
 	for {
@@ -107,7 +127,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	eoImports := f.pos
 
 	// Now read the symbol table
-	f.pos = offsetBase + symtableOffset
+	f.pos = symtableOffset - 12
 	symtable = nil
 	replacer := strings.NewReplacer(`"".`, pkg+".")
 	for {
@@ -329,20 +349,11 @@ func rdint(f *Membuf) int64 {
 }
 
 func rdstring(f *Membuf) string {
-	n := rdint(f)
-	data := f.read(int(n))
-	r := string(data)
-	n1 := rdint(f)
-	r1 := f.string(int(n1))
-	return r
+	return f.string(int(rdint(f)))
 }
 
 func rddata(f *Membuf) []byte {
-	n := rdint(f)
-	r := f.read(int(n))
-	n1 := rdint(f)
-	r1 := f.data(int(n1))
-	return r
+	return f.data(int(rdint(f)))
 }
 
 func rdsym(ctxt *Link, f *Membuf) *LSym {

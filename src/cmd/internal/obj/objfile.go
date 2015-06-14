@@ -19,8 +19,8 @@
 //	- byte 2 - version number
 //      - three little-endian 32-bit offsets from after the version number to:
 //        - the symbol table
-//        - the data block
 //        - the string block
+//        - the data block
 //	- sequence of strings giving dependencies (imported packages)
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
@@ -28,9 +28,9 @@
 //	- divider: "\xff\xfd"
 //	- symbol table: name (string), version (int) pairs, empty name terminates
 //	- divider: "\xff\xfd"
-//      - data block: int32 int length, that many bytes
-//	- divider: "\xff\xfd"
 //      - string block: int32 length, that many bytes
+//	- divider: "\xff\xfd"
+//      - data block: int32 int length, that many bytes
 //	- magic footer: "\xff\xffgo13ld"
 //
 // All integers are stored in a zigzag varint format.
@@ -559,16 +559,12 @@ func wrint(b *Biobuf, sval int64) {
 }
 
 func wrstring(ctxt *Link, b *Biobuf, s string) {
-	wrint(b, int64(len(s)))
-	b.w.WriteString(s)
 	ctxt.orderedstrings = append(ctxt.orderedstrings, s)
 	ctxt.stringlength += len(s)
 	wrint(b, int64(len(s)))
 }
 
 func wrdata(ctxt *Link, b *Biobuf, v []byte) {
-	wrint(b, int64(len(v)))
-	b.Write(v)
 	ctxt.ordereddata = append(ctxt.ordereddata, v)
 	ctxt.datalength += len(v)
 	wrint(b, int64(len(v)))
