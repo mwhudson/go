@@ -15,12 +15,14 @@
 //
 // The file format is:
 //
-//	- magic header: "\x00\x00go13ld"
-//	- byte 2 - version number
-//      - three little-endian 32-bit offsets from after the version number to:
-//        - the symbol table
-//        - the string block
-//        - the data block
+//      - header:
+//        - magic: "\x00\x00go13ld"
+//        - byte 2 - version number
+//        - three little-endian 32-bit offsets from after the header to:
+//          - the symbol table
+//          - the string block
+//          - the data block
+//        - little-endian 32-bit data block size (string block size can be computed from offsets)
 //	- sequence of strings giving dependencies (imported packages)
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
@@ -28,9 +30,8 @@
 //	- divider: "\xff\xfd"
 //	- symbol table: name (string), version (int) pairs, empty name terminates
 //	- divider: "\xff\xfd"
-//      - string block: int32 length, that many bytes
-//	- divider: "\xff\xfd"
-//      - data block: int32 int length, that many bytes
+//      - string block: bytes
+//      - data block: bytes
 //	- magic footer: "\xff\xffgo13ld"
 //
 // All integers are stored in a zigzag varint format.
@@ -327,12 +328,14 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 
 	// Symbol table location
 	putle32(b, 0)
-
-	// String table location
+	// String block location
+	putle32(b, 0)
+	// Data block location
+	putle32(b, 0)
+	// Data block size
 	putle32(b, 0)
 
-	// Data table location
-	putle32(b, 0)
+	offsetsBase := Boffset(b)
 
 	// Emit autolib.
 	for _, pkg := range ctxt.Imports {
@@ -352,7 +355,7 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	Bputc(b, 0xff)
 	Bputc(b, 0xfd)
 
-	symtableOffset := Boffset(b) - offsetsLocation
+	symtableOffset := Boffset(b) - offsetsBase
 
 	// Emit symbol table
 	for _, s := range ctxt.orderedsyms {
@@ -368,24 +371,22 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	Bputc(b, 0xff)
 	Bputc(b, 0xfd)
 
-	stringblockOffset := Boffset(b) - offsetsLocation
+	stringblockOffset := Boffset(b) - offsetsBase
 
 	// Emit string block
-	putle32(b, ctxt.stringlength)
 	for _, str := range ctxt.orderedstrings {
 		b.w.WriteString(str)
 	}
 
-	Bputc(b, 0xff)
-	Bputc(b, 0xfd)
-
-	datablockOffset := Boffset(b) - offsetsLocation
+	datablockStart := Boffset(b)
+	datablockOffset := datablockStart - offsetsBase
 
 	// Emit data block
-	putle32(b, ctxt.datalength)
 	for _, data := range ctxt.ordereddata {
 		b.Write(data)
 	}
+
+	datablockSize := Boffset(b) - datablockStart
 
 	// Emit footer.
 	Bputc(b, 0xff)
@@ -399,6 +400,7 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	putle32(b, int(symtableOffset))
 	putle32(b, int(stringblockOffset))
 	putle32(b, int(datablockOffset))
+	putle32(b, int(datablockSize))
 
 	Bseek(b, end, 0)
 }
@@ -560,13 +562,11 @@ func wrint(b *Biobuf, sval int64) {
 
 func wrstring(ctxt *Link, b *Biobuf, s string) {
 	ctxt.orderedstrings = append(ctxt.orderedstrings, s)
-	ctxt.stringlength += len(s)
 	wrint(b, int64(len(s)))
 }
 
 func wrdata(ctxt *Link, b *Biobuf, v []byte) {
 	ctxt.ordereddata = append(ctxt.ordereddata, v)
-	ctxt.datalength += len(v)
 	wrint(b, int64(len(v)))
 }
 

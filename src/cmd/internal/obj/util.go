@@ -63,6 +63,10 @@ func (b *Biobuf) Write(p []byte) (int, error) {
 	return b.w.Write(p)
 }
 
+func (b *Biobuf) R() io.Reader {
+	return b.r
+}
+
 func Bwritestring(b *Biobuf, p string) (int, error) {
 	return b.w.WriteString(p)
 }

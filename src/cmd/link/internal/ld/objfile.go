@@ -20,6 +20,15 @@ const (
 
 var symtable []*LSym
 
+type ObjfileHeader struct {
+	Startmagic        [8]byte
+	Version           byte
+	SymtableOffset    uint32
+	StringblockOffset uint32
+	DatablockOffset   uint32
+	DatablockLength   uint32
+}
+
 type Membuf struct {
 	gendata     []byte
 	pos         int
@@ -53,67 +62,47 @@ func (b *Membuf) string(n int) string {
 	return b.stringblock[p : p+n]
 }
 
-func bgeti32(ff *obj.Biobuf) int {
-	var buf [4]byte
-	obj.Bread(ff, buf[:])
-	return int(binary.LittleEndian.Uint32(buf[:]))
-}
-
-func bcheckdiv(ff *obj.Biobuf, pn, where string) {
-	var div [2]byte
-	obj.Bread(ff, div[:])
-	if string(div[:]) != "\xff\xfd" {
-		log.Fatalf("%s: invalid divider %s", pn, where)
-	}
-}
-
 func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) {
 	start := obj.Boffset(ff)
 	ctxt.Version++
-	var header [9]byte
-	obj.Bread(ff, header[:])
-	if string(header[:8]) != startmagic {
-		log.Fatalf("%s: invalid file start %x %x %x %x %x %x %x %x", pn, header[0], header[1], header[2], header[3], header[4], header[5], header[6], header[7])
+	var header ObjfileHeader
+	binary.Read(ff.R(), binary.LittleEndian, &header)
+	if string(header.Startmagic[:]) != startmagic {
+		log.Fatalf("%s: invalid file start %x", pn, header.Startmagic[:])
 	}
-	c := header[8]
-	if c != 2 {
-		log.Fatalf("%s: invalid file version number %d", pn, c)
+	if header.Version != 2 {
+		log.Fatalf("%s: invalid file version number %d", pn, header.Version)
 	}
-
 	offsetBase := obj.Boffset(ff)
 
-	var offsets [12]byte
-	obj.Bread(ff, offsets[:])
-
-	symtableOffset := int(binary.LittleEndian.Uint32(offsets[:4]))
-	stringblockOffset := int(binary.LittleEndian.Uint32(offsets[4:8]))
-	datablockOffset := int(binary.LittleEndian.Uint32(offsets[8:12]))
-
-	f := &Membuf{gendata: make([]byte, stringblockOffset)}
-	obj.Bread(ff, f.gendata)
+	f := &Membuf{gendata: make([]byte, int(header.StringblockOffset))}
+	if obj.Bread(ff, f.gendata) < 0 {
+		log.Fatalf("cannot read gendata")
+	}
 
 	// We need to read the string block before we read the symbol table
-	obj.Bseek(ff, offsetBase+int64(stringblockOffset), 0)
-	stringblockLength := bgeti32(ff)
-	stringdata := make([]byte, stringblockLength)
-	obj.Bread(ff, stringdata)
+	obj.Bseek(ff, offsetBase+int64(header.StringblockOffset), 0)
+	stringdata := make([]byte, header.DatablockOffset-header.StringblockOffset)
+	if obj.Bread(ff, stringdata) < 0 {
+		log.Fatalf("cannot read stringdata")
+	}
 	f.stringblock = string(stringdata)
-	bcheckdiv(ff, pn, "after string block")
 
 	// Need to read data block before reading symbols
-	obj.Bseek(ff, offsetBase+int64(datablockOffset), 0)
-	datablockLength := bgeti32(ff)
-	f.datablock = make([]byte, datablockLength)
-	obj.Bread(ff, f.datablock)
+	obj.Bseek(ff, offsetBase+int64(header.DatablockOffset), 0)
+	f.datablock = make([]byte, header.DatablockLength)
+	if obj.Bread(ff, f.datablock) < 0 {
+		log.Fatalf("cannot read datablock")
+	}
 
 	var tail [8]byte
 	obj.Bread(ff, tail[:])
-	if string(tail[:]) != endmagic {
-		log.Fatalf("%s: invalid file end", pn)
-	}
 
 	if obj.Boffset(ff) != start+length {
 		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(ff)), int64(start+length))
+	}
+	if string(tail[:]) != endmagic {
+		log.Fatalf("%s: invalid file end %x", pn, tail[:])
 	}
 
 	var lib string
@@ -127,7 +116,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	eoImports := f.pos
 
 	// Now read the symbol table
-	f.pos = symtableOffset - 12
+	f.pos = int(header.SymtableOffset)
 	symtable = nil
 	replacer := strings.NewReplacer(`"".`, pkg+".")
 	for {
@@ -161,10 +150,6 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 		}
 	}
 
-	if string(f.read(2)) != "\xff\xfd" {
-		log.Fatalf("%s: invalid divider after symbol table", pn)
-	}
-
 	// Finally, read symbol data
 	f.pos = eoImports
 	for {
@@ -173,10 +158,6 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 			break
 		}
 		readsym(ctxt, f, pkg, pn)
-	}
-
-	if string(f.read(2)) != "\xff\xfd" {
-		log.Fatalf("%s: invalid divider", pn)
 	}
 
 }

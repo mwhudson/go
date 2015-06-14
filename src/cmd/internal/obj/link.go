@@ -511,9 +511,7 @@ type Link struct {
 	Etextp             *LSym
 	orderedsyms        []*LSym
 	orderedstrings     []string
-	stringlength       int
 	ordereddata        [][]byte
-	datalength         int
 }
 
 type SymVer struct {
