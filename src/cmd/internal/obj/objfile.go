@@ -28,9 +28,7 @@
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
 //	- byte 0xff (marks end of sequence)
-//	- divider: "\xff\xfd"
 //	- symbol table: name (string), version (int) pairs, empty name terminates
-//	- divider: "\xff\xfd"
 //	- string block: bytes
 //	- data block: bytes
 //	- magic footer: "\xff\xffgo13ld"
@@ -42,8 +40,8 @@
 // consumes a number of bytes from the data or string block,
 // respecitively.
 //
-// A symbol reference is an index into the symbol table.
-// A nil LSym* pointer is written as -1.
+// A symbol reference is an index into the symbol table. Index 0 is
+// nil, which is not written as part of the symbol table.
 //
 // Each symbol is laid out as the following fields (taken from LSym*):
 //
@@ -77,9 +75,7 @@
 //	- siz [int]
 //	- type [int]
 //	- add [int]
-//	- xadd [int]
 //	- sym [symbol reference]
-//	- xsym [symbol reference]
 //
 // Each local has the encoding:
 //
@@ -103,13 +99,8 @@
 //
 // The file layout and meaning of type integers are architecture-independent.
 //
-// TODO(rsc): The file format is good for a first pass but needs work.
+// TODO(rsc): The file format is good for a second pass but still needs work.
 //	- There are SymID in the object file that should really just be strings.
-//	- The actual symbol memory images are interlaced with the symbol
-//	  metadata. They should be separated, to reduce the I/O required to
-//	  load just the metadata.
-//	- The symbol references should be shortened, either with a symbol
-//	  table or by using a simple backward index to an earlier mentioned symbol.
 
 package obj
 
