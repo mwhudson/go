@@ -82,8 +82,12 @@ type LSym struct {
 	Autom       *Auto
 	Pcln        *Pcln
 	P           []byte
-	R           []Reloc
+	r           []Reloc
 	Local       bool
+}
+
+func (s *LSym) R() []Reloc {
+	return s.r
 }
 
 func (s *LSym) String() string {
