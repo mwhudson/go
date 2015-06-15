@@ -15,22 +15,33 @@
 //
 // The file format is:
 //
-//	- magic header: "\x00\x00go13ld"
-//	- byte 1 - version number
+//	- header:
+//	  - magic: "\x00\x00go13ld"
+//	  - byte 2 - version number
+//	  - little-endian 64-bit "section" sizes:
+//	    - imports
+//	    - sequence of defined symbols
+//	    - symbol table
+//	    - string block
+//	    - data block
 //	- sequence of strings giving dependencies (imported packages)
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
 //	- byte 0xff (marks end of sequence)
+//	- symbol table: name (string), version (int) pairs, empty name terminates
+//	- string block: bytes
+//	- data block: bytes
 //	- magic footer: "\xff\xffgo13ld"
 //
 // All integers are stored in a zigzag varint format.
 // See golang.org/s/go12symtab for a definition.
 //
-// Data blocks and strings are both stored as an integer
-// followed by that many bytes.
+// Data blocks and strings are both stored as a size: reading them
+// consumes a number of bytes from the data or string block,
+// respecitively.
 //
-// A symbol reference is a string name followed by a version.
-// An empty name corresponds to a nil LSym* pointer.
+// A symbol reference is an index into the symbol table. Index 0 is
+// nil, which is not written as part of the symbol table.
 //
 // Each symbol is laid out as the following fields (taken from LSym*):
 //
@@ -64,9 +75,7 @@
 //	- siz [int]
 //	- type [int]
 //	- add [int]
-//	- xadd [int]
 //	- sym [symbol reference]
-//	- xsym [symbol reference]
 //
 // Each local has the encoding:
 //
@@ -90,17 +99,13 @@
 //
 // The file layout and meaning of type integers are architecture-independent.
 //
-// TODO(rsc): The file format is good for a first pass but needs work.
+// TODO(rsc): The file format is good for a second pass but still needs work.
 //	- There are SymID in the object file that should really just be strings.
-//	- The actual symbol memory images are interlaced with the symbol
-//	  metadata. They should be separated, to reduce the I/O required to
-//	  load just the metadata.
-//	- The symbol references should be shortened, either with a symbol
-//	  table or by using a simple backward index to an earlier mentioned symbol.
 
 package obj
 
 import (
+	"encoding/binary"
 	"fmt"
 	"log"
 	"path/filepath"
@@ -108,6 +113,16 @@ import (
 )
 
 var outfile string
+
+type ObjfileHeader struct {
+	Startmagic      [8]byte
+	Version         byte
+	ImportsSize     int64
+	SymdataSize     int64
+	SymtableSize    int64
+	StringblockSize int64
+	DatablockSize   int64
+}
 
 // The Go and C compilers, and the assembler, call writeobj to write
 // out a Go object file.  The linker does not call this; the linker
@@ -299,17 +314,19 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	}
 
 	// Emit header.
-	Bputc(b, 0)
+	header := ObjfileHeader{Startmagic: [8]byte{'\x00', '\x00', 'g', 'o', '1', '3', 'l', 'd'}, Version: 2}
+	headerLocation := Boffset(b)
+	binary.Write(b.w, binary.LittleEndian, &header)
 
-	Bputc(b, 0)
-	fmt.Fprintf(b, "go13ld")
-	Bputc(b, 1) // version
+	sectionStart := Boffset(b)
 
 	// Emit autolib.
 	for _, pkg := range ctxt.Imports {
-		wrstring(b, pkg)
+		wrstring(ctxt, b, pkg)
 	}
-	wrstring(b, "")
+	wrstring(ctxt, b, "")
+
+	header.ImportsSize, sectionStart = Boffset(b)-sectionStart, Boffset(b)
 
 	// Emit symbols.
 	for s := text; s != nil; s = s.Next {
@@ -318,12 +335,45 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	for s := data; s != nil; s = s.Next {
 		writesym(ctxt, b, s)
 	}
+	Bputc(b, 0xff)
+
+	header.SymdataSize, sectionStart = Boffset(b)-sectionStart, Boffset(b)
+
+	// Emit symbol table (index 0 is nil and not written to the file)
+	for _, s := range ctxt.orderedsyms[1:] {
+		if !s.ispath {
+			wrstring(ctxt, b, s.Name)
+		} else {
+			wrstring(ctxt, b, filepath.ToSlash(s.Name))
+		}
+		Bputc(b, byte(s.Version))
+	}
+	wrstring(ctxt, b, "")
+
+	header.SymtableSize, sectionStart = Boffset(b)-sectionStart, Boffset(b)
+
+	// Emit string block
+	for _, str := range ctxt.orderedstrings {
+		b.w.WriteString(str)
+	}
+
+	header.StringblockSize, sectionStart = Boffset(b)-sectionStart, Boffset(b)
+
+	// Emit data block
+	for _, data := range ctxt.ordereddata {
+		b.Write(data)
+	}
+	header.DatablockSize = Boffset(b) - sectionStart
 
 	// Emit footer.
-	Bputc(b, 0xff)
+	fmt.Fprintf(b, "\xff\xffgo13ld")
 
-	Bputc(b, 0xff)
-	fmt.Fprintf(b, "go13ld")
+	end := Boffset(b)
+
+	Bseek(b, headerLocation, 0)
+	binary.Write(b.w, binary.LittleEndian, &header)
+
+	Bseek(b, end, 0)
 }
 
 func writesym(ctxt *Link, b *Biobuf, s *LSym) {
@@ -398,16 +448,15 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 
 	Bputc(b, 0xfe)
 	wrint(b, int64(s.Type))
-	wrstring(b, s.Name)
-	wrint(b, int64(s.Version))
+	wrint(b, symindex(ctxt, s))
 	flags := int64(s.Dupok)
 	if s.Local {
 		flags |= 2
 	}
 	wrint(b, flags)
 	wrint(b, s.Size)
-	wrsym(b, s.Gotype)
-	wrdata(b, s.P)
+	wrsym(ctxt, b, s.Gotype)
+	wrdata(ctxt, b, s.P)
 
 	wrint(b, int64(len(s.R)))
 	var r *Reloc
@@ -417,45 +466,43 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		wrint(b, int64(r.Siz))
 		wrint(b, int64(r.Type))
 		wrint(b, r.Add)
-		wrint(b, 0) // Xadd, ignored
-		wrsym(b, r.Sym)
-		wrsym(b, nil) // Xsym, ignored
+		wrsym(ctxt, b, r.Sym)
 	}
 
 	if s.Type == STEXT {
 		wrint(b, int64(s.Args))
 		wrint(b, int64(s.Locals))
 		wrint(b, int64(s.Nosplit))
-		wrint(b, int64(s.Leaf)|int64(s.Cfunc)<<1)
+		wrint(b, int64(int64(s.Leaf)|int64(s.Cfunc)<<1))
 		n := 0
 		for a := s.Autom; a != nil; a = a.Link {
 			n++
 		}
 		wrint(b, int64(n))
 		for a := s.Autom; a != nil; a = a.Link {
-			wrsym(b, a.Asym)
+			wrsym(ctxt, b, a.Asym)
 			wrint(b, int64(a.Aoffset))
 			if a.Name == NAME_AUTO {
-				wrint(b, A_AUTO)
+				Bputc(b, A_AUTO)
 			} else if a.Name == NAME_PARAM {
-				wrint(b, A_PARAM)
+				Bputc(b, A_PARAM)
 			} else {
 				log.Fatalf("%s: invalid local variable type %d", s.Name, a.Name)
 			}
-			wrsym(b, a.Gotype)
+			wrsym(ctxt, b, a.Gotype)
 		}
 
 		pc := s.Pcln
-		wrdata(b, pc.Pcsp.P)
-		wrdata(b, pc.Pcfile.P)
-		wrdata(b, pc.Pcline.P)
+		wrdata(ctxt, b, pc.Pcsp.P)
+		wrdata(ctxt, b, pc.Pcfile.P)
+		wrdata(ctxt, b, pc.Pcline.P)
 		wrint(b, int64(len(pc.Pcdata)))
 		for i := 0; i < len(pc.Pcdata); i++ {
-			wrdata(b, pc.Pcdata[i].P)
+			wrdata(ctxt, b, pc.Pcdata[i].P)
 		}
 		wrint(b, int64(len(pc.Funcdataoff)))
 		for i := 0; i < len(pc.Funcdataoff); i++ {
-			wrsym(b, pc.Funcdata[i])
+			wrsym(ctxt, b, pc.Funcdata[i])
 		}
 		for i := 0; i < len(pc.Funcdataoff); i++ {
 			wrint(b, pc.Funcdataoff[i])
@@ -484,40 +531,39 @@ func wrint(b *Biobuf, sval int64) {
 	b.Write(varintbuf[:len(varintbuf)-len(p)])
 }
 
-func wrstring(b *Biobuf, s string) {
+func wrstring(ctxt *Link, b *Biobuf, s string) {
+	ctxt.orderedstrings = append(ctxt.orderedstrings, s)
 	wrint(b, int64(len(s)))
-	b.w.WriteString(s)
 }
 
-// wrpath writes a path just like a string, but on windows, it
-// translates '\\' to '/' in the process.
-func wrpath(ctxt *Link, b *Biobuf, p string) {
-	wrstring(b, filepath.ToSlash(p))
-}
-
-func wrdata(b *Biobuf, v []byte) {
+func wrdata(ctxt *Link, b *Biobuf, v []byte) {
+	ctxt.ordereddata = append(ctxt.ordereddata, v)
 	wrint(b, int64(len(v)))
-	b.Write(v)
+}
+
+func symindex(ctxt *Link, s *LSym) int64 {
+	if s.index == 0 {
+		s.index = len(ctxt.orderedsyms)
+		ctxt.orderedsyms = append(ctxt.orderedsyms, s)
+	}
+	return int64(s.index)
 }
 
 func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
 		wrint(b, 0)
-		wrint(b, 0)
 		return
 	}
+	s.ispath = true
 
-	wrpath(ctxt, b, s.Name)
-	wrint(b, int64(s.Version))
+	wrint(b, symindex(ctxt, s))
 }
 
-func wrsym(b *Biobuf, s *LSym) {
+func wrsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
-		wrint(b, 0)
 		wrint(b, 0)
 		return
 	}
 
-	wrstring(b, s.Name)
-	wrint(b, int64(s.Version))
+	wrint(b, symindex(ctxt, s))
 }
