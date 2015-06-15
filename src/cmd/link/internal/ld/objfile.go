@@ -18,118 +18,168 @@ const (
 	endmagic   = "\xff\xffgo13ld"
 )
 
-var symtable []*LSym
-
 type ObjfileHeader struct {
-	Startmagic        [8]byte
-	Version           byte
-	SymtableOffset    uint32
-	StringblockOffset uint32
-	DatablockOffset   uint32
-	DatablockLength   uint32
+	Startmagic      [8]byte
+	Version         byte
+	ImportsSize     uint32
+	SymdataSize     uint32
+	SymtableSize    uint32
+	StringblockSize uint32
+	DatablockSize   uint32
 }
 
-type Membuf struct {
-	gendata     []byte
-	pos         int
-	stringblock string
-	stringpos   int
-	datablock   []byte
-	datapos     int
+type Objfile struct {
+	header      ObjfileHeader
+	biobuf      *obj.Biobuf
+	offsetBase  int64
+	imports     *DataSection
+	symdata     *DataSection
+	symtable    *DataSection
+	stringblock *StringSection
+	datablock   *DataSection
+	symbols     []*LSym
 }
 
-func (b *Membuf) read(n int) []byte {
-	p := b.pos
-	b.pos += n
-	return b.gendata[p : p+n : p+n]
-}
-
-func (b *Membuf) getc() int {
-	c := int(b.gendata[b.pos])
-	b.pos++
-	return c
-}
-
-func (b *Membuf) data(n int) []byte {
-	p := b.datapos
-	b.datapos += n
-	return b.datablock[p : p+n : p+n]
-}
-
-func (b *Membuf) string(n int) string {
-	p := b.stringpos
-	b.stringpos += n
-	return b.stringblock[p : p+n]
-}
-
-func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) {
+func NewObjfile(ff *obj.Biobuf, pn string, length int64) *Objfile {
 	start := obj.Boffset(ff)
-	ctxt.Version++
-	var header ObjfileHeader
-	binary.Read(ff.R(), binary.LittleEndian, &header)
-	if string(header.Startmagic[:]) != startmagic {
-		log.Fatalf("%s: invalid file start %x", pn, header.Startmagic[:])
+	objfile := &Objfile{biobuf: ff}
+	binary.Read(ff.R(), binary.LittleEndian, &objfile.header)
+	if string(objfile.header.Startmagic[:]) != startmagic {
+		log.Fatalf("%s: invalid file start %x", pn, objfile.header.Startmagic[:])
 	}
-	if header.Version != 2 {
-		log.Fatalf("%s: invalid file version number %d", pn, header.Version)
+	if objfile.header.Version != 2 {
+		log.Fatalf("%s: invalid file version number %d", pn, objfile.header.Version)
 	}
-	offsetBase := obj.Boffset(ff)
-
-	f := &Membuf{gendata: make([]byte, int(header.StringblockOffset))}
-	if obj.Bread(ff, f.gendata) < 0 {
-		log.Fatalf("cannot read gendata")
-	}
-
-	// We need to read the string block before we read the symbol table
-	obj.Bseek(ff, offsetBase+int64(header.StringblockOffset), 0)
-	stringdata := make([]byte, header.DatablockOffset-header.StringblockOffset)
-	if obj.Bread(ff, stringdata) < 0 {
-		log.Fatalf("cannot read stringdata")
-	}
-	f.stringblock = string(stringdata)
-
-	// Need to read data block before reading symbols
-	obj.Bseek(ff, offsetBase+int64(header.DatablockOffset), 0)
-	f.datablock = make([]byte, header.DatablockLength)
-	if obj.Bread(ff, f.datablock) < 0 {
-		log.Fatalf("cannot read datablock")
-	}
-
+	objfile.imports = dataSection(ff, objfile.header.ImportsSize, pn, "imports")
+	objfile.symdata = dataSection(ff, objfile.header.SymdataSize, pn, "symdata")
+	objfile.symtable = dataSection(ff, objfile.header.SymtableSize, pn, "symtable")
+	objfile.stringblock = stringSection(ff, objfile.header.StringblockSize, pn, "stringblock")
+	objfile.datablock = dataSection(ff, objfile.header.DatablockSize, pn, "datablock")
 	var tail [8]byte
 	obj.Bread(ff, tail[:])
-
 	if obj.Boffset(ff) != start+length {
 		log.Fatalf("%s: unexpected end at %d, want %d", pn, int64(obj.Boffset(ff)), int64(start+length))
 	}
 	if string(tail[:]) != endmagic {
 		log.Fatalf("%s: invalid file end %x", pn, tail[:])
 	}
+	return objfile
+}
 
+func (o *Objfile) rdint(sect *DataSection) int64 {
+	var c int
+
+	uv := uint64(0)
+	for shift := 0; ; shift += 7 {
+		if shift >= 64 {
+			log.Fatalf("corrupt input")
+		}
+		c = sect.getc()
+		uv |= uint64(c&0x7F) << uint(shift)
+		if c&0x80 == 0 {
+			break
+		}
+	}
+
+	return int64(uv>>1) ^ (int64(uint64(uv)<<63) >> 63)
+}
+
+func (o *Objfile) rdstring(sect *DataSection) string {
+	return o.stringblock.read(int(o.rdint(sect)))
+}
+
+func (o *Objfile) rddata(sect *DataSection) []byte {
+	return o.datablock.read(int(o.rdint(sect)))
+}
+
+func (o *Objfile) rdsym(sect *DataSection) *LSym {
+	ind := int(o.rdint(sect))
+	if ind == -1 {
+		return nil
+	}
+	return o.symbols[ind]
+}
+
+func dataSection(ff *obj.Biobuf, sz uint32, pn, sn string) *DataSection {
+	section := &DataSection{data: make([]byte, sz)}
+	if obj.Bread(ff, section.data) < 0 {
+		log.Fatalf("%s: reading section %s failed", pn, sn)
+	}
+	return section
+}
+
+func stringSection(ff *obj.Biobuf, sz uint32, pn, sn string) *StringSection {
+	data := make([]byte, sz)
+	if obj.Bread(ff, data) < 0 {
+		log.Fatalf("%s: reading section %s failed", pn, sn)
+	}
+	section := &StringSection{data: string(data)}
+	return section
+}
+
+type DataSection struct {
+	data []byte
+	pos  int
+}
+
+func (b *DataSection) read(n int) []byte {
+	p := b.pos
+	b.pos += n
+	return b.data[p : p+n : p+n]
+}
+
+func (b *DataSection) getc() int {
+	c := int(b.data[b.pos])
+	b.pos++
+	return c
+}
+
+func (b *DataSection) checkDone() {
+	if b.pos != len(b.data) {
+		log.Fatalf("checkDone failed")
+	}
+}
+
+type StringSection struct {
+	data string
+	pos  int
+}
+
+func (b *StringSection) read(n int) string {
+	p := b.pos
+	b.pos += n
+	return b.data[p : p+n]
+}
+
+func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) {
+	ctxt.Version++
+
+	// NewObjfile reads the sections into memory
+	objfile := NewObjfile(ff, pn, length)
+
+	// Read the import strings
 	var lib string
 	for {
-		lib = rdstring(f)
+		lib = objfile.rdstring(objfile.imports)
 		if lib == "" {
 			break
 		}
 		addlib(ctxt, pkg, pn, lib)
 	}
-	eoImports := f.pos
+	objfile.imports.checkDone()
 
-	// Now read the symbol table
-	f.pos = int(header.SymtableOffset)
-	symtable = nil
+	// Read the symbol table
 	replacer := strings.NewReplacer(`"".`, pkg+".")
 	for {
-		s := rdstring(f)
+		s := objfile.rdstring(objfile.symtable)
 		if s == "" {
 			break
 		}
-		v := f.getc()
+		v := objfile.symtable.getc()
 		if v != 0 {
 			v = ctxt.Version
 		}
 		sym := Linklookup(ctxt, replacer.Replace(s), v)
-		symtable = append(symtable, sym)
 
 		if v == 0 && s[0] == '$' && sym.Type == 0 {
 			if strings.HasPrefix(s, "$f32.") {
@@ -148,40 +198,43 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 				sym.Reachable = false
 			}
 		}
+
+		objfile.symbols = append(objfile.symbols, sym)
 	}
+	objfile.symtable.checkDone()
 
 	// Finally, read symbol data
-	f.pos = eoImports
 	for {
-		c := f.gendata[f.pos]
+		c := objfile.symdata.data[objfile.symdata.pos]
 		if c == 0xff {
 			break
 		}
-		readsym(ctxt, f, pkg, pn)
+		readsym(ctxt, objfile, pkg, pn)
 	}
 
 }
 
 var readsym_ndup int
 
-func readsym(ctxt *Link, f *Membuf, pkg string, pn string) {
+func readsym(ctxt *Link, objfile *Objfile, pkg string, pn string) {
+	f := objfile.symdata
 	if f.getc() != 0xfe {
 		log.Fatalf("readsym out of sync")
 	}
 	t := f.getc()
-	ind := rdint(f)
+	ind := objfile.rdint(f)
 	flags := f.getc()
 	dupok := flags & 1
 	local := false
 	if flags&2 != 0 {
 		local = true
 	}
-	size := int(rdint(f))
-	typ := rdsym(ctxt, f)
-	data := rddata(f)
-	nreloc := int(rdint(f))
+	size := int(objfile.rdint(f))
+	typ := objfile.rdsym(f)
+	s := objfile.symbols[ind]
+	data := objfile.rddata(f)
+	nreloc := int(objfile.rdint(f))
 
-	s := symtable[ind]
 	var dup *LSym
 	if s.Type != 0 && s.Type != obj.SXREF {
 		if (t == obj.SDATA || t == obj.SBSS || t == obj.SNOPTRBSS) && len(data) == 0 && nreloc == 0 {
@@ -236,11 +289,11 @@ overwrite:
 		var r *Reloc
 		for i := 0; i < nreloc; i++ {
 			r = &s.R[i]
-			r.Off = int32(rdint(f))
-			r.Siz = uint8(rdint(f))
+			r.Off = int32(objfile.rdint(f))
+			r.Siz = uint8(objfile.rdint(f))
 			r.Type = int32(f.getc())
-			r.Add = rdint(f)
-			r.Sym = rdsym(ctxt, f)
+			r.Add = objfile.rdint(f)
+			r.Sym = objfile.rdsym(f)
 		}
 	}
 
@@ -253,47 +306,47 @@ overwrite:
 	}
 
 	if s.Type == obj.STEXT {
-		s.Args = int32(rdint(f))
-		s.Locals = int32(rdint(f))
+		s.Args = int32(objfile.rdint(f))
+		s.Locals = int32(objfile.rdint(f))
 		s.Nosplit = uint8(f.getc())
 		v := f.getc()
 		s.Leaf = uint8(v & 1)
 		s.Cfunc = uint8(v & 2)
-		n := int(rdint(f))
+		n := int(objfile.rdint(f))
 		var a *Auto
 		for i := 0; i < n; i++ {
 			a = new(Auto)
-			a.Asym = rdsym(ctxt, f)
-			a.Aoffset = int32(rdint(f))
+			a.Asym = objfile.rdsym(f)
+			a.Aoffset = int32(objfile.rdint(f))
 			a.Name = int16(f.getc())
-			a.Gotype = rdsym(ctxt, f)
+			a.Gotype = objfile.rdsym(f)
 			a.Link = s.Autom
 			s.Autom = a
 		}
 
 		s.Pcln = new(Pcln)
 		pc := s.Pcln
-		pc.Pcsp.P = rddata(f)
-		pc.Pcfile.P = rddata(f)
-		pc.Pcline.P = rddata(f)
-		n = int(rdint(f))
+		pc.Pcsp.P = objfile.rddata(f)
+		pc.Pcfile.P = objfile.rddata(f)
+		pc.Pcline.P = objfile.rddata(f)
+		n = int(objfile.rdint(f))
 		pc.Pcdata = make([]Pcdata, n)
 		for i := 0; i < n; i++ {
-			pc.Pcdata[i].P = rddata(f)
+			pc.Pcdata[i].P = objfile.rddata(f)
 		}
-		n = int(rdint(f))
+		n = int(objfile.rdint(f))
 		pc.Funcdata = make([]*LSym, n)
 		pc.Funcdataoff = make([]int64, n)
 		for i := 0; i < n; i++ {
-			pc.Funcdata[i] = rdsym(ctxt, f)
+			pc.Funcdata[i] = objfile.rdsym(f)
 		}
 		for i := 0; i < n; i++ {
-			pc.Funcdataoff[i] = rdint(f)
+			pc.Funcdataoff[i] = objfile.rdint(f)
 		}
-		n = int(rdint(f))
+		n = int(objfile.rdint(f))
 		pc.File = make([]*LSym, n)
 		for i := 0; i < n; i++ {
-			pc.File[i] = rdsym(ctxt, f)
+			pc.File[i] = objfile.rdsym(f)
 		}
 
 		if dup == nil {
@@ -309,40 +362,4 @@ overwrite:
 			ctxt.Etextp = s
 		}
 	}
-}
-
-func rdint(f *Membuf) int64 {
-	var c int
-
-	uv := uint64(0)
-	for shift := 0; ; shift += 7 {
-		if shift >= 64 {
-			log.Fatalf("corrupt input")
-		}
-		c = f.getc()
-		uv |= uint64(c&0x7F) << uint(shift)
-		if c&0x80 == 0 {
-			break
-		}
-	}
-
-	return int64(uv>>1) ^ (int64(uint64(uv)<<63) >> 63)
-}
-
-func rdstring(f *Membuf) string {
-	return f.string(int(rdint(f)))
-}
-
-func rddata(f *Membuf) []byte {
-	return f.data(int(rdint(f)))
-}
-
-func rdsym(ctxt *Link, f *Membuf) *LSym {
-	ind := int(rdint(f))
-	if ind == -1 {
-		return nil
-	}
-	s := symtable[ind]
-
-	return s
 }

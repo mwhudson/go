@@ -18,11 +18,12 @@
 //      - header:
 //        - magic: "\x00\x00go13ld"
 //        - byte 2 - version number
-//        - three little-endian 32-bit offsets from after the header to:
-//          - the symbol table
-//          - the string block
-//          - the data block
-//        - little-endian 32-bit data block size (string block size can be computed from offsets)
+//        - little-endian 32-bit "section" sizes:
+//          - imports
+//          - sequence of defined symbols
+//          - symbol table
+//          - string block
+//          - data block
 //	- sequence of strings giving dependencies (imported packages)
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
@@ -324,24 +325,28 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	fmt.Fprintf(b, "go13ld")
 	Bputc(b, 2) // version
 
-	offsetsLocation := Boffset(b)
+	sizesLocation := Boffset(b)
 
-	// Symbol table location
+	// import size
 	putle32(b, 0)
-	// String block location
+	// symdata size
 	putle32(b, 0)
-	// Data block location
+	// symtable size
 	putle32(b, 0)
-	// Data block size
+	// stringblock size
+	putle32(b, 0)
+	// datablock size
 	putle32(b, 0)
 
-	offsetsBase := Boffset(b)
+	sectionStart := Boffset(b)
 
 	// Emit autolib.
 	for _, pkg := range ctxt.Imports {
 		wrstring(ctxt, b, pkg)
 	}
 	wrstring(ctxt, b, "")
+
+	importSize, sectionStart := Boffset(b)-sectionStart, Boffset(b)
 
 	// Emit symbols.
 	for s := text; s != nil; s = s.Next {
@@ -350,12 +355,9 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	for s := data; s != nil; s = s.Next {
 		writesym(ctxt, b, s)
 	}
-
-	// Emit divider.
 	Bputc(b, 0xff)
-	Bputc(b, 0xfd)
 
-	symtableOffset := Boffset(b) - offsetsBase
+	symdataSize, sectionStart := Boffset(b)-sectionStart, Boffset(b)
 
 	// Emit symbol table
 	for _, s := range ctxt.orderedsyms {
@@ -368,25 +370,20 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 	}
 	wrstring(ctxt, b, "")
 
-	Bputc(b, 0xff)
-	Bputc(b, 0xfd)
-
-	stringblockOffset := Boffset(b) - offsetsBase
+	symtableSize, sectionStart := Boffset(b)-sectionStart, Boffset(b)
 
 	// Emit string block
 	for _, str := range ctxt.orderedstrings {
 		b.w.WriteString(str)
 	}
 
-	datablockStart := Boffset(b)
-	datablockOffset := datablockStart - offsetsBase
+	stringblockSize, sectionStart := Boffset(b)-sectionStart, Boffset(b)
 
 	// Emit data block
 	for _, data := range ctxt.ordereddata {
 		b.Write(data)
 	}
-
-	datablockSize := Boffset(b) - datablockStart
+	datablockSize := Boffset(b) - sectionStart
 
 	// Emit footer.
 	Bputc(b, 0xff)
@@ -395,11 +392,12 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 
 	end := Boffset(b)
 
-	Bseek(b, offsetsLocation, 0)
+	Bseek(b, sizesLocation, 0)
 
-	putle32(b, int(symtableOffset))
-	putle32(b, int(stringblockOffset))
-	putle32(b, int(datablockOffset))
+	putle32(b, int(importSize))
+	putle32(b, int(symdataSize))
+	putle32(b, int(symtableSize))
+	putle32(b, int(stringblockSize))
 	putle32(b, int(datablockSize))
 
 	Bseek(b, end, 0)
