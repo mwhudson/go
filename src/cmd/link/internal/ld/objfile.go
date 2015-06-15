@@ -18,19 +18,8 @@ const (
 	endmagic   = "\xff\xffgo13ld"
 )
 
-type ObjfileHeader struct {
-	Startmagic      [8]byte
-	Version         byte
-	ImportsSize     uint32
-	SymdataSize     uint32
-	SymtableSize    uint32
-	StringblockSize uint32
-	DatablockSize   uint32
-}
-
 type Objfile struct {
-	header      ObjfileHeader
-	biobuf      *obj.Biobuf
+	header      obj.ObjfileHeader
 	offsetBase  int64
 	imports     *DataSection
 	symdata     *DataSection
@@ -42,7 +31,7 @@ type Objfile struct {
 
 func NewObjfile(ff *obj.Biobuf, pn string, length int64) *Objfile {
 	start := obj.Boffset(ff)
-	objfile := &Objfile{biobuf: ff}
+	objfile := &Objfile{}
 	binary.Read(ff.R(), binary.LittleEndian, &objfile.header)
 	if string(objfile.header.Startmagic[:]) != startmagic {
 		log.Fatalf("%s: invalid file start %x", pn, objfile.header.Startmagic[:])
@@ -96,7 +85,7 @@ func (o *Objfile) rdsym(sect *DataSection) *LSym {
 	return o.symbols[int(o.rdint(sect))]
 }
 
-func dataSection(ff *obj.Biobuf, sz uint32, pn, sn string) *DataSection {
+func dataSection(ff *obj.Biobuf, sz int64, pn, sn string) *DataSection {
 	section := &DataSection{data: make([]byte, sz)}
 	if obj.Bread(ff, section.data) < 0 {
 		log.Fatalf("%s: reading section %s failed", pn, sn)
@@ -104,7 +93,7 @@ func dataSection(ff *obj.Biobuf, sz uint32, pn, sn string) *DataSection {
 	return section
 }
 
-func stringSection(ff *obj.Biobuf, sz uint32, pn, sn string) *StringSection {
+func stringSection(ff *obj.Biobuf, sz int64, pn, sn string) *StringSection {
 	data := make([]byte, sz)
 	if obj.Bread(ff, data) < 0 {
 		log.Fatalf("%s: reading section %s failed", pn, sn)
