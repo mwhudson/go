@@ -359,8 +359,8 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 
 	symdataSize, sectionStart := Boffset(b)-sectionStart, Boffset(b)
 
-	// Emit symbol table
-	for _, s := range ctxt.orderedsyms {
+	// Emit symbol table (index 0 is nil and not written to the file)
+	for _, s := range ctxt.orderedsyms[1:] {
 		if !s.ispath {
 			wrstring(ctxt, b, s.Name)
 		} else {
@@ -570,15 +570,15 @@ func wrdata(ctxt *Link, b *Biobuf, v []byte) {
 
 func symindex(ctxt *Link, s *LSym) int64 {
 	if s.index == 0 {
-		s.index = len(ctxt.orderedsyms) + 1
+		s.index = len(ctxt.orderedsyms)
 		ctxt.orderedsyms = append(ctxt.orderedsyms, s)
 	}
-	return int64(s.index - 1)
+	return int64(s.index)
 }
 
 func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
-		wrint(b, -1)
+		wrint(b, 0)
 		return
 	}
 	s.ispath = true
@@ -588,7 +588,7 @@ func wrpathsym(ctxt *Link, b *Biobuf, s *LSym) {
 
 func wrsym(ctxt *Link, b *Biobuf, s *LSym) {
 	if s == nil {
-		wrint(b, -1)
+		wrint(b, 0)
 		return
 	}
 

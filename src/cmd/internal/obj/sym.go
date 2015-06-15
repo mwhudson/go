@@ -79,6 +79,7 @@ func Headstr(v int) string {
 func Linknew(arch *LinkArch) *Link {
 	ctxt := new(Link)
 	ctxt.Hash = make(map[SymVer]*LSym)
+	ctxt.orderedsyms = []*LSym{nil}
 	ctxt.Arch = arch
 	ctxt.Version = HistVersion
 	ctxt.Goroot = Getgoroot()

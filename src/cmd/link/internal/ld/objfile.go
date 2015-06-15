@@ -93,11 +93,7 @@ func (o *Objfile) rddata(sect *DataSection) []byte {
 }
 
 func (o *Objfile) rdsym(sect *DataSection) *LSym {
-	ind := int(o.rdint(sect))
-	if ind == -1 {
-		return nil
-	}
-	return o.symbols[ind]
+	return o.symbols[int(o.rdint(sect))]
 }
 
 func dataSection(ff *obj.Biobuf, sz uint32, pn, sn string) *DataSection {
@@ -169,6 +165,7 @@ func ldobjfile(ctxt *Link, ff *obj.Biobuf, pkg string, length int64, pn string) 
 	objfile.imports.checkDone()
 
 	// Read the symbol table
+	objfile.symbols = []*LSym{nil}
 	replacer := strings.NewReplacer(`"".`, pkg+".")
 	for {
 		s := objfile.rdstring(objfile.symtable)
