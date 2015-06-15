@@ -84,9 +84,16 @@ type LSym struct {
 	P           []byte
 	r           []Reloc
 	Local       bool
+	r_accessed  bool
 }
 
+var r_accesses int
+
 func (s *LSym) R() []Reloc {
+	if !s.r_accessed {
+		s.r_accessed = true
+		r_accesses++
+	}
 	return s.r
 }
 

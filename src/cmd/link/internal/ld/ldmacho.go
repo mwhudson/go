@@ -882,8 +882,8 @@ func ldmacho(f *obj.Biobuf, pkg string, length int64, pn string) {
 		}
 
 		sort.Sort(rbyoff(r[:rpi]))
-		s.R = r
-		s.R = s.R[:rpi]
+		s.r = r
+		s.r = s.R()[:rpi]
 	}
 
 	return

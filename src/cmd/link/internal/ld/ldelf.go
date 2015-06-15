@@ -795,8 +795,8 @@ func ldelf(f *obj.Biobuf, pkg string, length int64, pn string) {
 		// just in case
 
 		s = sect.sym
-		s.R = r
-		s.R = s.R[:n]
+		s.r = r
+		s.r = s.R()[:n]
 	}
 
 	return

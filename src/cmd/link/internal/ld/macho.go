@@ -825,8 +825,8 @@ func machorelocsect(sect *Section, first *LSym) {
 		}
 		Ctxt.Cursym = sym
 
-		for ri = 0; ri < len(sym.R); ri++ {
-			r = &sym.R[ri]
+		for ri = 0; ri < len(sym.R()); ri++ {
+			r = &sym.R()[ri]
 			if r.Done != 0 {
 				continue
 			}

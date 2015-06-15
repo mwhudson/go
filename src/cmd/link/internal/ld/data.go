@@ -55,8 +55,8 @@ func Symgrow(ctxt *Link, s *LSym, siz int64) {
 }
 
 func Addrel(s *LSym) *Reloc {
-	s.R = append(s.R, Reloc{})
-	return &s.R[len(s.R)-1]
+	s.r = append(s.R(), Reloc{})
+	return &s.R()[len(s.R())-1]
 }
 
 func setuintxx(ctxt *Link, s *LSym, off int64, v uint64, wid int64) int64 {
@@ -325,8 +325,8 @@ func relocsym(s *LSym) {
 	var o int64
 
 	Ctxt.Cursym = s
-	for ri := int32(0); ri < int32(len(s.R)); ri++ {
-		r = &s.R[ri]
+	for ri := int32(0); ri < int32(len(s.R())); ri++ {
+		r = &s.R()[ri]
 		r.Done = 1
 		off = r.Off
 		siz = int32(r.Siz)
@@ -630,8 +630,8 @@ func dynrelocsym(s *LSym) {
 		}
 		var r *Reloc
 		var targ *LSym
-		for ri := 0; ri < len(s.R); ri++ {
-			r = &s.R[ri]
+		for ri := 0; ri < len(s.R()); ri++ {
+			r = &s.R()[ri]
 			targ = r.Sym
 			if targ == nil {
 				continue
@@ -668,8 +668,8 @@ func dynrelocsym(s *LSym) {
 	}
 
 	var r *Reloc
-	for ri := 0; ri < len(s.R); ri++ {
-		r = &s.R[ri]
+	for ri := 0; ri < len(s.R()); ri++ {
+		r = &s.R()[ri]
 		if r.Sym != nil && r.Sym.Type == obj.SDYNIMPORT || r.Type >= 256 {
 			if r.Sym != nil && !r.Sym.Reachable {
 				Diag("internal inconsistency: dynamic symbol %s is not reachable.", r.Sym.Name)
@@ -876,8 +876,8 @@ func Datblk(addr int64, size int64) {
 		fmt.Fprintf(&Bso, "\n")
 
 		if Linkmode == LinkExternal {
-			for i = 0; i < int64(len(sym.R)); i++ {
-				r = &sym.R[i]
+			for i = 0; i < int64(len(sym.R())); i++ {
+				r = &sym.R()[i]
 				rsname = ""
 				if r.Sym != nil {
 					rsname = r.Sym.Name

@@ -1563,7 +1563,7 @@ func writelines() {
 	if linesec == nil {
 		linesec = Linklookup(Ctxt, ".dwarfline", 0)
 	}
-	linesec.R = linesec.R[:0]
+	linesec.r = linesec.R()[:0]
 
 	unitstart := int64(-1)
 	headerend := int64(-1)
@@ -1794,7 +1794,7 @@ func writeframes() {
 	if framesec == nil {
 		framesec = Linklookup(Ctxt, ".dwarfframe", 0)
 	}
-	framesec.R = framesec.R[:0]
+	framesec.r = framesec.R()[:0]
 	frameo = Cpos()
 
 	// Emit the CIE, Section 6.4.1
@@ -1907,12 +1907,12 @@ func writeinfo() {
 	if infosec == nil {
 		infosec = Linklookup(Ctxt, ".dwarfinfo", 0)
 	}
-	infosec.R = infosec.R[:0]
+	infosec.r = infosec.R()[:0]
 
 	if arangessec == nil {
 		arangessec = Linklookup(Ctxt, ".dwarfaranges", 0)
 	}
-	arangessec.R = arangessec.R[:0]
+	arangessec.r = arangessec.R()[:0]
 
 	var here int64
 	var unitstart int64
@@ -2081,8 +2081,8 @@ func writedwarfreloc(s *LSym) int64 {
 	var r *Reloc
 
 	start := Cpos()
-	for ri := 0; ri < len(s.R); ri++ {
-		r = &s.R[ri]
+	for ri := 0; ri < len(s.R()); ri++ {
+		r = &s.R()[ri]
 		if Iself {
 			i = Thearch.Elfreloc1(r, int64(r.Off))
 		} else if HEADTYPE == obj.Hdarwin {
@@ -2528,7 +2528,7 @@ func dwarfaddmachoheaders(ms *MachoSeg) {
 		linesym.Value = int64(msect.addr)
 	}
 	if linerelocsize > 0 {
-		msect.nreloc = uint32(len(linesec.R))
+		msect.nreloc = uint32(len(linesec.R()))
 		msect.reloc = uint32(linereloco)
 	}
 
@@ -2542,7 +2542,7 @@ func dwarfaddmachoheaders(ms *MachoSeg) {
 		framesym.Value = int64(msect.addr)
 	}
 	if framerelocsize > 0 {
-		msect.nreloc = uint32(len(framesec.R))
+		msect.nreloc = uint32(len(framesec.R()))
 		msect.reloc = uint32(framereloco)
 	}
 
@@ -2556,7 +2556,7 @@ func dwarfaddmachoheaders(ms *MachoSeg) {
 		infosym.Value = int64(msect.addr)
 	}
 	if inforelocsize > 0 {
-		msect.nreloc = uint32(len(infosec.R))
+		msect.nreloc = uint32(len(infosec.R()))
 		msect.reloc = uint32(inforeloco)
 	}
 
@@ -2586,7 +2586,7 @@ func dwarfaddmachoheaders(ms *MachoSeg) {
 		addr += msect.size
 		msect.flag = 0x02000000
 		if arangesrelocsize > 0 {
-			msect.nreloc = uint32(len(arangessec.R))
+			msect.nreloc = uint32(len(arangessec.R()))
 			msect.reloc = uint32(arangesreloco)
 		}
 	}

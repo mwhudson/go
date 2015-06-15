@@ -251,6 +251,7 @@ func Ldmain() {
 		fmt.Fprintf(&Bso, "%d symbols\n", Ctxt.Nsymbol)
 		fmt.Fprintf(&Bso, "%d liveness data\n", liveness)
 	}
+	fmt.Fprintf(&Bso, "%d symbols %d r_accesses\n", Ctxt.Nsymbol, r_accesses)
 
 	Bso.Flush()
 

@@ -345,8 +345,8 @@ func ldpe(f *obj.Biobuf, pkg string, length int64, pn string) {
 		sort.Sort(rbyoff(r[:rsect.sh.NumberOfRelocations]))
 
 		s = rsect.sym
-		s.R = r
-		s.R = s.R[:rsect.sh.NumberOfRelocations]
+		s.r = r
+		s.r = s.R()[:rsect.sh.NumberOfRelocations]
 	}
 
 	// enter sub-symbols into symbol table.

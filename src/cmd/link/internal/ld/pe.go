@@ -815,8 +815,8 @@ func perelocsect(sect *Section, first *LSym) int {
 		}
 		Ctxt.Cursym = sym
 
-		for ri = 0; ri < len(sym.R); ri++ {
-			r = &sym.R[ri]
+		for ri = 0; ri < len(sym.R()); ri++ {
+			r = &sym.R()[ri]
 			if r.Done != 0 {
 				continue
 			}
@@ -988,7 +988,7 @@ func pegenasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 	if Linkmode == LinkExternal {
 		for d := dr; d != nil; d = d.next {
 			for m := d.ms; m != nil; m = m.next {
-				s := m.s.R[0].Xsym
+				s := m.s.R()[0].Xsym
 				put(s, s.Name, 'U', 0, int64(Thearch.Ptrsize), 0, nil)
 			}
 		}
@@ -1073,8 +1073,8 @@ func addpersrc() {
 	var p []byte
 	var r *Reloc
 	var val uint32
-	for ri := 0; ri < len(rsrcsym.R); ri++ {
-		r = &rsrcsym.R[ri]
+	for ri := 0; ri < len(rsrcsym.R()); ri++ {
+		r = &rsrcsym.R()[ri]
 		p = rsrcsym.P[r.Off:]
 		val = uint32(int64(h.VirtualAddress) + r.Add)
 

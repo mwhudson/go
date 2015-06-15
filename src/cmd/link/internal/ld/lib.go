@@ -1541,7 +1541,7 @@ func stkcheck(up *Chain, depth int) int {
 	// so it incorrectly thinks the call to morestack happens wherever it shows up.
 	// This check will be wrong if there are any hand-inserted calls to morestack.
 	// There are not any now, nor should there ever be.
-	for _, r := range s.R {
+	for _, r := range s.R() {
 		if r.Sym == nil || !strings.HasPrefix(r.Sym.Name, "runtime.morestack") {
 			continue
 		}
@@ -1570,7 +1570,7 @@ func stkcheck(up *Chain, depth int) int {
 	// Walk through sp adjustments in function, consuming relocs.
 	ri := 0
 
-	endr := len(s.R)
+	endr := len(s.R())
 	var ch1 Chain
 	var pcsp Pciter
 	var r *Reloc
@@ -1584,8 +1584,8 @@ func stkcheck(up *Chain, depth int) int {
 		}
 
 		// Process calls in this span.
-		for ; ri < endr && uint32(s.R[ri].Off) < pcsp.nextpc; ri++ {
-			r = &s.R[ri]
+		for ; ri < endr && uint32(s.R()[ri].Off) < pcsp.nextpc; ri++ {
+			r = &s.R()[ri]
 			switch r.Type {
 			// Direct call.
 			case obj.R_CALL, obj.R_CALLARM, obj.R_CALLARM64, obj.R_CALLPOWER:
@@ -1670,8 +1670,8 @@ func Yconv(s *LSym) string {
 		}
 
 		fmt_ += fmt.Sprintf("\n")
-		for i := 0; i < len(s.R); i++ {
-			fmt_ += fmt.Sprintf("\t0x%04x[%x] %d %s[%x]\n", s.R[i].Off, s.R[i].Siz, s.R[i].Type, s.R[i].Sym.Name, int64(s.R[i].Add))
+		for i := 0; i < len(s.R()); i++ {
+			fmt_ += fmt.Sprintf("\t0x%04x[%x] %d %s[%x]\n", s.R()[i].Off, s.R()[i].Siz, s.R()[i].Type, s.R()[i].Sym.Name, int64(s.R()[i].Add))
 		}
 
 		str := fmt_
@@ -1898,8 +1898,8 @@ func undefsym(s *LSym) {
 	var r *Reloc
 
 	Ctxt.Cursym = s
-	for i := 0; i < len(s.R); i++ {
-		r = &s.R[i]
+	for i := 0; i < len(s.R()); i++ {
+		r = &s.R()[i]
 		if r.Sym == nil { // happens for some external ARM relocs
 			continue
 		}
@@ -1932,8 +1932,8 @@ func callgraph() {
 	var i int
 	var r *Reloc
 	for s := Ctxt.Textp; s != nil; s = s.Next {
-		for i = 0; i < len(s.R); i++ {
-			r = &s.R[i]
+		for i = 0; i < len(s.R()); i++ {
+			r = &s.R()[i]
 			if r.Sym == nil {
 				continue
 			}
@@ -1978,8 +1978,8 @@ func checkgo() {
 		changed = 0
 		for s = Ctxt.Textp; s != nil; s = s.Next {
 			if s.Cfunc == 0 || (s.Cfunc == 2 && s.Nosplit != 0) {
-				for i = 0; i < len(s.R); i++ {
-					r = &s.R[i]
+				for i = 0; i < len(s.R()); i++ {
+					r = &s.R()[i]
 					if r.Sym == nil {
 						continue
 					}
@@ -2001,8 +2001,8 @@ func checkgo() {
 	// (that can be preempted for garbage collection or trigger a stack copy).
 	for s := Ctxt.Textp; s != nil; s = s.Next {
 		if s.Cfunc == 0 || (s.Cfunc == 2 && s.Nosplit != 0) {
-			for i = 0; i < len(s.R); i++ {
-				r = &s.R[i]
+			for i = 0; i < len(s.R()); i++ {
+				r = &s.R()[i]
 				if r.Sym == nil {
 					continue
 				}

@@ -612,8 +612,8 @@ func markflood() {
 			}
 		}
 
-		for i = 0; i < len(s.R); i++ {
-			mark1(s.R[i].Sym, s)
+		for i = 0; i < len(s.R()); i++ {
+			mark1(s.R()[i].Sym, s)
 		}
 		if s.Pcln != nil {
 			for i = 0; i < s.Pcln.Nfuncdata; i++ {
@@ -679,7 +679,7 @@ func deadcode() {
 		// keep each beginning with 'typelink.' if the symbol it points at is being kept.
 		for s := Ctxt.Allsym; s != nil; s = s.Allsym {
 			if strings.HasPrefix(s.Name, "go.typelink.") {
-				s.Reachable = len(s.R) == 1 && s.R[0].Sym.Reachable
+				s.Reachable = len(s.R()) == 1 && s.R()[0].Sym.Reachable
 			}
 		}
 

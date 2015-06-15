@@ -229,7 +229,7 @@ func readsym(ctxt *Link, d *GoSection, pkg string, pn string) {
 			return
 		}
 
-		if (s.Type == obj.SDATA || s.Type == obj.SBSS || s.Type == obj.SNOPTRBSS) && len(s.P) == 0 && len(s.R) == 0 {
+		if (s.Type == obj.SDATA || s.Type == obj.SBSS || s.Type == obj.SNOPTRBSS) && len(s.P) == 0 && len(s.R()) == 0 {
 			goto overwrite
 		}
 		if s.Type != obj.SBSS && s.Type != obj.SNOPTRBSS && dupok == 0 && s.Dupok == 0 {
@@ -267,10 +267,10 @@ overwrite:
 	}
 	s.P = data
 	if nreloc > 0 {
-		s.R = make([]Reloc, nreloc)
+		s.r = make([]Reloc, nreloc)
 		var r *Reloc
 		for i := 0; i < nreloc; i++ {
-			r = &s.R[i]
+			r = &s.R()[i]
 			r.Off = int32(d.rdint())
 			r.Siz = uint8(d.rdint())
 			r.Type = int32(d.rdint())
@@ -394,8 +394,8 @@ overwrite:
 		}
 
 		var r *Reloc
-		for i := 0; i < len(s.R); i++ {
-			r = &s.R[i]
+		for i := 0; i < len(s.R()); i++ {
+			r = &s.R()[i]
 			fmt.Fprintf(ctxt.Bso, "\trel %d+%d t=%d %s+%d\n", int(r.Off), r.Siz, r.Type, r.Sym.Name, int64(r.Add))
 		}
 	}
