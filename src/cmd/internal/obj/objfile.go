@@ -15,15 +15,15 @@
 //
 // The file format is:
 //
-//      - header:
-//        - magic: "\x00\x00go13ld"
-//        - byte 2 - version number
-//        - little-endian 32-bit "section" sizes:
-//          - imports
-//          - sequence of defined symbols
-//          - symbol table
-//          - string block
-//          - data block
+//	- header:
+//	  - magic: "\x00\x00go13ld"
+//	  - byte 2 - version number
+//	  - little-endian 32-bit "section" sizes:
+//	    - imports
+//	    - sequence of defined symbols
+//	    - symbol table
+//	    - string block
+//	    - data block
 //	- sequence of strings giving dependencies (imported packages)
 //	- empty string (marks end of sequence)
 //	- sequence of defined symbols
@@ -31,8 +31,8 @@
 //	- divider: "\xff\xfd"
 //	- symbol table: name (string), version (int) pairs, empty name terminates
 //	- divider: "\xff\xfd"
-//      - string block: bytes
-//      - data block: bytes
+//	- string block: bytes
+//	- data block: bytes
 //	- magic footer: "\xff\xffgo13ld"
 //
 // All integers are stored in a zigzag varint format.
