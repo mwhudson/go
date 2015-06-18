@@ -33,4 +33,7 @@ const (
 
 	// When passed to ggloblsym, causes Local to be set to true on the LSym it creates.
 	LOCAL = 128
+
+	// This data is a TLS offset
+	TLSBSS = 256
 )

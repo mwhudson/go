@@ -21,3 +21,7 @@
 #define WRAPPER 32
 // This function uses its incoming context register.
 #define NEEDCTXT 64
+// TODO(mwhudson) This data is an offset from the TLS base to a TLS variable.
+// The GC will not see pointers stored into the TLS. Do not use this on intel
+// (for now).
+#define TLSBSS	256

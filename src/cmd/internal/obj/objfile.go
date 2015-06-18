@@ -194,6 +194,9 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 					s.Type = SRODATA
 				} else if flag&NOPTR != 0 {
 					s.Type = SNOPTRBSS
+				} else if flag&TLSBSS != 0 {
+					fmt.Printf("newtls %s\n", s.Name)
+					s.Type = STLSBSS
 				}
 				edata = s
 				continue

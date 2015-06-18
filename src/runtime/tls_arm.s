@@ -52,6 +52,7 @@ TEXT runtime·save_g(SB),NOSPLIT,$-4
 	ADD	R11, R0
 	MOVW	g, 0(R0)
 	MOVW	g, R0 // preserve R0 across call to setg<>
+        MOVW    g, runtime·newtlsg(SB)
 	RET
 
 // load_g loads the g register from pthread-provided
@@ -100,4 +101,6 @@ TEXT setg_gcc<>(SB),NOSPLIT,$0
 
 #ifdef TLSG_IS_VARIABLE
 GLOBL runtime·tlsg+0(SB), NOPTR, $4
+#else
+GLOBL runtime·newtlsg+0(SB), TLSBSS, $4
 #endif
