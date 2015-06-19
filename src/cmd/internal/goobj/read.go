@@ -13,9 +13,11 @@ import (
 	"bufio"
 	"bytes"
 	"cmd/internal/obj"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"strconv"
 	"strings"
 )
@@ -235,15 +237,102 @@ var (
 
 // An objReader is an object file reader.
 type objReader struct {
-	p         *Package
-	b         *bufio.Reader
-	f         io.ReadSeeker
-	err       error
-	offset    int64
-	limit     int64
-	tmp       [256]byte
-	pkg       string
-	pkgprefix string
+	p           *Package
+	b           *bufio.Reader
+	f           io.ReadSeeker
+	err         error
+	offset      int64
+	limit       int64
+	tmp         [256]byte
+	pkg         string
+	pkgprefix   string
+	imports     *GoSection
+	symdata     *GoSection
+	symtable    *GoSection
+	stringblock StringBlock
+	datablock   DataBlock
+	symbols     []SymID
+}
+
+type GoSection struct {
+	objfile *objReader
+	data    []byte
+	pos     int
+}
+
+func gosection(r *objReader, sz int64, pn, sn string) *GoSection {
+	gosection := &GoSection{objfile: r, data: make([]byte, sz)}
+	err := r.readFull(gosection.data)
+	if err != nil {
+		log.Fatalf("%s: reading section %s failed: %v", pn, sn, err)
+	}
+	return gosection
+}
+
+func (s *GoSection) getc() int {
+	c := int(s.data[s.pos])
+	s.pos++
+	return c
+}
+
+func (s *GoSection) readInt() int {
+	uv := uint64(0)
+	for shift := 0; ; shift += 7 {
+		if shift >= 64 {
+			log.Fatalf("corrupt input")
+		}
+		c := s.getc()
+		uv |= uint64(c&0x7F) << uint(shift)
+		if c&0x80 == 0 {
+			break
+		}
+	}
+
+	v := int64(uv>>1) ^ (int64(uint64(uv)<<63) >> 63)
+	if int64(int(v)) != v {
+		s.objfile.error(errCorruptObject) // TODO
+		return 0
+	}
+	return int(v)
+
+}
+
+func (s *GoSection) readString() string {
+	amt := s.readInt()
+	return s.objfile.stringblock.read(amt)
+}
+
+func (s *GoSection) readData() Data {
+	p := s.objfile.datablock.pos
+	sz := s.readInt()
+	s.objfile.datablock.pos += sz
+	return Data{Offset: int64(p), Size: int64(sz)}
+}
+
+func (s *GoSection) readSymID() SymID {
+	return s.objfile.symbols[s.readInt()]
+}
+
+type DataBlock struct {
+	data []byte
+	pos  int
+}
+
+func (b *DataBlock) read(n int) []byte {
+	p := b.pos
+	b.pos += n
+	return b.data[p : p+n : p+n]
+}
+
+type StringBlock struct {
+	data string
+	pos  int
+}
+
+func (b *StringBlock) read(n int) string {
+	p := b.pos
+	b.pos += n
+	return b.data[p : p+n]
 }
 
 // importPathToPrefix returns the prefix that will be used in the
@@ -356,66 +445,6 @@ func (r *objReader) readFull(b []byte) error {
 	return nil
 }
 
-// readInt reads a zigzag varint from the input file.
-func (r *objReader) readInt() int {
-	var u uint64
-
-	for shift := uint(0); ; shift += 7 {
-		if shift >= 64 {
-			r.error(errCorruptObject)
-			return 0
-		}
-		c := r.readByte()
-		u |= uint64(c&0x7F) << shift
-		if c&0x80 == 0 {
-			break
-		}
-	}
-
-	v := int64(u>>1) ^ (int64(u) << 63 >> 63)
-	if int64(int(v)) != v {
-		r.error(errCorruptObject) // TODO
-		return 0
-	}
-	return int(v)
-}
-
-// readString reads a length-delimited string from the input file.
-func (r *objReader) readString() string {
-	n := r.readInt()
-	buf := make([]byte, n)
-	r.readFull(buf)
-	return string(buf)
-}
-
-// readSymID reads a SymID from the input file.
-func (r *objReader) readSymID() SymID {
-	name, vers := r.readString(), r.readInt()
-
-	// In a symbol name in an object file, "". denotes the
-	// prefix for the package in which the object file has been found.
-	// Expand it.
-	name = strings.Replace(name, `"".`, r.pkgprefix, -1)
-
-	// An individual object file only records version 0 (extern) or 1 (static).
-	// To make static symbols unique across all files being read, we
-	// replace version 1 with the version corresponding to the current
-	// file number. The number is incremented on each call to parseObject.
-	if vers != 0 {
-		vers = r.p.MaxVersion
-	}
-
-	return SymID{name, vers}
-}
-
-// readData reads a data reference from the input file.
-func (r *objReader) readData() Data {
-	n := r.readInt()
-	d := Data{Offset: r.offset, Size: int64(n)}
-	r.skip(int64(n))
-	return d
-}
-
 // skip skips n bytes in the input.
 func (r *objReader) skip(n int64) {
 	if n < 0 {
@@ -522,11 +551,13 @@ func (r *objReader) parseArchive() error {
 		name := trimSpace(data[0:16])
 		size, err := strconv.ParseInt(trimSpace(data[48:58]), 10, 64)
 		if err != nil {
+			println(2)
 			return errCorruptArchive
 		}
 		data = data[60:]
 		fsize := size + size&1
 		if fsize < 0 || fsize < size {
+			println(1)
 			return errCorruptArchive
 		}
 		switch name {
@@ -572,96 +603,132 @@ func (r *objReader) parseObject(prefix []byte) error {
 		}
 	}
 
-	r.readFull(r.tmp[:8])
-	if !bytes.Equal(r.tmp[:8], []byte("\x00\x00go13ld")) {
+	var header obj.ObjfileHeader
+	x, _ := r.f.Seek(0, 1)
+	x += int64(r.b.Buffered())
+	binary.Read(r.b, binary.LittleEndian, &header)
+	y, _ := r.f.Seek(0, 1)
+	y += int64(r.b.Buffered())
+	r.offset += x - y
+
+	if !bytes.Equal(header.Startmagic[:], []byte("\x00\x00go13ld")) {
 		return r.error(errCorruptObject)
 	}
 
-	b := r.readByte()
-	if b != 1 {
-		return r.error(errCorruptObject)
+	if header.Version != 2 {
+		return r.error(fmt.Errorf("xxx"))
+	}
+
+	r.imports = gosection(r, header.ImportsSize, "", "imports")
+	r.symdata = gosection(r, header.SymdataSize, "", "symdata")
+	r.symtable = gosection(r, header.SymtableSize, "", "symtable")
+
+	block := make([]byte, header.StringblockSize)
+	err := r.readFull(block)
+	if err != nil {
+		log.Fatalf("%s: reading string block failed: %v", "", err)
+	}
+	r.stringblock.pos = 0
+	r.stringblock.data = string(block)
+
+	r.datablock.pos = 0
+	r.skip(header.DatablockSize)
+
+	r.readFull(r.tmp[:8])
+	if !bytes.Equal(r.tmp[:8], []byte("\xff\xffgo13ld")) {
+		return r.error(fmt.Errorf("yyy %q %q", r.tmp[:7], []byte("\xffgo13ld")))
 	}
 
 	// Direct package dependencies.
 	for {
-		s := r.readString()
+		s := r.imports.readString()
 		if s == "" {
 			break
 		}
 		r.p.Imports = append(r.p.Imports, s)
 	}
 
+	// Symbol table
+	r.symbols = []SymID{SymID{}}
+	replacer := strings.NewReplacer(`"".`, r.pkgprefix)
+	for {
+		s := r.symtable.readString()
+		if s == "" {
+			break
+		}
+		v := r.symtable.getc()
+		if v != 0 {
+			v = r.p.MaxVersion
+		}
+		sym := SymID{Name: replacer.Replace(s), Version: v}
+
+		r.symbols = append(r.symbols, sym)
+	}
+
 	// Symbols.
 	for {
-		if b := r.readByte(); b != 0xfe {
+		if b := r.symdata.getc(); b != 0xfe {
 			if b != 0xff {
-				return r.error(errCorruptObject)
+				return r.error(fmt.Errorf("zzz %x", b))
 			}
 			break
 		}
 
-		typ := r.readInt()
-		s := &Sym{SymID: r.readSymID()}
+		typ := r.symdata.readInt()
+		s := &Sym{SymID: r.symdata.readSymID()}
 		r.p.Syms = append(r.p.Syms, s)
 		s.Kind = SymKind(typ)
-		flags := r.readInt()
+		flags := r.symdata.readInt()
 		s.DupOK = flags&1 != 0
-		s.Size = r.readInt()
-		s.Type = r.readSymID()
-		s.Data = r.readData()
-		s.Reloc = make([]Reloc, r.readInt())
+		s.Size = r.symdata.readInt()
+		s.Type = r.symdata.readSymID()
+		s.Data = r.symdata.readData()
+		s.Reloc = make([]Reloc, r.symdata.readInt())
 		for i := range s.Reloc {
 			rel := &s.Reloc[i]
-			rel.Offset = r.readInt()
-			rel.Size = r.readInt()
-			rel.Type = r.readInt()
-			rel.Add = r.readInt()
-			r.readInt() // Xadd - ignored
-			rel.Sym = r.readSymID()
-			r.readSymID() // Xsym - ignored
+			rel.Offset = r.symdata.readInt()
+			rel.Size = r.symdata.readInt()
+			rel.Type = r.symdata.readInt()
+			rel.Add = r.symdata.readInt()
+			rel.Sym = r.symdata.readSymID()
 		}
 
 		if s.Kind == STEXT {
 			f := new(Func)
 			s.Func = f
-			f.Args = r.readInt()
-			f.Frame = r.readInt()
-			flags := r.readInt()
+			f.Args = r.symdata.readInt()
+			f.Frame = r.symdata.readInt()
+			flags := r.symdata.readInt()
 			f.Leaf = flags&1 != 0
-			f.NoSplit = r.readInt() != 0
-			f.Var = make([]Var, r.readInt())
+			f.NoSplit = r.symdata.readInt() != 0
+			f.Var = make([]Var, r.symdata.readInt())
 			for i := range f.Var {
 				v := &f.Var[i]
-				v.Name = r.readSymID().Name
-				v.Offset = r.readInt()
-				v.Kind = r.readInt()
-				v.Type = r.readSymID()
+				v.Name = r.symdata.readSymID().Name
+				v.Offset = r.symdata.readInt()
+				v.Kind = r.symdata.readInt()
+				v.Type = r.symdata.readSymID()
 			}
 
-			f.PCSP = r.readData()
-			f.PCFile = r.readData()
-			f.PCLine = r.readData()
-			f.PCData = make([]Data, r.readInt())
+			f.PCSP = r.symdata.readData()
+			f.PCFile = r.symdata.readData()
+			f.PCLine = r.symdata.readData()
+			f.PCData = make([]Data, r.symdata.readInt())
 			for i := range f.PCData {
-				f.PCData[i] = r.readData()
+				f.PCData[i] = r.symdata.readData()
 			}
-			f.FuncData = make([]FuncData, r.readInt())
+			f.FuncData = make([]FuncData, r.symdata.readInt())
 			for i := range f.FuncData {
-				f.FuncData[i].Sym = r.readSymID()
+				f.FuncData[i].Sym = r.symdata.readSymID()
 			}
 			for i := range f.FuncData {
-				f.FuncData[i].Offset = int64(r.readInt()) // TODO
+				f.FuncData[i].Offset = int64(r.symdata.readInt()) // TODO
 			}
-			f.File = make([]string, r.readInt())
+			f.File = make([]string, r.symdata.readInt())
 			for i := range f.File {
-				f.File[i] = r.readSymID().Name
+				f.File[i] = r.symdata.readSymID().Name
 			}
 		}
-	}
-
-	r.readFull(r.tmp[:7])
-	if !bytes.Equal(r.tmp[:7], []byte("\xffgo13ld")) {
-		return r.error(errCorruptObject)
 	}
 
 	return nil
