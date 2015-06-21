@@ -147,6 +147,36 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 			p.To.Type = obj.TYPE_MEM
 		}
 	}
+
+	// MOVW tlsvar(SB), R3
+	//
+	// MRC 15, 0, R0, C13, C0, 3 / WORD 0xee1d0f70
+	// MOVW tlsvar(SB), R3
+	// MOVW R3(R0), R3
+	//
+	// mrc 15, 0, r0, cr13, cr0, {3}
+	// ldr r3, [pc, #off]--.
+	// ldr r3, [r0, r3]    |
+	// ...                 |
+	// .word <-------------' <- reloc with Type=R_TLS_LE, Sym=runtime·tlsg pointing here
+
+	if p.From.Sym != nil && p.From.Sym.Type == obj.STLSBSS {
+		println(p.From.Sym.Name)
+		if p.As != AMOVW || p.To.Type != obj.TYPE_REG {
+			ctxt.Diag("invalid operation on TLS var %v", p)
+		}
+		p1 := obj.Appendp(ctxt, p)
+		p1.As = AWORD
+		p1.To.Offset = 0xee1d0f70
+		p1.To.Type = obj.TYPE_CONST
+	}
+	if p.To.Sym != nil && p.To.Sym.Type == obj.STLSBSS {
+		println(p.To.Sym.Name)
+		fmt.Printf("%#v\n", p)
+		if p.As != AMOVW || p.From.Type != obj.TYPE_REG {
+			ctxt.Diag("invalid operation on TLS var %v", p)
+		}
+	}
 }
 
 // Prog.mark

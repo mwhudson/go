@@ -287,6 +287,19 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 
 		break
 	}
+
+	// MOVW tlsvar(SB), R3
+	//
+	// MRC 15, 0, R0, C13, C0, 3 / WORD 0xee1d0f70
+	// MOVW tlsvar(SB), R3
+	// MOVW R3(R0), R3
+	//
+	// mrc 15, 0, r0, cr13, cr0, {3}
+	// ldr r3, [pc, #off]--.
+	// ldr r3, [r0, r3]    |
+	// ...                 |
+	// .word <-------------' <- reloc with Type=R_TLS_LE, Sym=runtime·tlsg pointing here
+
 }
 
 func follow(ctxt *obj.Link, s *obj.LSym) {

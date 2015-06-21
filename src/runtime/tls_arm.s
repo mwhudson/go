@@ -52,7 +52,10 @@ TEXT runtime·save_g(SB),NOSPLIT,$-4
 	ADD	R11, R0
 	MOVW	g, 0(R0)
 	MOVW	g, R0 // preserve R0 across call to setg<>
-        MOVW    g, runtime·newtlsg(SB)
+        // MOVW    g, runtime·newtlsg(SB)
+        WORD $0x12345678
+        MOVW    runtime·newtlsg(SB), R1
+        WORD $0x12345678
 	RET
 
 // load_g loads the g register from pthread-provided
