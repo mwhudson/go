@@ -452,6 +452,8 @@ const (
 	// relocated place to the referenced symbol, plus addend.  Error if the
 	// displacement is too large to fit.
 	R_AARCH64_CALL26
+
+	R_ARM64_TLSLE_MOVW_TPREL_G0
 )
 
 type Auto struct {

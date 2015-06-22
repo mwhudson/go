@@ -1404,7 +1404,7 @@ func dodata() {
 		Diag("data or bss segment too large")
 	}
 
-	if Iself && Linkmode == LinkExternal && s != nil && s.Type == obj.STLSBSS && HEADTYPE != obj.Hopenbsd {
+	if Iself && s != nil && Linkmode == LinkExternal && s.Type == obj.STLSBSS && HEADTYPE != obj.Hopenbsd {
 		sect := addsection(&Segdata, ".tbss", 06)
 		sect.Align = int32(Thearch.Ptrsize)
 		sect.Vaddr = 0
@@ -1418,12 +1418,13 @@ func dodata() {
 
 		sect.Length = uint64(datsize)
 	} else {
-		// Might be internal linking but still using cgo.
+		// Might be on a platform that does not support TLS but still using cgo.
 		// In that case, the only possible STLSBSS symbol is runtime.tlsg.
 		// Give it offset 0, because it's the only thing here.
-		if s != nil && s.Type == obj.STLSBSS && s.Name == "runtime.tlsg" {
-			s.Value = 0
-			s = s.Next
+		datsize = 0
+		for ; s != nil && s.Type == obj.STLSBSS; s = s.Next {
+			s.Value = datsize
+			growdatsize(&datsize, s)
 		}
 	}
 

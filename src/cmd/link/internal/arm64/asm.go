@@ -33,6 +33,7 @@ package arm64
 import (
 	"cmd/internal/obj"
 	"cmd/link/internal/ld"
+	"debug/elf"
 	"fmt"
 	"log"
 )
@@ -64,6 +65,9 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		default:
 			return -1
 		}
+
+	case obj.R_ARM64_TLSLE_MOVW_TPREL_G0:
+		ld.Thearch.Vput(uint64(elf.R_AARCH64_TLSLE_MOVW_TPREL_G0) | uint64(elfsym)<<32)
 
 	case obj.R_AARCH64_ADR_PREL_PG_HI21:
 		ld.Thearch.Vput(ld.R_AARCH64_ADR_PREL_PG_HI21 | uint64(elfsym)<<32)
@@ -209,6 +213,19 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 
 	case obj.R_GOTOFF:
 		*val = ld.Symaddr(r.Sym) + r.Add - ld.Symaddr(ld.Linklookup(ld.Ctxt, ".got", 0))
+		return 0
+
+	case obj.R_ARM64_TLSLE_MOVW_TPREL_G0:
+		r.Done = 0
+		if ld.HEADTYPE != obj.Hlinux {
+			ld.Diag("TLS reloc on unsupported OS %s", ld.Headstr(int(ld.HEADTYPE)))
+		}
+		// The TCB is 16 bytes on linux in lp64
+		v := r.Sym.Value + 16
+		if v < 0 || v >= 32678 {
+			ld.Diag("TLS offset out of range %d", v)
+		}
+		*val |= v << 5
 		return 0
 
 	case obj.R_AARCH64_ADR_PREL_PG_HI21:

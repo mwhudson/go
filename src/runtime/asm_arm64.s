@@ -38,7 +38,7 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 #ifdef TLSG_IS_VARIABLE
 	MOVD	$runtime·tls_g(SB), R2 	// arg 2: tlsg
 #else
-	MOVD	$0x10, R2		// arg 2: tlsg TODO(minux): hardcoded for linux
+	MOVD	$0, R2			// arg 2: Not used when we are really doing tls.
 #endif
 	MOVD	$setg_gcc<>(SB), R1	// arg 1: setg
 	MOVD	g, R0			// arg 0: G
