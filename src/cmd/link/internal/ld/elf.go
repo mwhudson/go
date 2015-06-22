@@ -1670,7 +1670,7 @@ func doelf() {
 	// binutils could correctly calculate PT_TLS size.
 	// see http://golang.org/issue/5200.
 	if HEADTYPE != obj.Hopenbsd {
-		if Debug['d'] == 0 || Linkmode == LinkExternal {
+		if Debug['d'] == 0 || Linkmode == LinkExternal || Thearch.Thechar == '7' {
 			Addstring(shstrtab, ".tbss")
 		}
 	}

@@ -416,6 +416,8 @@ const (
 	R_USEFIELD
 	R_POWER_TOC
 	R_GOTPCREL
+
+	R_ARM64_TLSLE_MOVW_TPREL_G0
 )
 
 type Auto struct {

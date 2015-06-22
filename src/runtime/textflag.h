@@ -21,3 +21,4 @@
 #define WRAPPER 32
 // This function uses its incoming context register.
 #define NEEDCTXT 64
+#define TLSBSS	256

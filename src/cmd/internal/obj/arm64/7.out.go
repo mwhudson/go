@@ -323,6 +323,8 @@ const (
 	C_ADDR // TODO(aram): explain difference from C_VCONADDR
 	C_ROFF // register offset (including register extended)
 
+	C_TLS // TODO(mwhudson): document
+
 	C_GOK
 	C_TEXTSIZE
 	C_NCLASS // must be last

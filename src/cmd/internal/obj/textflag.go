@@ -34,5 +34,6 @@ const (
 	NEEDCTXT = 64
 
 	// When passed to ggloblsym, causes Local to be set to true on the LSym it creates.
-	LOCAL = 128
+	LOCAL  = 128
+	TLSBSS = 256
 )
