@@ -261,6 +261,16 @@ var optab = []Optab{
 	{AMOVW, C_VCONADDR, C_NONE, C_REG, 68, 8, 0, 0, 0},
 	{AMOVD, C_VCON, C_NONE, C_REG, 12, 4, 0, LFROM, 0},
 	{AMOVD, C_VCONADDR, C_NONE, C_REG, 68, 8, 0, 0, 0},
+	{AMOVB, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVBU, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVH, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVW, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVD, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVB, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVBU, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVH, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVW, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVD, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
 	{AMOVB, C_REG, C_NONE, C_ADDR, 64, 12, 0, 0, 0},
 	{AMOVBU, C_REG, C_NONE, C_ADDR, 64, 12, 0, 0, 0},
 	{AMOVH, C_REG, C_NONE, C_ADDR, 64, 12, 0, 0, 0},
@@ -2799,6 +2809,26 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		if p.From.Offset != 0 {
 			ctxt.Diag("invalid offset on MOVQ $tlsvar")
 		}
+
+	case 70: /* movT reg, sym@GOT -> adr, ldr REGTMP, [REGTMP, #0], ldr reg, [REGTMP] */
+		o1 = ADR(1, 0, REGTMP)
+		o2 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), 0, REGTMP, REGTMP)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 4
+		rel.Sym = p.To.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_ADR_GOT_PAGE
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.To.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_LD64_GOT_LO12_NC
+		// Encode p.To.Offset here
+		o3 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), 0, REGTMP, int(p.From.Reg))
+
+	case 71: /* movT sym@GOT, reg -> adr, add, movT (REGTMP), REGTMP, movT (REGTMP), reg */
 
 	// This is supposed to be something that stops execution.
 	// It's not supposed to be reached, ever, but if it is, we'd

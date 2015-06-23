@@ -35,6 +35,9 @@ func betypeinit() {
 	gc.Widthptr = 8
 	gc.Widthint = 8
 	gc.Widthreg = 8
+	if gc.Ctxt.Flag_dynlink {
+		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, x86.REG_R15)
+	}
 }
 
 func Main() {
