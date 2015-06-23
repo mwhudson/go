@@ -13,6 +13,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 )
 
 // go-specific code shared across loaders (5l, 6l, 8l).
@@ -645,6 +647,14 @@ var markextra = []string{
 	"_divu",
 	"_mod",
 	"_modu",
+}
+
+func exportname(s string) bool {
+	if s[0] < utf8.RuneSelf {
+		return 'A' <= s[0] && s[0] <= 'Z'
+	}
+	r, _ := utf8.DecodeRuneInString(s)
+	return unicode.IsUpper(r)
 }
 
 func deadcode() {

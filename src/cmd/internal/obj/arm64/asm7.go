@@ -261,6 +261,16 @@ var optab = []Optab{
 	{AMOVW, C_VCONADDR, C_NONE, C_REG, 68, 8, 0, 0, 0},
 	{AMOVD, C_VCON, C_NONE, C_REG, 12, 4, 0, LFROM, 0},
 	{AMOVD, C_VCONADDR, C_NONE, C_REG, 68, 8, 0, 0, 0},
+	{AMOVB, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVBU, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVH, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVW, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVD, C_REG, C_NONE, C_GOTADDR, 70, 12, 0, 0, 0},
+	{AMOVB, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVBU, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVH, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVW, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
+	{AMOVD, C_GOTADDR, C_NONE, C_REG, 71, 12, 0, 0, 0},
 	{AMOVB, C_REG, C_NONE, C_ADDR, 64, 12, 0, 0, 0},
 	{AMOVBU, C_REG, C_NONE, C_ADDR, 64, 12, 0, 0, 0},
 	{AMOVH, C_REG, C_NONE, C_ADDR, 64, 12, 0, 0, 0},
@@ -981,6 +991,12 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 				return C_ADDR
 			}
 			return C_LEXT
+
+		case obj.NAME_GOTREF:
+			if a.Sym.Type == obj.STLSBSS {
+				return C_TLS
+			}
+			return C_GOTADDR
 
 		case obj.NAME_AUTO:
 			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset
@@ -2817,6 +2833,44 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		if p.From.Offset != 0 {
 			ctxt.Diag("invalid offset on MOVQ $tlsvar")
 		}
+
+	case 70: /* movT reg, sym@GOT -> adr REGTMP, ldr REGTMP, [REGTMP, #0], ldr reg, [REGTMP] */
+		o1 = ADR(1, 0, REGTMP)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 4
+		rel.Sym = p.To.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_ADR_GOT_PAGE
+
+		o2 = olsr12u(ctxt, int32(opldr12(ctxt, AMOVD)), 0, REGTMP, REGTMP)
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.To.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_LD64_GOT_LO12_NC
+
+		o3 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), int32(p.To.Offset), REGTMP, int(p.From.Reg))
+
+	case 71: /* movT sym@GOT, reg -> adr, add, movT (REGTMP), REGTMP, movT (REGTMP), reg */
+		o1 = ADR(1, 0, REGTMP)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_ADR_GOT_PAGE
+
+		o2 = olsr12u(ctxt, int32(opldr12(ctxt, AMOVD)), 0, REGTMP, REGTMP)
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_LD64_GOT_LO12_NC
+
+		o3 = olsr12u(ctxt, int32(opldr12(ctxt, int(p.As))), int32(p.From.Offset), REGTMP, int(p.To.Reg))
 
 	// This is supposed to be something that stops execution.
 	// It's not supposed to be reached, ever, but if it is, we'd

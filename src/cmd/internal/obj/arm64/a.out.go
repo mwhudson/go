@@ -324,6 +324,7 @@ const (
 	C_ROFF // register offset (including register extended)
 
 	C_TLS // TODO(mwhudson): document
+	C_GOTADDR
 
 	C_GOK
 	C_TEXTSIZE

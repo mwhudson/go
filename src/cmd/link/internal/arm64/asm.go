@@ -66,6 +66,18 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 			return -1
 		}
 
+	case obj.R_AARCH64_ADR_PREL_PG_HI21:
+		ld.Thearch.Vput(ld.R_AARCH64_ADR_PREL_PG_HI21 | uint64(elfsym)<<32)
+
+	case obj.R_AARCH64_ADR_GOT_PAGE:
+		if r.Xsym.Local {
+			ld.Ctxt.Diag("wtf %s", r.Xsym.Name)
+		}
+		ld.Thearch.Vput(uint64(elf.R_AARCH64_ADR_GOT_PAGE) | uint64(elfsym)<<32)
+
+	case obj.R_AARCH64_LD64_GOT_LO12_NC:
+		ld.Thearch.Vput(uint64(elf.R_AARCH64_LD64_GOT_LO12_NC) | uint64(elfsym)<<32)
+
 	case obj.R_ARM64_TLSLE_MOVW_TPREL_G0:
 		ld.Thearch.Vput(uint64(elf.R_AARCH64_TLSLE_MOVW_TPREL_G0) | uint64(elfsym)<<32)
 
@@ -180,7 +192,17 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		default:
 			return -1
 
-		case obj.R_AARCH64_ADR_PREL_PG_HI21, obj.R_AARCH64_ADD_ABS_LO12_NC:
+		case obj.R_ARM64_TLSLE_MOVW_TPREL_G0:
+			r.Done = 0
+			// check Outer is nil, Type is TLSBSS?
+			r.Xadd = r.Add
+			r.Xsym = r.Sym
+			return 0
+
+		case obj.R_AARCH64_ADR_PREL_PG_HI21,
+			obj.R_AARCH64_ADD_ABS_LO12_NC,
+			obj.R_AARCH64_ADR_GOT_PAGE,
+			obj.R_AARCH64_LD64_GOT_LO12_NC:
 			r.Done = 0
 
 			// set up addend for eventual relocation via outer symbol.
