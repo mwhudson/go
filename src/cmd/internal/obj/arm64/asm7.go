@@ -2810,25 +2810,43 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			ctxt.Diag("invalid offset on MOVQ $tlsvar")
 		}
 
-	case 70: /* movT reg, sym@GOT -> adr, ldr REGTMP, [REGTMP, #0], ldr reg, [REGTMP] */
+	case 70: /* movT reg, sym@GOT -> adr REGTMP, ldr REGTMP, [REGTMP, #0], ldr reg, [REGTMP] */
 		o1 = ADR(1, 0, REGTMP)
-		o2 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), 0, REGTMP, REGTMP)
 		rel := obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc)
 		rel.Siz = 4
 		rel.Sym = p.To.Sym
 		rel.Add = 0
 		rel.Type = obj.R_AARCH64_ADR_GOT_PAGE
+
+		o2 = olsr12u(ctxt, int32(opldr12(ctxt, AMOVD)), 0, REGTMP, REGTMP)
 		rel = obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc) + 4
 		rel.Siz = 4
 		rel.Sym = p.To.Sym
 		rel.Add = 0
 		rel.Type = obj.R_AARCH64_LD64_GOT_LO12_NC
-		// Encode p.To.Offset here
-		o3 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), 0, REGTMP, int(p.From.Reg))
+
+		o3 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), p.To.Offset, REGTMP, int(p.From.Reg))
 
 	case 71: /* movT sym@GOT, reg -> adr, add, movT (REGTMP), REGTMP, movT (REGTMP), reg */
+		o1 = ADR(1, 0, REGTMP)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_ADR_GOT_PAGE
+
+		o2 = olsr12u(ctxt, int32(opldr12(ctxt, AMOVD)), 0, REGTMP, REGTMP)
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Add = 0
+		rel.Type = obj.R_AARCH64_LD64_GOT_LO12_NC
+
+		o3 = olsr12u(ctxt, int32(opldr12(ctxt, int(p.As))), p.From.Offset, REGTMP, int(p.To.Reg))
 
 	// This is supposed to be something that stops execution.
 	// It's not supposed to be reached, ever, but if it is, we'd
