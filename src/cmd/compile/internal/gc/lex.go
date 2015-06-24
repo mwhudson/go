@@ -240,6 +240,8 @@ func Main() {
 	if Thearch.Thechar == '6' {
 		obj.Flagcount("largemodel", "generate code that assumes a large memory model", &flag_largemodel)
 		obj.Flagcount("shared", "generate code that can be linked into a shared library", &flag_shared)
+	}
+	if Thearch.Thechar == '6' || Thearch.Thechar == '7' {
 		flag.BoolVar(&flag_dynlink, "dynlink", false, "support references to Go symbols defined in other shared libraries")
 	}
 	obj.Flagstr("cpuprofile", "write cpu profile to `file`", &cpuprofile)
