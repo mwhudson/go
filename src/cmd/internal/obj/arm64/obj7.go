@@ -360,6 +360,9 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
 			return
 		}
+		if source.Sym.Type == obj.STLSBSS {
+			return
+		}
 		if source.Type != obj.TYPE_MEM {
 			ctxt.Diag("don't know how to handle %v with -dynlink", p)
 		}

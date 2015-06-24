@@ -92,6 +92,10 @@ func archinit() {
 		ld.Linkmode = ld.LinkExternal
 	}
 
+	if ld.Buildmode == ld.BuildmodeCArchive || ld.Buildmode == ld.BuildmodeCShared || ld.DynlinkingGo() {
+		ld.Linkmode = ld.LinkExternal
+	}
+
 	switch ld.HEADTYPE {
 	default:
 		if ld.Linkmode == ld.LinkAuto {

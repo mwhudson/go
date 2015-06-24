@@ -87,6 +87,12 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_AARCH64_ADD_ABS_LO12_NC:
 		ld.Thearch.Vput(ld.R_AARCH64_ADD_ABS_LO12_NC | uint64(elfsym)<<32)
 
+	case obj.R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+		ld.Thearch.Vput(uint64(elf.R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21) | uint64(elfsym)<<32)
+
+	case obj.R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+		ld.Thearch.Vput(uint64(elf.R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC) | uint64(elfsym)<<32)
+
 	case obj.R_AARCH64_CALL26:
 		if r.Siz != 4 {
 			return -1
@@ -192,7 +198,9 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		default:
 			return -1
 
-		case obj.R_ARM64_TLSLE_MOVW_TPREL_G0:
+		case obj.R_ARM64_TLSLE_MOVW_TPREL_G0,
+			obj.R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21,
+			obj.R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
 			r.Done = 0
 			// check Outer is nil, Type is TLSBSS?
 			r.Xadd = r.Add
@@ -213,8 +221,8 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 				rs = rs.Outer
 			}
 
-			if rs.Type != obj.SHOSTOBJ && rs.Sect == nil {
-				ld.Diag("missing section for %s", rs.Name)
+			if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
+				ld.Diag("missing section for %s ++", rs.Name)
 			}
 			r.Xsym = rs
 

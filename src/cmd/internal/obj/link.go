@@ -460,14 +460,21 @@ const (
 	// Set an ADRP immediate value to [32:12] of the displacement from the "page
 	// address" (i.e. addr&^0xfff) of the relocated place to the page address of the
 	// entry in the GOT for the referenced symbol. Error if the offset is too large to
-	// fit.
+	// fit. Currently only supported for external linking.
 	R_AARCH64_ADR_GOT_PAGE
 
 	// Set an LD/ST offset immediate value to [11:3] of the address of the entry in
 	// the GOT for the referenced symbol. No error if the address is too large to fit
 	// (as it is expected that this is used in conjunction with
-	// R_AARCH64_ADR_GOT_PAGE), but check that the address % 8 is zero.
+	// R_AARCH64_ADR_GOT_PAGE), but check that the address % 8 is zero. Currently only
+	// supported for external linking.
 	R_AARCH64_LD64_GOT_LO12_NC
+
+	// TODO(mwhudson): document. Currently only supported for external linking.
+	R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21
+
+	// TODO(mwhudson): document. Currently only supported for external linking.
+	R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC
 )
 
 type Auto struct {

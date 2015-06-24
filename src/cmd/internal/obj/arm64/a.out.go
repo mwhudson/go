@@ -323,7 +323,8 @@ const (
 	C_ADDR // TODO(aram): explain difference from C_VCONADDR
 	C_ROFF // register offset (including register extended)
 
-	C_TLS // TODO(mwhudson): document
+	C_TLS_LE // TODO(mwhudson): document
+	C_TLS_IE // TODO(mwhudson): document
 	C_GOTADDR
 
 	C_GOK

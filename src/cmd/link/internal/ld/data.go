@@ -462,7 +462,7 @@ func relocsym(s *LSym) {
 				}
 
 				if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
-					Diag("missing section for %s", rs.Name)
+					Diag("missing section for %s 2", rs.Name)
 				}
 				r.Xsym = rs
 
@@ -522,7 +522,7 @@ func relocsym(s *LSym) {
 
 				r.Xadd -= int64(r.Siz) // relative to address after the relocated chunk
 				if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
-					Diag("missing section for %s", rs.Name)
+					Diag("missing section for %s 1", rs.Name)
 				}
 				r.Xsym = rs
 
