@@ -1567,7 +1567,7 @@ func stkcheck(up *Chain, depth int) int {
 		switch r.Type {
 		default:
 			continue
-		case obj.R_CALL, obj.R_CALLARM, obj.R_CALLARM64, obj.R_CALLPOWER:
+		case obj.R_CALL, obj.R_CALLARM, obj.R_AARCH64_CALL26, obj.R_CALLPOWER:
 		}
 
 		// Ensure we have enough stack to call morestack.
@@ -1605,7 +1605,7 @@ func stkcheck(up *Chain, depth int) int {
 			r = &s.R[ri]
 			switch r.Type {
 			// Direct call.
-			case obj.R_CALL, obj.R_CALLARM, obj.R_CALLARM64, obj.R_CALLPOWER:
+			case obj.R_CALL, obj.R_CALLARM, obj.R_AARCH64_CALL26, obj.R_CALLPOWER:
 				// We handled calls to morestack already.
 				if strings.HasPrefix(r.Sym.Name, "runtime.morestack") {
 					continue
