@@ -38,7 +38,63 @@ import (
 	"log"
 )
 
-func gentext() {}
+func gentext() {
+	if !ld.DynlinkingGo() {
+		return
+	}
+	addmoduledata := ld.Linklookup(ld.Ctxt, "runtime.addmoduledata", 0)
+	if addmoduledata.Type == obj.STEXT {
+		// we're linking a module containing the runtime -> no need for
+		// an init function
+		return
+	}
+	addmoduledata.Reachable = true
+	initfunc := ld.Linklookup(ld.Ctxt, "go.link.addmoduledata", 0)
+	initfunc.Type = obj.STEXT
+	initfunc.Local = true
+	initfunc.Reachable = true
+	o := func(op uint32) {
+		ld.Adduint32(ld.Ctxt, initfunc, op)
+	}
+	// 0000000000000000 <local.dso_init>:
+	// 0:	90000000 	adrp	x0, 0 <runtime.firstmoduledata>
+	// 	0: R_AARCH64_ADR_PREL_PG_HI21	runtime.firstmoduledata
+	o(0x90000000)
+	rel := ld.Addrel(initfunc)
+	rel.Off = 0
+	rel.Siz = 4
+	rel.Sym = ld.Linklookup(ld.Ctxt, "runtime.firstmoduledata", 0)
+	rel.Type = obj.R_AARCH64_ADR_PREL_PG_HI21
+	// 4:	91000000 	add	x0, x0, #0x0
+	// 	4: R_AARCH64_ADD_ABS_LO12_NC	runtime.firstmoduledata
+	o(0x91000000)
+	rel = ld.Addrel(initfunc)
+	rel.Off = 4
+	rel.Siz = 4
+	rel.Sym = ld.Linklookup(ld.Ctxt, "runtime.firstmoduledata", 0)
+	rel.Type = obj.R_AARCH64_ADD_ABS_LO12_NC
+
+	// 8:	14000000 	bl	0 <runtime.addmoduledata>
+	// 	8: R_AARCH64_CALL26	runtime.addmoduledata
+	o(0x14000000)
+	rel = ld.Addrel(initfunc)
+	rel.Off = 8
+	rel.Siz = 4
+	rel.Sym = ld.Linklookup(ld.Ctxt, "runtime.addmoduledata", 0)
+	rel.Type = obj.R_AARCH64_CALL26 // Really should be R_AARCH64_JUMP26 but doesn't seem to make any difference
+
+	if ld.Ctxt.Etextp != nil {
+		ld.Ctxt.Etextp.Next = initfunc
+	} else {
+		ld.Ctxt.Textp = initfunc
+	}
+	ld.Ctxt.Etextp = initfunc
+	initarray_entry := ld.Linklookup(ld.Ctxt, "go.link.addmoduledatainit", 0)
+	initarray_entry.Reachable = true
+	initarray_entry.Local = true
+	initarray_entry.Type = obj.SINITARR
+	ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
+}
 
 func adddynrela(rel *ld.LSym, s *ld.LSym, r *ld.Reloc) {
 	log.Fatalf("adddynrela not implemented")
@@ -65,9 +121,6 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		default:
 			return -1
 		}
-
-	case obj.R_AARCH64_ADR_PREL_PG_HI21:
-		ld.Thearch.Vput(ld.R_AARCH64_ADR_PREL_PG_HI21 | uint64(elfsym)<<32)
 
 	case obj.R_AARCH64_ADR_GOT_PAGE:
 		if r.Xsym.Local {
