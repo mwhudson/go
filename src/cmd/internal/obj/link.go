@@ -384,11 +384,11 @@ type Reloc struct {
 const (
 	R_ADDR = 1 + iota
 	R_ADDRPOWER
-	R_ADDRARM64
+	_
 	R_SIZE
 	R_CALL
 	R_CALLARM
-	R_CALLARM64
+	_
 	R_CALLIND
 	R_CALLPOWER
 	R_CONST
@@ -408,7 +408,7 @@ const (
 	// R_TLS_IE (only used on 386 and amd64 currently) resolves to the PC-relative
 	// offset to a GOT slot containing the offset the thread-local g from the thread
 	// local base and is used to implemented the "initial exec" model for tls access
-	// (r.Sym is not set by the compiler for this case but is set to Tlsg in the
+	// (r.Sym is not  set by the compiler for this case but is set to Tlsg in the
 	// linker when externally linking).
 	R_TLS_IE
 	R_GOTOFF
@@ -418,6 +418,40 @@ const (
 	R_USEFIELD
 	R_POWER_TOC
 	R_GOTPCREL
+
+	// Platform dependent relocations. Architectures with fixed width instructions
+	// have the inherent issue that a 32-bit (or 64-bit!) displacement cannot be
+	// stuffed into a 32-bit instruction, so an address needs to be spread across
+	// several instructions, and in turn this requires a sequence of relocations, each
+	// updating a part of an instruction.  This leads to relocation codes that are
+	// inherently processor specific, and have long and ridiculous-seeming names,
+	// which get easier to read with a bit of practice.
+
+	// Arm64.
+
+	// The names here come from the ELF for the ARM 64-bit Architecture document,
+	// which can be found at:
+	// http://infocenter.arm.com/help/topic/com.arm.doc.ihi0056b/IHI0056B_aaelf64.pdf
+	// We only support the few relocations we actually generate out of the hundred or
+	// so defined by the platform. Macho uses similar relocations, but they don't seem
+	// to be as well documented.
+
+	// Set an ADRP immediate value to bits [32:12] of the displacement from the "page
+	// address" (i.e. addr&^0xfff) of the relocated place to the page address of the
+	// referenced symbol, plus addend. Error if the displacement is too large to
+	// entirely fit.
+	R_AARCH64_ADR_PREL_PG_HI21
+
+	// Set an ADD immediate value to bits [11:0] of the displacement from the
+	// relocated place to the referenced symbol, plus addend. No error if the
+	// displacement does not entirely fit (as it is expected that this is used in
+	// conjunction with R_AARCH64_ADR_PREL_PG_HI21)
+	R_AARCH64_ADD_ABS_LO12_NC
+
+	// Set a BL immediate field to bits [27:2] of the the displacement from the
+	// relocated place to the referenced symbol, plus addend.  Error if the
+	// displacement is too large to fit.
+	R_AARCH64_CALL26
 )
 
 type Auto struct {
