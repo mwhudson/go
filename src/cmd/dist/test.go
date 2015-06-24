@@ -576,7 +576,7 @@ func (t *tester) supportedBuildmode(mode string) bool {
 		return false
 	case "shared":
 		switch pair {
-		case "linux-amd64":
+		case "linux-amd64", "linux-arm64":
 			return true
 		}
 		return false
