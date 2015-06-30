@@ -222,6 +222,9 @@ overwrite:
 	if t == obj.SBSS && (s.Type == obj.SRODATA || s.Type == obj.SNOPTRBSS) {
 		t = int(s.Type)
 	}
+	if s.Type == obj.SDYNIMPORT {
+		println("overwriting imported", s.Name)
+	}
 	s.Type = int16(t)
 	if s.Size < int64(size) {
 		s.Size = int64(size)
