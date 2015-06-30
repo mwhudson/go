@@ -472,14 +472,21 @@ func loadlib() {
 
 	var i int
 	for i = 0; i < len(Ctxt.Library); i++ {
-		if Debug['v'] > 1 {
-			fmt.Fprintf(&Bso, "%5.2f autolib: %s (from %s)\n", obj.Cputime(), Ctxt.Library[i].File, Ctxt.Library[i].Objref)
+		if Ctxt.Library[i].Shlib == "" {
+			if Debug['v'] > 1 {
+				fmt.Fprintf(&Bso, "%5.2f autolib: %s (from %s)\n", obj.Cputime(), Ctxt.Library[i].File, Ctxt.Library[i].Objref)
+			}
+			iscgo = iscgo || Ctxt.Library[i].Pkg == "runtime/cgo"
+			objfile(Ctxt.Library[i])
 		}
+	}
+	for i = 0; i < len(Ctxt.Library); i++ {
 		iscgo = iscgo || Ctxt.Library[i].Pkg == "runtime/cgo"
 		if Ctxt.Library[i].Shlib != "" {
+			if Debug['v'] > 1 {
+				fmt.Fprintf(&Bso, "%5.2f autolib: %s (from %s)\n", obj.Cputime(), Ctxt.Library[i].File, Ctxt.Library[i].Objref)
+			}
 			ldshlibsyms(Ctxt.Library[i].Shlib)
-		} else {
-			objfile(Ctxt.Library[i])
 		}
 	}
 
