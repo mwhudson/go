@@ -1341,7 +1341,7 @@ func ldshlibsyms(shlib string) {
 				// If the existing symbol is a BSS value that is
 				// larger than the one read from the shared library,
 				// keep references to that.  Conversely, if the
-				// version from the shared libray is larger, we want
+				// version from the shared library is larger, we want
 				// to make all references be to that.
 				continue
 			}
