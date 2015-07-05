@@ -363,7 +363,7 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch platform {
-			case "linux/amd64", "linux/arm64":
+			case "linux/amd64", "linux/arm", "linux/arm64":
 			default:
 				fatalf("-buildmode=shared not supported on %s\n", platform)
 			}
