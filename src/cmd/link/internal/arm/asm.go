@@ -212,6 +212,13 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 			return -1
 		}
 
+	case obj.R_GOTPCREL:
+		if r.Siz == 4 {
+			ld.Thearch.Lput(ld.R_ARM_GOT_PREL | uint32(elfsym)<<8)
+		} else {
+			return -1
+		}
+
 	case obj.R_CALLARM:
 		if r.Siz == 4 {
 			if r.Add&0xff000000 == 0xeb000000 { // BL
@@ -339,8 +346,8 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 				rs = rs.Outer
 			}
 
-			if rs.Type != obj.SHOSTOBJ && rs.Sect == nil {
-				ld.Diag("missing section for %s", rs.Name)
+			if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
+				ld.Diag("missing section for %s %d", rs.Name, rs.Type)
 			}
 			r.Xsym = rs
 

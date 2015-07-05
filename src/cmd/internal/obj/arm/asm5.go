@@ -91,6 +91,7 @@ var optab = []Optab{
 
 	Optab{AB, C_NONE, C_NONE, C_ROREG, 6, 4, 0, LPOOL, 0},
 	Optab{ABL, C_NONE, C_NONE, C_ROREG, 7, 4, 0, 0, 0},
+	Optab{ABL, C_NONE, C_NONE, C_REG, 7, 4, 0, 0, 0},
 	Optab{ABL, C_REG, C_NONE, C_ROREG, 7, 4, 0, 0, 0},
 	Optab{ABX, C_NONE, C_NONE, C_ROREG, 75, 12, 0, 0, 0},
 	Optab{ABXRET, C_NONE, C_NONE, C_ROREG, 76, 4, 0, 0, 0},
@@ -1004,6 +1005,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_NONE
 
 	case obj.TYPE_REG:
+		ctxt.Instoffset = 0
 		if REG_R0 <= a.Reg && a.Reg <= REG_R15 {
 			return C_REG
 		}
@@ -1033,6 +1035,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 	case obj.TYPE_MEM:
 		switch a.Name {
 		case obj.NAME_EXTERN,
+			obj.NAME_GOTREF,
 			obj.NAME_STATIC:
 			if a.Sym == nil || a.Sym.Name == "" {
 				fmt.Printf("null sym external\n")
@@ -1145,6 +1148,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 			return C_LCON
 
 		case obj.NAME_EXTERN,
+			obj.NAME_GOTREF,
 			obj.NAME_STATIC:
 			s := a.Sym
 			if s == nil {
@@ -1606,7 +1610,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		aclass(ctxt, &p.To)
 
 		if ctxt.Instoffset != 0 {
-			ctxt.Diag("%v: doesn't support BL offset(REG) where offset != 0", p)
+			ctxt.Diag("%v: doesn't support BL offset(REG) where offset != 0, %d", p, ctxt.Instoffset)
 		}
 		o1 = oprrr(ctxt, ABL, int(p.Scond))
 		o1 |= (uint32(p.To.Reg) & 15) << 0
@@ -1673,7 +1677,11 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 					rel.Add += ctxt.Pc - p.Rel.Pc - 8 - int64(rel.Siz)
 				}
 			} else if ctxt.Flag_shared != 0 {
-				rel.Type = obj.R_PCREL
+				if p.To.Name == obj.NAME_GOTREF {
+					rel.Type = obj.R_GOTPCREL
+				} else {
+					rel.Type = obj.R_PCREL
+				}
 				rel.Add += ctxt.Pc - p.Rel.Pc - 8
 			} else {
 				rel.Type = obj.R_ADDR
