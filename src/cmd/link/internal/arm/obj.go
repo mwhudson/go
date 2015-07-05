@@ -171,8 +171,8 @@ func archinit() {
 	}
 
 	// embed goarm to runtime.goarm
-	s := ld.Linklookup(ld.Ctxt, "runtime.goarm", 0)
+	//s := ld.Linklookup(ld.Ctxt, "runtime.goarm", 0)
 
-	s.Type = obj.SRODATA
-	ld.Adduint8(ld.Ctxt, s, uint8(ld.Ctxt.Goarm))
+	//s.Type = obj.SRODATA
+	//ld.Adduint8(ld.Ctxt, s, uint8(ld.Ctxt.Goarm))
 }

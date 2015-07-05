@@ -381,9 +381,9 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch platform {
-			case "linux/amd64", "linux/arm64":
+			case "linux/amd64", "linux/arm", "linux/arm64":
 			default:
-				fmt.Fprintf(os.Stderr, "go %s: -linkshared is only supported on linux/amd64\n", flag.Args()[0])
+				fmt.Fprintf(os.Stderr, "go %s: -linkshared is only supported on linux/{amd64,arm,arm64}\n", flag.Args()[0])
 				os.Exit(2)
 			}
 			codegenArg = "-dynlink"
