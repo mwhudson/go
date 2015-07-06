@@ -161,7 +161,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p.From.Name = obj.NAME_GOTREF
 		p.From.Sym = sym
 		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REGTMP
+		p.To.Reg = REG_R9
 		p.To.Name = obj.NAME_NONE
 		p.To.Offset = 0
 		p.To.Sym = nil
@@ -171,11 +171,11 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p1.From.Offset = offset
 		println("yolo", offset)
 		p1.To.Type = obj.TYPE_REG
-		p1.To.Reg = REGTMP
+		p1.To.Reg = REG_R9
 		p2 := obj.Appendp(ctxt, p1)
 		p2.As = obj.ACALL
 		p2.To.Type = obj.TYPE_REG
-		p2.To.Reg = REGTMP
+		p2.To.Reg = REG_R9
 	}
 
 	if ctxt.Flag_dynlink {
@@ -228,17 +228,17 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p1.From.Sym = source.Sym
 		p1.From.Name = obj.NAME_GOTREF
 		p1.To.Type = obj.TYPE_REG
-		p1.To.Reg = REGTMP
+		p1.To.Reg = REG_R9
 
 		p2.As = p.As
 		p2.From = p.From
 		p2.To = p.To
 		if p.From.Name == obj.NAME_EXTERN {
-			p2.From.Reg = REGTMP
+			p2.From.Reg = REG_R9
 			p2.From.Name = obj.NAME_NONE
 			p2.From.Sym = nil
 		} else if p.To.Name == obj.NAME_EXTERN {
-			p2.To.Reg = REGTMP
+			p2.To.Reg = REG_R9
 			p2.To.Name = obj.NAME_NONE
 			p2.To.Sym = nil
 		} else {
