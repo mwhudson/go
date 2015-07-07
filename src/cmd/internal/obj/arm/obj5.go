@@ -214,7 +214,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
 			return
 		}
-		if source.Sym.Name == "runtime.tlsg" {
+		if source.Sym.Type == obj.STLSBSS {
 			return
 		}
 		if source.Type != obj.TYPE_MEM {

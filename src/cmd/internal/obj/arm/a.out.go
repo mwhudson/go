@@ -155,6 +155,8 @@ const (
 	C_HREG
 
 	C_ADDR /* reference to relocatable address */
+	C_TLS_LE
+	C_TLS_IE
 	C_TEXTSIZE
 
 	C_GOK

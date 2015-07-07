@@ -416,8 +416,10 @@ func relocsym(s *LSym) {
 		case obj.R_TLS_LE:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
 				r.Done = 0
-				r.Sym = Ctxt.Tlsg
-				r.Xsym = Ctxt.Tlsg
+				if r.Sym == nil {
+					r.Sym = Ctxt.Tlsg
+				}
+				r.Xsym = r.Sym
 				r.Xadd = r.Add
 				o = 0
 				if Thearch.Thechar != '6' {
@@ -437,8 +439,11 @@ func relocsym(s *LSym) {
 		case obj.R_TLS_IE:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
 				r.Done = 0
-				r.Sym = Ctxt.Tlsg
-				r.Xsym = Ctxt.Tlsg
+				println("!r.Sym.Name", r.Sym.Name)
+				if r.Sym == nil {
+					r.Sym = Ctxt.Tlsg
+				}
+				r.Xsym = r.Sym
 				r.Xadd = r.Add
 				o = 0
 				if Thearch.Thechar != '6' {
