@@ -21,6 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -30,7 +31,8 @@ var gopathInstallDir, gorootInstallDir, suffix string
 
 // This is the smallest set of packages we can link into a shared
 // library (runtime/cgo is built implicitly).
-var minpkgs = []string{"runtime", "sync/atomic"}
+// "sync" is there because of golang.org/issue/11480
+var minpkgs = []string{"runtime", "sync/atomic", "sync"}
 var soname = "libruntime,sync-atomic.so"
 
 // run runs a command and calls t.Errorf if it fails.
@@ -126,6 +128,10 @@ func testMain(m *testing.M) (int, error) {
 	os.Setenv("GOPATH", scratchDir)
 	myContext.GOPATH = scratchDir
 	os.Chdir(scratchDir)
+
+	if runtime.GOARCH == "arm" {
+		minpkgs = append(minpkgs, "math")
+	}
 
 	// All tests depend on runtime being built into a shared library. Because
 	// that takes a few seconds, do it here and have all tests use the version
