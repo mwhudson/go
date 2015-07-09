@@ -2126,7 +2126,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			ctxt.Diag("conditional tls")
 		}
 		o1 = omvl(ctxt, p, &p.From, int(p.To.Reg))
-		o2 = olrr(ctxt, int(p.To.Reg), (REGPC & 15), int(p.To.Reg), int(p.Scond))
+		o2 = olrr(ctxt, int(p.To.Reg)&15, (REGPC & 15), int(p.To.Reg), int(p.Scond))
 
 	case 167: /* word tlsvar, local exec */
 		if p.To.Sym == nil {
