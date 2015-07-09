@@ -48,7 +48,7 @@ func run(t *testing.T, msg string, args ...string) {
 func goCmd(t *testing.T, args ...string) {
 	newargs := []string{args[0], "-installsuffix=" + suffix}
 	if testing.Verbose() {
-		newargs = append(newargs, "-v")
+		newargs = append(newargs, "-v", "-x")
 	}
 	newargs = append(newargs, args[1:]...)
 	c := exec.Command("go", newargs...)
@@ -132,7 +132,11 @@ func testMain(m *testing.M) (int, error) {
 	if runtime.GOARCH == "arm" {
 		minpkgs = append(minpkgs, "math")
 	}
-	soname = "lib" + strings.Join(minpkgs, ",") + ".so"
+	soname = "lib"
+	for _, pkg := range minpkgs {
+		soname += strings.Replace(pkg, "/", "-", -1) + ","
+	}
+	soname = soname[:len(soname)-1] + ".so"
 
 	// All tests depend on runtime being built into a shared library. Because
 	// that takes a few seconds, do it here and have all tests use the version
@@ -185,7 +189,7 @@ func TestShlibnameFiles(t *testing.T) {
 		}
 		contents := strings.TrimSpace(string(contentsb))
 		if contents != soname {
-			t.Errorf("shlibnamefile for %s has wrong contents: %q", pkg, contents)
+			t.Errorf("shlibnamefile for %s has wrong contents: %q vs %q", pkg, contents, soname)
 		}
 	}
 }
