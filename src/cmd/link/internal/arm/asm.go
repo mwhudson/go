@@ -78,7 +78,7 @@ func gentext() {
 		ld.Adduint32(ld.Ctxt, initfunc, op)
 	}
 	o(0xe59f0004)
-	o(0xe79f0000)
+	o(0xe08f0000)
 
 	o(0xeafffffe)
 	rel := ld.Addrel(initfunc)
