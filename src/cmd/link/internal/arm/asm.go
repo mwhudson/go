@@ -88,12 +88,13 @@ func gentext() {
 	rel.Type = obj.R_CALLARM
 	rel.Add = 0xeafffffe // vomit
 
-	o(0x00000004)
+	o(0x00000000)
 	rel = ld.Addrel(initfunc)
 	rel.Off = 12
 	rel.Siz = 4
 	rel.Sym = ld.Linklookup(ld.Ctxt, "runtime.firstmoduledata", 0)
 	rel.Type = obj.R_PCREL
+	rel.Add = 4
 
 	if ld.Ctxt.Etextp != nil {
 		ld.Ctxt.Etextp.Next = initfunc
