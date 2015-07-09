@@ -169,7 +169,6 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p1.As = AADD
 		p1.From.Type = obj.TYPE_CONST
 		p1.From.Offset = offset
-		println("yolo", offset)
 		p1.To.Type = obj.TYPE_REG
 		p1.To.Reg = REG_R9
 		p2 := obj.Appendp(ctxt, p1)

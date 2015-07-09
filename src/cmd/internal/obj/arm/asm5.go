@@ -2157,7 +2157,6 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		rel.Siz = 4
 		rel.Sym = p.To.Sym
 		rel.Type = obj.R_TLS_IE
-		println(rel.Sym.Name)
 		rel.Add = ctxt.Pc - p.Rel.Pc - 8 - int64(rel.Siz)
 
 	case 68: /* floating point store -> ADDR */
