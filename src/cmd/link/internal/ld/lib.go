@@ -980,6 +980,10 @@ func hostlink() {
 		// anyway.
 		argv = append(argv, "-Wl,-Bsymbolic-functions")
 		argv = append(argv, "-shared")
+		if Thearch.Thechar == '5' {
+			// aaand ld.bfd is buggy wrt -Bsymbolic-functions on ARM.
+			argv = append(argv, "-fuse-ld=gold")
+		}
 	}
 
 	if Linkshared && Iself {
