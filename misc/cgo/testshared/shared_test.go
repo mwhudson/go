@@ -132,6 +132,7 @@ func testMain(m *testing.M) (int, error) {
 	if runtime.GOARCH == "arm" {
 		minpkgs = append(minpkgs, "math")
 	}
+	soname = "lib" + strings.Join(minpkgs, ",") + ".so"
 
 	// All tests depend on runtime being built into a shared library. Because
 	// that takes a few seconds, do it here and have all tests use the version
