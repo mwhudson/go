@@ -90,7 +90,7 @@ func dumpobj() {
 	externdcl = tmp
 
 	zero := Pkglookup("zerovalue", Runtimepkg)
-	ggloblsym(zero, int32(zerosize), obj.DUPOK|obj.RODATA)
+	ggloblsym(zero, int32(zerosize), obj.DUPOK|obj.RODATA|obj.LOCAL)
 
 	dumpdata()
 	obj.Writeobjdirect(Ctxt, bout)

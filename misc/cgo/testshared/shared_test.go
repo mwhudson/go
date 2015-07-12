@@ -334,6 +334,15 @@ func TestGopathShlib(t *testing.T) {
 	run(t, "executable linked to GOPATH library", "./bin/exe")
 }
 
+// Build a GOPATH package into a shared library that links against the goroot runtime
+// and an executable that links against both.
+func TestZeroValueTortureShlib(t *testing.T) {
+	goCmd(t, "install", "-buildmode=shared", "-linkshared", "zvtlib")
+	goCmd(t, "install", "-linkshared", "zvtexe")
+	// And check it runs.
+	run(t, "executable linked to GOPATH library", "./bin/zvtexe")
+}
+
 // The shared library contains a note listing the packages it contains in a section
 // that is not mapped into memory.
 func testPkgListNote(t *testing.T, f *elf.File, note *note) {
