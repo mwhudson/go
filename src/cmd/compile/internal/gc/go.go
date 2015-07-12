@@ -684,6 +684,8 @@ var nodfp *Node
 
 var Disable_checknil int
 
+var zerosize int64
+
 type Flow struct {
 	Prog   *obj.Prog // actual instruction
 	P1     *Flow     // predecessors of this instruction: p1,

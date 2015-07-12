@@ -233,7 +233,7 @@ func makemap(t *maptype, hint int64, h *hmap, bucket unsafe.Pointer) *hmap {
 		throw("need padding in bucket (value)")
 	}
 
-	// make sure zeroptr is large enough
+	// make sure zero of element type is available.
 	mapzero(t.elem)
 
 	// find size parameter which will hold the requested # of elements
@@ -277,7 +277,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 		raceReadObjectPC(t.key, key, callerpc, pc)
 	}
 	if h == nil || h.count == 0 {
-		return zeroptr
+		return unsafe.Pointer(t.elem.zero)
 	}
 	alg := t.key.alg
 	hash := alg.hash(key, uintptr(h.hash0))
@@ -312,7 +312,7 @@ func mapaccess1(t *maptype, h *hmap, key unsafe.Pointer) unsafe.Pointer {
 		}
 		b = b.overflow(t)
 		if b == nil {
-			return zeroptr
+			return unsafe.Pointer(t.elem.zero)
 		}
 	}
 }
@@ -325,7 +325,7 @@ func mapaccess2(t *maptype, h *hmap, key unsafe.Pointer) (unsafe.Pointer, bool) 
 		raceReadObjectPC(t.key, key, callerpc, pc)
 	}
 	if h == nil || h.count == 0 {
-		return zeroptr, false
+		return unsafe.Pointer(t.elem.zero), false
 	}
 	alg := t.key.alg
 	hash := alg.hash(key, uintptr(h.hash0))
@@ -360,7 +360,7 @@ func mapaccess2(t *maptype, h *hmap, key unsafe.Pointer) (unsafe.Pointer, bool) 
 		}
 		b = b.overflow(t)
 		if b == nil {
-			return zeroptr, false
+			return unsafe.Pointer(t.elem.zero), false
 		}
 	}
 }
@@ -994,34 +994,59 @@ func reflect_ismapkey(t *_type) bool {
 	return ismapkey(t)
 }
 
-var zerolock mutex
-var zero1024 [1024]byte
-var zeroptr unsafe.Pointer = unsafe.Pointer(&zero1024)
-var zerosize uintptr = 1024
+var zerobuf struct {
+	lock mutex
+	p    *byte
+	size uintptr
+}
 
-// mapzero ensures STUFF
+var zerotiny [1024]byte
+
+// mapzero ensures that t.zero points at a zero value for type t.
+// Types known to the compiler are in read-only memory and all point
+// to a single zero in the bss of a large enough size.
+// Types allocated by package reflect are in writable memory and
+// start out with zero set to nil; we initialize those on demand.
 func mapzero(t *_type) {
 	// On ARM, atomicloadp is implemented as xadd(p, 0),
 	// so we cannot use atomicloadp on read-only memory.
 	// Check whether the pointer is in the heap; if not, it's not writable
 	// so the zero value must already be set.
+	if GOARCH == "arm" && !inheap(uintptr(unsafe.Pointer(t))) {
+		if t.zero == nil {
+			print("runtime: map element ", *t._string, " missing zero value\n")
+			throw("mapzero")
+		}
+		return
+	}
 
-	// Small enough for existing buffer
-	if t.size <= zerosize {
+	// Already done?
+	// Check without lock, so must use atomicload to sync with atomicstore in allocation case below.
+	if atomicloadp(unsafe.Pointer(&t.zero)) != nil {
+		return
+	}
+
+	// Small enough for static buffer?
+	if t.size <= uintptr(len(zerotiny)) {
+		atomicstorep(unsafe.Pointer(&t.zero), unsafe.Pointer(&zerotiny[0]))
 		return
 	}
 
 	// Use allocated buffer.
-	lock(&zerolock)
-	if zerosize < t.size {
-		for zerosize < t.size {
-			zerosize *= 2
-			if zerosize == 0 {
+	lock(&zerobuf.lock)
+	if zerobuf.size < t.size {
+		if zerobuf.size == 0 {
+			zerobuf.size = 4 * 1024
+		}
+		for zerobuf.size < t.size {
+			zerobuf.size *= 2
+			if zerobuf.size == 0 {
 				// need >2GB zero on 32-bit machine
 				throw("map element too large")
 			}
 		}
-		zeroptr = persistentalloc(zerosize, 64, &memstats.other_sys)
+		zerobuf.p = (*byte)(persistentalloc(zerobuf.size, 64, &memstats.other_sys))
 	}
-	unlock(&zerolock)
+	atomicstorep(unsafe.Pointer(&t.zero), unsafe.Pointer(zerobuf.p))
+	unlock(&zerobuf.lock)
 }
