@@ -383,7 +383,7 @@ type Reloc struct {
 // Reloc.type
 const (
 	R_ADDR = 1 + iota
-	R_ADDRPOWER
+	_
 	_
 	R_SIZE
 	R_CALL
