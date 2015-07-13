@@ -971,6 +971,10 @@ func hostlink() {
 		// anyway.
 		argv = append(argv, "-Wl,-Bsymbolic-functions")
 		argv = append(argv, "-shared")
+		// We handle runtime.zerovalue by making it a COMMON symbol,
+		// which is not properly supported by ld.bfd when built with the
+		// default options.
+		argv = append(argv, "-fuse-ld=gold")
 	}
 
 	if Linkshared && Iself {
@@ -1306,6 +1310,9 @@ func ldshlibsyms(shlib string) {
 	}
 	for _, elfsym := range syms {
 		if elf.ST_TYPE(elfsym.Info) == elf.STT_NOTYPE || elf.ST_TYPE(elfsym.Info) == elf.STT_SECTION {
+			continue
+		}
+		if elfsym.Name == "runtime.zerovalue" {
 			continue
 		}
 		lsym := Linklookup(Ctxt, elfsym.Name, 0)

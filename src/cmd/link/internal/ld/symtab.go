@@ -122,7 +122,11 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	}
 
 	var elfshnum int
-	if xo.Type == obj.SDYNIMPORT || xo.Type == obj.SHOSTOBJ {
+	if DynlinkingGo() && xo.Name == "runtime.zerovalue" {
+		println("yo")
+		elfshnum = 0xfff2
+		type_ = 5
+	} else if xo.Type == obj.SDYNIMPORT || xo.Type == obj.SHOSTOBJ {
 		elfshnum = SHN_UNDEF
 	} else {
 		if xo.Sect == nil {
@@ -160,7 +164,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	}
 
 	off := putelfstr(s)
-	if Linkmode == LinkExternal && elfshnum != SHN_UNDEF {
+	if Linkmode == LinkExternal && elfshnum != SHN_UNDEF && elfshnum != 0xfff2 {
 		addr -= int64(xo.Sect.Vaddr)
 	}
 	other := STV_DEFAULT
