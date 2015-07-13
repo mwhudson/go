@@ -7,6 +7,7 @@ package runtime
 import "unsafe"
 
 //go:cgo_export_static main
+//go:cgo_export_static _cgo_reginit
 
 // Filled in by runtime/cgo when linked into binary.
 
