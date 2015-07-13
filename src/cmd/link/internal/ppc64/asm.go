@@ -379,7 +379,8 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			return 0
 
 		case obj.R_PPC64_ADDR16_LO,
-			obj.R_PPC64_ADDR16_HA:
+			obj.R_PPC64_ADDR16_HA,
+			obj.R_CALLPOWER:
 			r.Done = 0
 
 			// set up addend for eventual relocation via outer symbol.
@@ -395,12 +396,6 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			}
 			r.Xsym = rs
 
-			return 0
-
-		case obj.R_CALLPOWER:
-			r.Done = 0
-			r.Xsym = r.Sym
-			r.Xadd = r.Add
 			return 0
 		}
 	}
