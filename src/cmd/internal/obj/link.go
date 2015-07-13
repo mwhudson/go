@@ -475,6 +475,9 @@ const (
 
 	// TODO(mwhudson): document. Currently only supported for external linking.
 	R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC
+
+	// TODO(mwhudson): document
+	R_PPC64_TPREL16
 )
 
 type Auto struct {
