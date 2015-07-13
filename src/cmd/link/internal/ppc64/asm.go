@@ -317,6 +317,9 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_PPC64_ADDR16_LO:
 		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_LO) | uint64(elfsym)<<32)
 
+	case obj.R_PPC64_ADDR16_LO_DS:
+		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_LO_DS) | uint64(elfsym)<<32)
+
 	case obj.R_PPC64_ADDR16_HA:
 		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_HA) | uint64(elfsym)<<32)
 
@@ -379,6 +382,7 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			return 0
 
 		case obj.R_PPC64_ADDR16_LO,
+			obj.R_PPC64_ADDR16_LO_DS,
 			obj.R_PPC64_ADDR16_HA,
 			obj.R_CALLPOWER:
 			r.Done = 0
@@ -411,6 +415,14 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 
 	case obj.R_PPC64_ADDR16_LO:
 		v := (ld.Symaddr(r.Sym) + r.Add) & 0xffff
+		*val |= v
+		return 0
+
+	case obj.R_PPC64_ADDR16_LO_DS:
+		v := (ld.Symaddr(r.Sym) + r.Add) & 0xffff
+		if v&0x3 != 0 {
+			ld.Ctxt.Diag("bad DS reloc for %s: %d", s.Name, ld.Symaddr(r.Sym))
+		}
 		*val |= v
 		return 0
 

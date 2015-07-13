@@ -239,9 +239,9 @@ var optab = []Optab{
 	Optab{AMOVWZ, C_LOREG, C_NONE, C_NONE, C_REG, 36, 8, REGZERO},
 	Optab{AMOVBZ, C_LOREG, C_NONE, C_NONE, C_REG, 36, 8, REGZERO},
 	Optab{AMOVB, C_LOREG, C_NONE, C_NONE, C_REG, 37, 12, REGZERO},
-	Optab{AMOVD, C_ADDR, C_NONE, C_NONE, C_REG, 75, 8, 0},
 	Optab{AMOVD, C_TLS_LE, C_NONE, C_NONE, C_REG, 125, 4, 0},
 	Optab{AMOVD, C_TLS_IE, C_NONE, C_NONE, C_REG, 126, 8, 0},
+	Optab{AMOVD, C_ADDR, C_NONE, C_NONE, C_REG, 75, 8, 0},
 	Optab{AMOVW, C_ADDR, C_NONE, C_NONE, C_REG, 75, 8, 0},
 	Optab{AMOVWZ, C_ADDR, C_NONE, C_NONE, C_REG, 75, 8, 0},
 	Optab{AMOVBZ, C_ADDR, C_NONE, C_NONE, C_REG, 75, 8, 0},
@@ -1293,6 +1293,35 @@ func buildop(ctxt *obj.Link) {
 	}
 }
 
+const (
+	D_FORM int = iota
+	DS_FORM
+)
+
+func loadform(ctxt *obj.Link, a int16) int {
+	switch a {
+	default:
+		ctxt.Diag("bad op in loadform: %s", obj.Aconv(int(a)))
+	case AMOVD, AMOVW:
+		return DS_FORM
+	case AMOVWZ, AMOVH, AMOVHZ, AMOVBZ, AMOVB, AFMOVS, AFMOVD:
+		return D_FORM
+	}
+	return 0
+}
+
+func storeform(ctxt *obj.Link, a int16) int {
+	switch a {
+	default:
+		ctxt.Diag("bad op in storeform: %s", obj.Aconv(int(a)))
+	case AMOVD:
+		return DS_FORM
+	case AMOVW, AMOVWZ, AMOVH, AMOVHZ, AMOVBZ, AMOVB, AFMOVS, AFMOVD:
+		return D_FORM
+	}
+	return 0
+}
+
 func OPVCC(o uint32, xo uint32, oe uint32, rc uint32) uint32 {
 	return o<<26 | xo<<1 | oe<<10 | rc&1
 }
@@ -1381,7 +1410,7 @@ func oclass(a *obj.Addr) int {
 }
 
 // add XXX relocation to symbol s for the two instructions o1 and o2.
-func addaddrreloc(ctxt *obj.Link, s *obj.LSym, a int64) {
+func addaddrreloc(ctxt *obj.Link, s *obj.LSym, a int64, form int) {
 	rel := obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc)
 	rel.Siz = 4
@@ -1393,7 +1422,12 @@ func addaddrreloc(ctxt *obj.Link, s *obj.LSym, a int64) {
 	rel.Siz = 4
 	rel.Sym = s
 	rel.Add = a
-	rel.Type = obj.R_PPC64_ADDR16_LO
+	switch form {
+	case D_FORM:
+		rel.Type = obj.R_PPC64_ADDR16_LO
+	case DS_FORM:
+		rel.Type = obj.R_PPC64_ADDR16_LO_DS
+	}
 }
 
 /*
@@ -1821,7 +1855,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		} else {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
 			o2 = AOP_IRR(OP_ADDI, uint32(p.To.Reg), REGTMP, 0)
-			addaddrreloc(ctxt, p.From.Sym, d)
+			addaddrreloc(ctxt, p.From.Sym, d, D_FORM)
 		}
 
 	//if(dlm) reloc(&p->from, p->pc, 0);
@@ -2389,7 +2423,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 
 		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
 		o2 = AOP_IRR(uint32(opstore(ctxt, int(p.As))), uint32(p.From.Reg), REGTMP, 0)
-		addaddrreloc(ctxt, p.To.Sym, v)
+		addaddrreloc(ctxt, p.To.Sym, v, storeform(ctxt, p.As))
 
 	//if(dlm) reloc(&p->to, p->pc, 1);
 
@@ -2397,7 +2431,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		v := vregoff(ctxt, &p.From)
 		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
 		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, 0)
-		addaddrreloc(ctxt, p.From.Sym, v)
+		addaddrreloc(ctxt, p.From.Sym, v, loadform(ctxt, p.As))
 
 	case 125:
 		if p.From.Offset != 0 {
@@ -2416,7 +2450,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		v := vregoff(ctxt, &p.From)
 		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
 		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, 0)
-		addaddrreloc(ctxt, p.From.Sym, v)
+		addaddrreloc(ctxt, p.From.Sym, v, D_FORM)
 		o3 = LOP_RRR(OP_EXTSB, uint32(p.To.Reg), uint32(p.To.Reg), 0)
 
 		//if(dlm) reloc(&p->from, p->pc, 1);
