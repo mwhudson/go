@@ -530,6 +530,7 @@ const (
 	RBasePPC64  = 4 * 1024  // range [4k, 8k)
 	RBaseARM64  = 8 * 1024  // range [8k, 13k)
 	RBaseMIPS64 = 13 * 1024 // range [13k, 16k)
+	RBaseS390X  = 17 * 1024 // TODO(mundaym): 16 * 1024 doesn't work, conflict with MIPS?
 )
 
 // RegisterRegister binds a pretty-printer (Rconv) for register
@@ -590,6 +591,7 @@ const (
 	ABasePPC64
 	ABaseARM64
 	ABaseMIPS64
+	ABaseS390X
 	AMask = 1<<12 - 1 // AND with this to use the opcode as an array index.
 )
 

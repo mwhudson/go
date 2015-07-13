@@ -1725,6 +1725,72 @@ var rppc64Strings = []intName{
 func (i R_PPC64) String() string   { return stringName(uint32(i), rppc64Strings, false) }
 func (i R_PPC64) GoString() string { return stringName(uint32(i), rppc64Strings, true) }
 
+// Relocation types for s390x processors.
+type R_S390X int
+
+const (
+        R_390_NONE                R_S390X = 0
+        R_390_8                   R_S390X = 1
+        R_390_12                  R_S390X = 2
+        R_390_16                  R_S390X = 3
+        R_390_32                  R_S390X = 4
+        R_390_PC32                R_S390X = 5
+        R_390_GOT12               R_S390X = 6
+        R_390_GOT32               R_S390X = 7
+        R_390_PLT32               R_S390X = 8
+        R_390_COPY                R_S390X = 9
+        R_390_GLOB_DAT            R_S390X = 10
+        R_390_JMP_SLOT            R_S390X = 11
+        R_390_RELATIVE            R_S390X = 12
+        R_390_GOTOFF              R_S390X = 13
+        R_390_GOTPC               R_S390X = 14
+        R_390_GOT16               R_S390X = 15
+        R_390_PC16                R_S390X = 16
+        R_390_PC16DBL             R_S390X = 17
+        R_390_PLT16DBL            R_S390X = 18
+        R_390_PC32DBL             R_S390X = 19
+        R_390_PLT32DBL            R_S390X = 20
+        R_390_GOTPCDBL            R_S390X = 21
+        R_390_64                  R_S390X = 22
+        R_390_PC64                R_S390X = 23
+        R_390_GOT64               R_S390X = 24
+        R_390_PLT64               R_S390X = 25
+        R_390_GOTENT              R_S390X = 26
+)
+
+var rs390xStrings = []intName{
+	{0 , "R_390_NONE"},
+	{1 , "R_390_8"},
+	{2 , "R_390_12"},
+	{3 , "R_390_16"},
+	{4 , "R_390_32"},
+	{5 , "R_390_PC32"},
+	{6 , "R_390_GOT12"},
+	{7 , "R_390_GOT32"},
+	{8 , "R_390_PLT32"},
+	{9 , "R_390_COPY"},
+	{10, "R_390_GLOB_DAT"},
+	{11, "R_390_JMP_SLOT"},
+	{12, "R_390_RELATIVE"},
+	{13, "R_390_GOTOFF"},
+	{14, "R_390_GOTPC"},
+	{15, "R_390_GOT16"},
+	{16, "R_390_PC16"},
+	{17, "R_390_PC16DBL"},
+	{18, "R_390_PLT16DBL"},
+	{19, "R_390_PC32DBL"},
+	{20, "R_390_PLT32DBL"},
+	{21, "R_390_GOTPCDBL"},
+	{22, "R_390_64"},
+	{23, "R_390_PC64"},
+	{24, "R_390_GOT64"},
+	{25, "R_390_PLT64"},
+	{26, "R_390_GOTENT"},
+}
+
+func (i R_S390X) String() string   { return stringName(uint32(i), rs390xStrings, false) }
+func (i R_S390X) GoString() string { return stringName(uint32(i), rs390xStrings, true) }
+
 // Relocation types for SPARC.
 type R_SPARC int
 

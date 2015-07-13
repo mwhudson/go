@@ -616,7 +616,7 @@ opswitch:
 
 		if n.Left.Op == ONAME && n.Left.Sym.Name == "Sqrt" && n.Left.Sym.Pkg.Path == "math" {
 			switch Thearch.Thechar {
-			case '5', '6', '7':
+			case '5', '6', '7', 'z':
 				n.Op = OSQRT
 				n.Left = n.List.N
 				n.List = nil
@@ -3284,7 +3284,7 @@ func samecheap(a *Node, b *Node) bool {
 }
 
 func walkrotate(np **Node) {
-	if Thearch.Thechar == '0' || Thearch.Thechar == '7' || Thearch.Thechar == '9' {
+	if Thearch.Thechar == '0' || Thearch.Thechar == '7' || Thearch.Thechar == '9' || Thearch.Thechar == 'z' {
 		return
 	}
 

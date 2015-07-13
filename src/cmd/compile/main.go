@@ -11,6 +11,7 @@ import (
 	"cmd/compile/internal/mips64"
 	"cmd/compile/internal/ppc64"
 	"cmd/compile/internal/x86"
+	"cmd/compile/internal/s390x"
 	"cmd/internal/obj"
 	"fmt"
 	"log"
@@ -38,5 +39,7 @@ func main() {
 		mips64.Main()
 	case "ppc64", "ppc64le":
 		ppc64.Main()
+	case "s390x":
+		s390x.Main()
 	}
 }

@@ -493,6 +493,10 @@ var debugstr string
 var Debug_checknil int
 var Debug_typeassert int
 
+var Debugmergeopmv int = -1
+
+var Debugcnb int = -1
+
 var importmyname *Sym // my name for package
 
 var localpkg *Pkg // package being compiled
