@@ -134,6 +134,7 @@ const (
 	ElfSymTypeFunc    = 2
 	ElfSymTypeSection = 3
 	ElfSymTypeFile    = 4
+	ElfSymTypeTls     = 6
 )
 
 const (
@@ -879,7 +880,7 @@ func readelfsym(elfobj *ElfObj, i int, sym *ElfSym, needSym int) (err error) {
 	case ElfSymTypeSection:
 		s = elfobj.sect[sym.shndx].sym
 
-	case ElfSymTypeObject, ElfSymTypeFunc, ElfSymTypeNone:
+	case ElfSymTypeObject, ElfSymTypeFunc, ElfSymTypeNone, ElfSymTypeTls:
 		switch sym.bind {
 		case ElfSymBindGlobal:
 			if needSym != 0 {
