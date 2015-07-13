@@ -126,6 +126,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 		println("yo")
 		elfshnum = 0xfff2
 		type_ = 5
+		addr = 8
 	} else if xo.Type == obj.SDYNIMPORT || xo.Type == obj.SHOSTOBJ {
 		elfshnum = SHN_UNDEF
 	} else {

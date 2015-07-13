@@ -450,7 +450,7 @@ func relocsym(s *LSym) {
 					rs = rs.Outer
 				}
 
-				if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
+				if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil && rs.Name != "runtime.zerovalue" {
 					Diag("missing section for %s", rs.Name)
 				}
 				r.Xsym = rs

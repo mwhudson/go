@@ -91,6 +91,7 @@ func archinit() {
 	}
 
 	if ld.Buildmode == ld.BuildmodeCArchive || ld.Buildmode == ld.BuildmodeCShared || ld.DynlinkingGo() {
+		ld.Linklookup(ld.Ctxt, "runtime.zerovalue", 0).Special = 1
 		ld.Linkmode = ld.LinkExternal
 	}
 
