@@ -33,6 +33,7 @@ package ppc64
 import (
 	"cmd/internal/obj"
 	"cmd/link/internal/ld"
+	"debug/elf"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -293,8 +294,42 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 }
 
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
-	// TODO(minux)
-	return -1
+	ld.Thearch.Vput(uint64(sectoff))
+
+	elfsym := r.Xsym.Elfsym
+	switch r.Type {
+	default:
+		return -1
+
+	case obj.R_ADDR:
+		switch r.Siz {
+		case 4:
+			ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR32) | uint64(elfsym)<<32)
+		case 8:
+			ld.Thearch.Vput(ld.R_PPC64_ADDR64 | uint64(elfsym)<<32)
+		default:
+			return -1
+		}
+
+	case obj.R_PPC64_TPREL16:
+		ld.Thearch.Vput(uint64(elf.R_PPC64_TPREL16) | uint64(elfsym)<<32)
+
+	case obj.R_PPC64_ADDR16_LO:
+		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_LO) | uint64(elfsym)<<32)
+
+	case obj.R_PPC64_ADDR16_HA:
+		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_HA) | uint64(elfsym)<<32)
+
+	case obj.R_CALLPOWER:
+		if r.Siz != 4 {
+			return -1
+		}
+		ld.Thearch.Vput(ld.R_PPC64_REL24 | uint64(elfsym)<<32)
+
+	}
+	ld.Thearch.Vput(uint64(r.Xadd))
+
+	return 0
 }
 
 func elfsetupplt() {
@@ -332,10 +367,42 @@ func symtoc(s *ld.LSym) int64 {
 
 func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 	if ld.Linkmode == ld.LinkExternal {
-		// TODO(minux): translate R_ADDRPOWER and R_CALLPOWER into standard ELF relocations.
-		// R_ADDRPOWER corresponds to R_PPC_ADDR16_HA and R_PPC_ADDR16_LO.
-		// R_CALLPOWER corresponds to R_PPC_REL24.
-		return -1
+		switch r.Type {
+		default:
+			return -1
+
+		case obj.R_PPC64_TPREL16:
+			r.Done = 0
+			// check Outer is nil, Type is TLSBSS?
+			r.Xadd = r.Add
+			r.Xsym = r.Sym
+			return 0
+
+		case obj.R_PPC64_ADDR16_LO,
+			obj.R_PPC64_ADDR16_HA:
+			r.Done = 0
+
+			// set up addend for eventual relocation via outer symbol.
+			rs := r.Sym
+			r.Xadd = r.Add
+			for rs.Outer != nil {
+				r.Xadd += ld.Symaddr(rs) - ld.Symaddr(rs.Outer)
+				rs = rs.Outer
+			}
+
+			if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
+				ld.Diag("missing section for %s ++", rs.Name)
+			}
+			r.Xsym = rs
+
+			return 0
+
+		case obj.R_CALLPOWER:
+			r.Done = 0
+			r.Xsym = r.Sym
+			r.Xadd = r.Add
+			return 0
+		}
 	}
 
 	switch r.Type {
