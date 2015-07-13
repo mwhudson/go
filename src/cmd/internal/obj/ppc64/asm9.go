@@ -1380,14 +1380,20 @@ func oclass(a *obj.Addr) int {
 	return int(a.Class) - 1
 }
 
-// add R_ADDRPOWER relocation to symbol s for the two instructions o1 and o2.
-func addaddrreloc(ctxt *obj.Link, s *obj.LSym, o1 *uint32, o2 *uint32) {
+// add XXX relocation to symbol s for the two instructions o1 and o2.
+func addaddrreloc(ctxt *obj.Link, s *obj.LSym, a int64) {
 	rel := obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc)
-	rel.Siz = 8
+	rel.Siz = 4
 	rel.Sym = s
-	rel.Add = int64(uint64(*o1)<<32 | uint64(uint32(*o2)))
-	rel.Type = obj.R_ADDRPOWER
+	rel.Add = a
+	rel.Type = obj.R_PPC64_ADDR16_HA
+	rel = obj.Addrel(ctxt.Cursym)
+	rel.Off = int32(ctxt.Pc) + 4
+	rel.Siz = 4
+	rel.Sym = s
+	rel.Add = a
+	rel.Type = obj.R_PPC64_ADDR16_LO
 }
 
 /*
@@ -1813,9 +1819,9 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			o1 = loadu32(int(p.To.Reg), d)
 			o2 = LOP_IRR(OP_ORI, uint32(p.To.Reg), uint32(p.To.Reg), uint32(int32(d)))
 		} else {
-			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, uint32(high16adjusted(int32(d))))
-			o2 = AOP_IRR(OP_ADDI, uint32(p.To.Reg), REGTMP, uint32(d))
-			addaddrreloc(ctxt, p.From.Sym, &o1, &o2)
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+			o2 = AOP_IRR(OP_ADDI, uint32(p.To.Reg), REGTMP, 0)
+			addaddrreloc(ctxt, p.From.Sym, d)
 		}
 
 	//if(dlm) reloc(&p->from, p->pc, 0);
@@ -2379,19 +2385,19 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 
 		/* relocation operations */
 	case 74:
-		v := regoff(ctxt, &p.To)
+		v := vregoff(ctxt, &p.To)
 
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, uint32(high16adjusted(v)))
-		o2 = AOP_IRR(uint32(opstore(ctxt, int(p.As))), uint32(p.From.Reg), REGTMP, uint32(v))
-		addaddrreloc(ctxt, p.To.Sym, &o1, &o2)
+		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		o2 = AOP_IRR(uint32(opstore(ctxt, int(p.As))), uint32(p.From.Reg), REGTMP, 0)
+		addaddrreloc(ctxt, p.To.Sym, v)
 
 	//if(dlm) reloc(&p->to, p->pc, 1);
 
 	case 75:
-		v := regoff(ctxt, &p.From)
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, uint32(high16adjusted(v)))
-		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, uint32(v))
-		addaddrreloc(ctxt, p.From.Sym, &o1, &o2)
+		v := vregoff(ctxt, &p.From)
+		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, 0)
+		addaddrreloc(ctxt, p.From.Sym, v)
 
 	case 125:
 		if p.From.Offset != 0 {
@@ -2407,10 +2413,10 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 	//if(dlm) reloc(&p->from, p->pc, 1);
 
 	case 76:
-		v := regoff(ctxt, &p.From)
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, uint32(high16adjusted(v)))
-		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, uint32(v))
-		addaddrreloc(ctxt, p.From.Sym, &o1, &o2)
+		v := vregoff(ctxt, &p.From)
+		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, 0)
+		addaddrreloc(ctxt, p.From.Sym, v)
 		o3 = LOP_RRR(OP_EXTSB, uint32(p.To.Reg), uint32(p.To.Reg), 0)
 
 		//if(dlm) reloc(&p->from, p->pc, 1);

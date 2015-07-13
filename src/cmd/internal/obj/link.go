@@ -478,6 +478,9 @@ const (
 
 	// TODO(mwhudson): document
 	R_PPC64_TPREL16
+	R_PPC64_ADDR16_HA
+	R_PPC64_ADDR16_LO
+	R_PPC64_REL24
 )
 
 type Auto struct {

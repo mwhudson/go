@@ -347,7 +347,24 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		*val = ld.Symaddr(r.Sym) + r.Add - ld.Symaddr(ld.Linklookup(ld.Ctxt, ".got", 0))
 		return 0
 
-	case obj.R_ADDRPOWER:
+	case obj.R_PPC64_ADDR16_LO:
+		v := (ld.Symaddr(r.Sym) + r.Add) & 0xffff
+		*val |= v
+		return 0
+
+	case obj.R_PPC64_ADDR16_HA:
+		v := (ld.Symaddr(r.Sym) + r.Add)
+		if v&0x8000 != 0 {
+			v += 0x10000
+		}
+		v >>= 16
+		if v < -32768 || v >= 32768 {
+			ld.Ctxt.Diag("relocation for %s is too big (>=2G): %d", s.Name, ld.Symaddr(r.Sym))
+		}
+		*val |= v
+		return 0
+
+	case obj.R_ADDRPOWER: // just for the glink resolver now!
 		// r->add is two ppc64 instructions holding an immediate 32-bit constant.
 		// We want to add r->sym's address to that constant.
 		// The encoding of the immediate x<<16 + y,
