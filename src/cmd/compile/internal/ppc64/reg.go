@@ -113,6 +113,12 @@ func excludedregs() uint64 {
 	// Exclude registers with fixed functions
 	regbits := uint64(1<<0 | RtoB(ppc64.REGSP) | RtoB(ppc64.REGG) | RtoB(ppc64.REGTLS))
 
+	if gc.Ctxt.Flag_shared != 0 {
+		println("yabba")
+		// R2 is reserved to be the TOC pointer when building
+		// a shared library.
+		regbits |= RtoB(ppc64.REG_R2)
+	}
 	// Also exclude floating point registers with fixed constants
 	regbits |= RtoB(ppc64.REG_F27) | RtoB(ppc64.REG_F28) | RtoB(ppc64.REG_F29) | RtoB(ppc64.REG_F30) | RtoB(ppc64.REG_F31)
 
