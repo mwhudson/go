@@ -939,15 +939,6 @@ A few common code hosting sites have special syntax:
 		import "code.google.com/p/project.subrepository"
 		import "code.google.com/p/project.subrepository/sub/directory"
 
-	Launchpad (Bazaar)
-
-		import "launchpad.net/project"
-		import "launchpad.net/project/series"
-		import "launchpad.net/project/series/sub/directory"
-
-		import "launchpad.net/~user/project/branch"
-		import "launchpad.net/~user/project/branch/sub/directory"
-
 	IBM DevOps Services (Git)
 
 		import "hub.jazz.net/git/user/project"

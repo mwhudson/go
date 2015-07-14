@@ -847,6 +847,14 @@ var vcsPaths = []*vcsPath{
 	// Launchpad
 	{
 		prefix: "launchpad.net/",
+		re:     `^(?P<root>launchpad\.net/(~[A-Za-z0-9_.\-]+/(\+junk|[A-Za-z0-9_.\-]+)/[A-Za-z0-9_.\-]+))(/[A-Za-z0-9_.\-]+)*$`,
+		vcs:    "bzr",
+		repo:   "https://{root}",
+		check:  launchpadVCS,
+	},
+
+	{
+		prefix: "launchpad.net/",
 		re:     `^(?P<root>launchpad\.net/((?P<project>[A-Za-z0-9_.\-]+)(?P<series>/[A-Za-z0-9_.\-]+)?|~[A-Za-z0-9_.\-]+/(\+junk|[A-Za-z0-9_.\-]+)/[A-Za-z0-9_.\-]+))(/[A-Za-z0-9_.\-]+)*$`,
 		vcs:    "bzr",
 		repo:   "https://{root}",
