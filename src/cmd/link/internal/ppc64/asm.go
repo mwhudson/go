@@ -33,7 +33,6 @@ package ppc64
 import (
 	"cmd/internal/obj"
 	"cmd/link/internal/ld"
-	"debug/elf"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -304,7 +303,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_ADDR:
 		switch r.Siz {
 		case 4:
-			ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR32) | uint64(elfsym)<<32)
+			ld.Thearch.Vput(ld.R_PPC64_ADDR32 | uint64(elfsym)<<32)
 		case 8:
 			ld.Thearch.Vput(ld.R_PPC64_ADDR64 | uint64(elfsym)<<32)
 		default:
@@ -312,16 +311,16 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		}
 
 	case obj.R_PPC64_TPREL16:
-		ld.Thearch.Vput(uint64(elf.R_PPC64_TPREL16) | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_TPREL16 | uint64(elfsym)<<32)
 
 	case obj.R_PPC64_ADDR16_LO:
-		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_LO) | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO | uint64(elfsym)<<32)
 
 	case obj.R_PPC64_ADDR16_LO_DS:
-		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_LO_DS) | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO_DS | uint64(elfsym)<<32)
 
 	case obj.R_PPC64_ADDR16_HA:
-		ld.Thearch.Vput(uint64(elf.R_PPC64_ADDR16_HA) | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_ADDR16_HA | uint64(elfsym)<<32)
 
 	case obj.R_CALLPOWER:
 		if r.Siz != 4 {
