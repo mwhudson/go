@@ -595,7 +595,7 @@ func rawgins(as int, f *gc.Node, t *gc.Node) *obj.Prog {
 		}
 		if p.To.Type == obj.TYPE_REG && p.To.Reg != ppc64.REG_CTR {
 			// Allow front end to emit CALL REG, and rewrite into MOV REG, CTR; CALL CTR.
-			if gc.Ctxt.Flag_dynlink != 0 {
+			if gc.Ctxt.Flag_dynlink {
 				// Make sure function pointer is in R12 as well when
 				// dynlink (this is obviously somewhat terrible)
 				ppp := gc.Prog(as)
