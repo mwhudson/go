@@ -234,7 +234,7 @@ TEXT runtime·_sigtramp(SB),NOSPLIT,$64
 	MOVW	R3, 8(R1)
 	MOVD	R4, 16(R1)
 	MOVD	R5, 24(R1)
-	MOVD	$runtime·sigtrampgo(SB), R31
+	MOVD	$runtime·sigtrampgo(SB), R12
 	MOVD	R12, CTR
 	BL	(CTR)
 	RET

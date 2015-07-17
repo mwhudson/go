@@ -371,8 +371,8 @@ TEXT ·reflectcall(SB), NOSPLIT, $-8-32
 	DISPATCH(runtime·call268435456, 268435456)
 	DISPATCH(runtime·call536870912, 536870912)
 	DISPATCH(runtime·call1073741824, 1073741824)
-	MOVD	$runtime·badreflectcall(SB), R31
-	MOVD	R31, CTR
+	MOVD	$runtime·badreflectcall(SB), R12
+	MOVD	R12, CTR
 	BR	(CTR)
 
 #define CALLFN(NAME,MAXSIZE)			\
