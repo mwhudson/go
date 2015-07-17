@@ -46,6 +46,7 @@ func betypeinit() {
 
 	if gc.Ctxt.Flag_shared != 0 {
 		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, ppc64.REG_R2)
+		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, ppc64.REG_R12)
 	}
 }
 
