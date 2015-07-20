@@ -394,8 +394,10 @@ var optab = []Optab{
 	Optab{obj.APCDATA, C_LCON, C_NONE, C_NONE, C_LCON, 0, 0, 0},
 	Optab{obj.AFUNCDATA, C_SCON, C_NONE, C_NONE, C_ADDR, 0, 0, 0},
 	Optab{obj.ANOP, C_NONE, C_NONE, C_NONE, C_NONE, 0, 0, 0},
-	Optab{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
-	Optab{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
+	Optab{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},     // same as ABR/ABL
+	Optab{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},     // same as ABR/ABL
+	Optab{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 111, 4, 0}, // same as ABR/ABL
+	Optab{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 111, 4, 0}, // same as ABR/ABL
 
 	Optab{obj.AXXX, C_NONE, C_NONE, C_NONE, C_NONE, 0, 4, 0},
 }

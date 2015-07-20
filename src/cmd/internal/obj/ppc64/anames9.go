@@ -20,6 +20,7 @@ var cnames9 = []string{
 	"DACON",
 	"SBRA",
 	"LBRA",
+	"LBRAPIC",
 	"SAUTO",
 	"LAUTO",
 	"SEXT",
@@ -35,6 +36,8 @@ var cnames9 = []string{
 	"ANY",
 	"GOK",
 	"ADDR",
+	"TLS_LE",
+	"TLS_IE",
 	"TEXTSIZE",
 	"NCLASS",
 }
