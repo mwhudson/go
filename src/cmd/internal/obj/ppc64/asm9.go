@@ -281,6 +281,7 @@ var optab = []Optab{
 	Optab{ABEQ, C_NONE, C_NONE, C_NONE, C_SBRA, 16, 4, 0},
 	Optab{ABEQ, C_CREG, C_NONE, C_NONE, C_SBRA, 16, 4, 0},
 	Optab{ABR, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},
+	Optab{ABR, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 111, 8, 0},
 	Optab{ABC, C_SCON, C_REG, C_NONE, C_SBRA, 16, 4, 0},
 	Optab{ABC, C_SCON, C_REG, C_NONE, C_LBRA, 17, 4, 0},
 	Optab{ABR, C_NONE, C_NONE, C_NONE, C_LR, 18, 4, 0},
@@ -707,6 +708,9 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_DCON
 
 	case obj.TYPE_BRANCH:
+		if a.Sym != nil && ctxt.Flag_dynlink {
+			return C_LBRAPIC
+		}
 		return C_SBRA
 	}
 
@@ -1714,6 +1718,28 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			rel.Add = int64(v)
 			rel.Type = obj.R_CALLPOWER
 		}
+
+	case 111: /* br/bl lbra */
+		v := int32(0)
+
+		if p.Pcond != nil {
+			panic("p.Pcond != nil")
+		}
+
+		o1 = OP_BR(uint32(opirr(ctxt, int(p.As))), uint32(v), 0)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 4
+		rel.Sym = p.To.Sym
+		v += int32(p.To.Offset)
+		if v&03 != 0 {
+			ctxt.Diag("odd branch target address\n%v", p)
+			v &^= 03
+		}
+
+		rel.Add = int64(v)
+		rel.Type = obj.R_CALLPOWER
+		o2 = 0x60000000
 
 	case 12: /* movb r,r (extsb); movw r,r (extsw) */
 		if p.To.Reg == REGZERO && p.From.Type == obj.TYPE_CONST {

@@ -599,7 +599,8 @@ func rawgins(as int, f *gc.Node, t *gc.Node) *obj.Prog {
 				// Make sure function pointer is in R12 as well when
 				// dynlink (this is obviously somewhat terrible)
 				ppp := gc.Prog(as)
-				ppp.From = p.From
+				ppp.As = ppc64.AMOVD
+				ppp.From = p.To
 				ppp.To.Type = obj.TYPE_REG
 				ppp.To.Reg = ppc64.REG_R12
 			}
