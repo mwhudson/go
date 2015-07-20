@@ -321,44 +321,44 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			}
 			p.To.Offset = int64(autosize) - fixedStackSize // XXX ??
 
-			if p.From3.Offset&obj.NOSPLIT == 0 {
-				p = stacksplit(ctxt, p, autosize) // emit split check
-			}
-
 			q = p
 
 			if ctxt.Flag_dynlink {
-				// Do Something Entirely Different
-				// X = autosize (inc 24 bytes for back chain, cr, reserved, lr, toc)
-				// addis r2, r12, .TOC.-func@ha
-				// addi r2, r2, .TOC.-func@l
-				// X \in [-BIG,BIG] then stdu r1, -X(r1)
-				//                  else lis r0, ha(-X), addi r0, r0, lo(-X), stdux r1, r1, r0
-				// mflr r31
-				// std r31, 16(r1)
-				// std r2, 24(r1)
-				if autosize >= -BIG && autosize <= BIG {
+				// X = autosize (inc 32 bytes for back chain, cr, reserved, lr, toc)
 
-				}
-			} else {
-				mov := AMOVD
-				aoffset := 0
-				if autosize != 0 {
-					/* use MOVDU to adjust R1 when saving R31, if autosize is small */
-					if cursym.Text.Mark&LEAF == 0 && autosize >= -BIG && autosize <= BIG {
-						mov = AMOVDU
-						aoffset = int(-autosize)
-					} else {
-						q = obj.Appendp(ctxt, p)
-						q.As = AADD
-						q.Lineno = p.Lineno
-						q.From.Type = obj.TYPE_CONST
-						q.From.Offset = int64(-autosize)
-						q.To.Type = obj.TYPE_REG
-						q.To.Reg = REGSP
-						q.Spadj = +autosize
-					}
-				} else if cursym.Text.Mark&LEAF == 0 {
+				// addis r2, r12, .TOC.-func@ha
+				q = obj.Appendp(ctxt, q)
+				q.As = AWORD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_CONST
+				q.From.Offset = 0x3c4c0000
+				rel := obj.Addrel(ctxt.Cursym)
+				rel.Off = 0
+				rel.Siz = 4
+				rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
+				rel.Add = 0
+				rel.Type = obj.R_PPC64_REL16_HA
+				q = obj.Appendp(ctxt, q)
+				q.As = AWORD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_CONST
+				q.From.Offset = 0x38420000
+				rel = obj.Addrel(ctxt.Cursym)
+				rel.Off = 4
+				rel.Siz = 4
+				rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
+				rel.Add = 4
+				rel.Type = obj.R_PPC64_REL16_LO
+
+				// addi r2, r2, .TOC.-func@l
+			}
+
+			if p.From3.Offset&obj.NOSPLIT == 0 {
+				q = stacksplit(ctxt, q, autosize) // emit split check
+			}
+
+			if autosize == 0 {
+				if cursym.Text.Mark&LEAF == 0 {
 					if ctxt.Debugvlog != 0 {
 						fmt.Fprintf(ctxt.Bso, "save suppressed in: %s\n", cursym.Name)
 						ctxt.Bso.Flush()
@@ -366,10 +366,79 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 					cursym.Text.Mark |= LEAF
 				}
+			}
 
-				if cursym.Text.Mark&LEAF != 0 {
-					cursym.Leaf = 1
-					break
+			if cursym.Text.Mark&LEAF != 0 {
+				cursym.Leaf = 1
+				break
+			}
+
+			if ctxt.Flag_dynlink {
+				// X = autosize (inc 32 bytes for back chain, cr, reserved, lr, toc)
+
+				// X \in [-BIG,BIG] then stdu r1, -X(r1)
+				//                  else lis r0, ha(-X), addi r0, r0, lo(-X), stdux r1, r1, r0
+				// mflr r31
+				// std r31, 16(r1)
+				// std r2, 24(r1)
+
+				if autosize >= -BIG && autosize <= BIG {
+					// X \in [-BIG,BIG] then stdu r1, -X(r1)
+					q = obj.Appendp(ctxt, q)
+					q.As = AMOVDU
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_REG
+					q.From.Reg = REGSP
+					q.To.Type = obj.TYPE_MEM
+					q.To.Offset = int64(-autosize)
+					q.To.Reg = REGSP
+					q.Spadj = int32(autosize)
+				} else {
+					//                  else lis r0, ha(-X), addi r0, r0, lo(-X), stdux r1, r1, r0
+					panic("large stack")
+				}
+				// mflr r31
+				q = obj.Appendp(ctxt, q)
+				q.As = AMOVD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_REG
+				q.From.Reg = REG_LR
+				q.To.Type = obj.TYPE_REG
+				q.To.Reg = REGTMP
+				// std r31, 16(r1)
+				q = obj.Appendp(ctxt, q)
+				q.As = AMOVD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_REG
+				q.From.Reg = REGTMP
+				q.To.Type = obj.TYPE_MEM
+				q.To.Offset = 16
+				q.To.Reg = REGSP
+				// std r2, 24(r1)
+				q = obj.Appendp(ctxt, q)
+				q.As = AMOVD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_REG
+				q.From.Reg = REG_R2
+				q.To.Type = obj.TYPE_MEM
+				q.To.Offset = 24
+				q.To.Reg = REGSP
+			} else {
+				mov := AMOVD
+				aoffset := 0
+				/* use MOVDU to adjust R1 when saving R31, if autosize is small */
+				if cursym.Text.Mark&LEAF == 0 && autosize >= -BIG && autosize <= BIG {
+					mov = AMOVDU
+					aoffset = int(-autosize)
+				} else {
+					q = obj.Appendp(ctxt, p)
+					q.As = AADD
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_CONST
+					q.From.Offset = int64(-autosize)
+					q.To.Type = obj.TYPE_REG
+					q.To.Reg = REGSP
+					q.Spadj = +autosize
 				}
 
 				q = obj.Appendp(ctxt, q)
