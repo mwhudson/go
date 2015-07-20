@@ -302,25 +302,24 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 		}
 	}
 
+	fixedStackSize := int64(8)
+	if ctxt.Flag_dynlink {
+		fixedStackSize = 32
+	}
+
 	autosize := int32(0)
-	var aoffset int
-	var mov int
-	var o int
 	var p1 *obj.Prog
 	var p2 *obj.Prog
 	for p := cursym.Text; p != nil; p = p.Link {
-		o = int(p.As)
-		switch o {
+		switch int(p.As) {
 		case obj.ATEXT:
-			mov = AMOVD
-			aoffset = 0
-			autosize = int32(textstksiz + 8) // XXX needs editing
+			autosize = int32(textstksiz + fixedStackSize)
 			if (p.Mark&LEAF != 0) && autosize <= 8 {
 				autosize = 0
 			} else if autosize&4 != 0 {
 				autosize += 4
 			}
-			p.To.Offset = int64(autosize) - 8 // XXX does this actually do anything??
+			p.To.Offset = int64(autosize) - fixedStackSize // XXX ??
 
 			if p.From3.Offset&obj.NOSPLIT == 0 {
 				p = stacksplit(ctxt, p, autosize) // emit split check
@@ -334,11 +333,16 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				// addis r2, r12, .TOC.-func@ha
 				// addi r2, r2, .TOC.-func@l
 				// X \in [-BIG,BIG] then stdu r1, -X(r1)
-				//                  else lis r0, ha(X), addi r0, r0, lo(X), stdux r1, r1, r0
+				//                  else lis r0, ha(-X), addi r0, r0, lo(-X), stdux r1, r1, r0
 				// mflr r31
 				// std r31, 16(r1)
 				// std r2, 24(r1)
+				if autosize >= -BIG && autosize <= BIG {
+
+				}
 			} else {
+				mov := AMOVD
+				aoffset := 0
 				if autosize != 0 {
 					/* use MOVDU to adjust R1 when saving R31, if autosize is small */
 					if cursym.Text.Mark&LEAF == 0 && autosize >= -BIG && autosize <= BIG {
