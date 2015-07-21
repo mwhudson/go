@@ -1620,7 +1620,7 @@ func stkcheck(up *Chain, depth int) int {
 		}
 		// Raise limit to allow frame.
 		limit = int(obj.StackLimit + s.Locals)
-		if Thearch.Thechar == '9' {
+		if Thearch.Thechar == '9' && DynlinkingGo() {
 			limit += 32
 		} else if haslinkregister() {
 			limit += Thearch.Regsize
