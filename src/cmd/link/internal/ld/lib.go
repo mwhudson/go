@@ -1513,9 +1513,7 @@ func haslinkregister() bool {
 }
 
 func callsize() int {
-	if Thearch.Thechar == '9' && DynlinkingGo() {
-		return 32
-	} else if haslinkregister() {
+	if haslinkregister() {
 		return 0
 	}
 	return Thearch.Regsize
