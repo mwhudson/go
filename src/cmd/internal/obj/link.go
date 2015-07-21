@@ -484,6 +484,8 @@ const (
 	R_PPC64_REL24
 	R_PPC64_REL16_HA
 	R_PPC64_REL16_LO
+	R_PPC64_TOC16_HA
+	R_PPC64_TOC16_LO_DS
 )
 
 type Auto struct {
