@@ -129,7 +129,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p.From.Name = obj.NAME_GOTREF
 		p.From.Sym = sym
 		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REGTMP
+		p.To.Reg = REG_R12
 		p.To.Name = obj.NAME_NONE
 		p.To.Offset = 0
 		p.To.Sym = nil
@@ -140,9 +140,17 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p1.To.Type = obj.TYPE_REG
 		p1.To.Reg = REGTMP
 		p2 := obj.Appendp(ctxt, p1)
-		p2.As = obj.ACALL
+		p2.As = AMOVD
+		p2.From.Type = obj.TYPE_REG
+		p2.From.Reg = REG_R12
 		p2.To.Type = obj.TYPE_REG
-		p2.To.Reg = REGTMP
+		p2.To.Reg = REG_CTR
+		p3 := obj.Appendp(ctxt, p1)
+		p3.As = obj.ACALL
+		p3.From.Type = obj.TYPE_REG
+		p3.From.Reg = REG_R12
+		p3.To.Type = obj.TYPE_REG
+		p3.To.Reg = REG_CTR
 	}
 
 	if ctxt.Flag_dynlink {
