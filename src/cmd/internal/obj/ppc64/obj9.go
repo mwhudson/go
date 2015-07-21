@@ -569,7 +569,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 					q.To.Reg = REGSP
 					q.Spadj = +autosize
 				}
-				if cursym.Text.Mark & LEAF {
+				if cursym.Text.Mark&LEAF != 0 {
 					break
 				}
 
