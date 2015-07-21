@@ -480,11 +480,10 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 					cursym.Text.Mark |= LEAF
 				}
-			}
-
-			if cursym.Text.Mark&LEAF != 0 {
-				cursym.Leaf = 1
-				break
+				if cursym.Text.Mark&LEAF != 0 {
+					cursym.Leaf = 1
+					break
+				}
 			}
 
 			if ctxt.Flag_dynlink {
@@ -561,7 +560,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 					mov = AMOVDU
 					aoffset = int(-autosize)
 				} else {
-					q = obj.Appendp(ctxt, p)
+					q = obj.Appendp(ctxt, q)
 					q.As = AADD
 					q.Lineno = p.Lineno
 					q.From.Type = obj.TYPE_CONST
