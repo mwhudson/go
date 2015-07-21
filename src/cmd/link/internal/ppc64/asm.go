@@ -328,6 +328,12 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_PPC64_REL16_HA:
 		ld.Thearch.Vput(ld.R_PPC64_REL16_HA | uint64(elfsym)<<32)
 
+	case obj.R_PPC64_TOC16_LO_DS:
+		ld.Thearch.Vput(ld.R_PPC64_TOC16_LO | uint64(elfsym)<<32)
+
+	case obj.R_PPC64_TOC16_HA:
+		ld.Thearch.Vput(ld.R_PPC64_TOC16_HA | uint64(elfsym)<<32)
+
 	case obj.R_CALLPOWER:
 		if r.Siz != 4 {
 			return -1
@@ -391,6 +397,8 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			obj.R_PPC64_ADDR16_HA,
 			obj.R_PPC64_REL16_LO,
 			obj.R_PPC64_REL16_HA,
+			obj.R_PPC64_TOC16_LO_DS,
+			obj.R_PPC64_TOC16_HA,
 			obj.R_CALLPOWER:
 			r.Done = 0
 

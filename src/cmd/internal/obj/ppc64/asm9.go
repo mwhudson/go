@@ -2502,10 +2502,10 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 	case 105:
 		v := vregoff(ctxt, &p.To)
 
-		o1 = AOP_IRR(OP_ADDIS, REGZERO, REG_R2, 0)
-		o2 = AOP_IRR(OPVCC(58, 0, 0, 0), REGZERO, REGZERO, 0)
-		addgotreloc(ctxt, p.To.Sym)
-		o3 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGZERO, uint32(v))
+		o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
+		o2 = AOP_IRR(OPVCC(58, 0, 0, 0), REGTMP, REGTMP, 0)
+		addgotreloc(ctxt, p.From.Sym)
+		o3 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, uint32(v))
 
 	case 125:
 		if p.From.Offset != 0 {
