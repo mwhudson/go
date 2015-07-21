@@ -569,6 +569,9 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 					q.To.Reg = REGSP
 					q.Spadj = +autosize
 				}
+				if cursym.Text.Mark & LEAF {
+					break
+				}
 
 				q = obj.Appendp(ctxt, q)
 				q.As = AMOVD

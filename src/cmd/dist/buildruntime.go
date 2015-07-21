@@ -92,5 +92,9 @@ func stackGuardMultiplier() int {
 			return 2
 		}
 	}
+	if goarch == "ppc64le" {
+		// XXX gross hack for now
+		return 2
+	}
 	return 1
 }
