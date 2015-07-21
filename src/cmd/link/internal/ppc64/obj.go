@@ -98,6 +98,10 @@ func archinit() {
 		ld.Linkmode = ld.LinkInternal
 	}
 
+	if ld.DynlinkingGo() {
+		ld.Linklookup(ld.Ctxt, ".TOC.", 0).Type = obj.SDYNIMPORT
+	}
+
 	switch ld.HEADTYPE {
 	default:
 		if ld.Linkmode == ld.LinkAuto {

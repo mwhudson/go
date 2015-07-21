@@ -308,7 +308,7 @@ func (mode *BuildMode) Set(s string) error {
 		}
 		*mode = BuildmodeCShared
 	case "shared":
-		if goos != "linux" || (goarch != "amd64" && goarch != "arm" && goarch != "arm64") {
+		if goos != "linux" || (goarch != "amd64" && goarch != "arm" && goarch != "arm64" && goarch != "ppc64le") {
 			return badmode()
 		}
 		*mode = BuildmodeShared
@@ -1513,7 +1513,9 @@ func haslinkregister() bool {
 }
 
 func callsize() int {
-	if haslinkregister() {
+	if Thearch.Thechar == '9' && DynlinkingGo() {
+		return 32
+	} else if haslinkregister() {
 		return 0
 	}
 	return Thearch.Regsize
@@ -1618,7 +1620,9 @@ func stkcheck(up *Chain, depth int) int {
 		}
 		// Raise limit to allow frame.
 		limit = int(obj.StackLimit + s.Locals)
-		if haslinkregister() {
+		if Thearch.Thechar == '9' {
+			limit += 32
+		} else if haslinkregister() {
 			limit += Thearch.Regsize
 		}
 	}
@@ -1803,7 +1807,7 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 	}
 
 	for s := Ctxt.Allsym; s != nil; s = s.Allsym {
-		if s.Hide != 0 || (s.Name[0] == '.' && s.Version == 0 && s.Name != ".rathole") {
+		if s.Hide != 0 || (s.Name[0] == '.' && s.Version == 0 && s.Name != ".rathole" && s.Name != ".TOC.") {
 			continue
 		}
 		switch s.Type & obj.SMASK {

@@ -395,7 +395,23 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 					q.Spadj = int32(autosize)
 				} else {
 					//                  else lis r0, ha(-X), addi r0, r0, lo(-X), stdux r1, r1, r0
-					panic("large stack")
+					q = obj.Appendp(ctxt, q)
+					q.As = AMOVD
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_CONST
+					q.From.Offset = int64(-autosize)
+					q.To.Type = obj.TYPE_REG
+					q.To.Reg = REGTMP
+					q = obj.Appendp(ctxt, q)
+					q.As = AMOVDU
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_REG
+					q.From.Reg = REGSP
+					q.To.Type = obj.TYPE_MEM
+					q.To.Reg = REGSP
+					q.To.Index = REGTMP
+					q.To.Scale = 1
+					q.Spadj = int32(autosize)
 				}
 				// mflr r31
 				q = obj.Appendp(ctxt, q)

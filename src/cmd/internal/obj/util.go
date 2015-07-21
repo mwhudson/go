@@ -330,6 +330,9 @@ func (p *Prog) String() string {
 	if p.RegTo2 != REG_NONE {
 		fmt.Fprintf(&buf, "%s%v", sep, Rconv(int(p.RegTo2)))
 	}
+	if p.Spadj != 0 {
+		fmt.Fprintf(&buf, "\t%d", p.Spadj)
+	}
 	return buf.String()
 }
 
