@@ -1455,9 +1455,17 @@ func addaddrreloc(ctxt *obj.Link, s *obj.LSym, a int64, form int) {
 	rel.Add = a
 	switch form {
 	case D_FORM:
-		rel.Type = obj.R_PPC64_ADDR16_LO
+		if !ctxt.Flag_dynlink {
+			rel.Type = obj.R_PPC64_ADDR16_LO
+		} else {
+			rel.Type = obj.R_PPC64_TOC16_LO
+		}
 	case DS_FORM:
-		rel.Type = obj.R_PPC64_ADDR16_LO_DS
+		if !ctxt.Flag_dynlink {
+			rel.Type = obj.R_PPC64_ADDR16_LO_DS
+		} else {
+			rel.Type = obj.R_PPC64_TOC16_LO_DS
+		}
 	}
 }
 
@@ -1467,12 +1475,12 @@ func addgotreloc(ctxt *obj.Link, s *obj.LSym) {
 	rel.Off = int32(ctxt.Pc)
 	rel.Siz = 4
 	rel.Sym = s
-	rel.Type = obj.R_PPC64_TOC16_HA
+	rel.Type = obj.R_PPC64_GOT16_HA
 	rel = obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc) + 4
 	rel.Siz = 4
 	rel.Sym = s
-	rel.Type = obj.R_PPC64_TOC16_LO_DS
+	rel.Type = obj.R_PPC64_GOT16_LO_DS
 }
 
 /*
@@ -1920,7 +1928,11 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			o1 = loadu32(int(p.To.Reg), d)
 			o2 = LOP_IRR(OP_ORI, uint32(p.To.Reg), uint32(p.To.Reg), uint32(int32(d)))
 		} else {
-			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+			if !ctxt.Flag_dynlink {
+				o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+			} else {
+				o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
+			}
 			o2 = AOP_IRR(OP_ADDI, uint32(p.To.Reg), REGTMP, 0)
 			addaddrreloc(ctxt, p.From.Sym, d, D_FORM)
 		}
@@ -2488,14 +2500,22 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 	case 74:
 		v := vregoff(ctxt, &p.To)
 
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		if !ctxt.Flag_dynlink {
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		} else {
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
+		}
 		o2 = AOP_IRR(uint32(opstore(ctxt, int(p.As))), uint32(p.From.Reg), REGTMP, 0)
 		addaddrreloc(ctxt, p.To.Sym, v, storeform(ctxt, p.As))
 	//if(dlm) reloc(&p->to, p->pc, 1);
 
 	case 75:
 		v := vregoff(ctxt, &p.From)
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		if !ctxt.Flag_dynlink {
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		} else {
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
+		}
 		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, 0)
 		addaddrreloc(ctxt, p.From.Sym, v, loadform(ctxt, p.As))
 
@@ -2522,7 +2542,11 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 
 	case 76:
 		v := vregoff(ctxt, &p.From)
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		if !ctxt.Flag_dynlink {
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
+		} else {
+			o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
+		}
 		o2 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, 0)
 		addaddrreloc(ctxt, p.From.Sym, v, D_FORM)
 		o3 = LOP_RRR(OP_EXTSB, uint32(p.To.Reg), uint32(p.To.Reg), 0)

@@ -538,6 +538,9 @@ const (
 	R_PPC64_ADDR16_LO          = R_PPC_ADDR16_LO
 	R_PPC64_ADDR16_HA          = R_PPC_ADDR16_HA
 	R_PPC64_REL24              = R_PPC_REL24
+	R_PPC64_GOT16_LO           = R_PPC_GOT16_LO
+	R_PPC64_GOT16_HI           = R_PPC_GOT16_HI
+	R_PPC64_GOT16_HA           = R_PPC_GOT16_HA
 	R_PPC64_JMP_SLOT           = R_PPC_JMP_SLOT
 	R_PPC64_TPREL16            = R_PPC_TPREL16
 	R_PPC64_ADDR64             = 38
@@ -546,6 +549,7 @@ const (
 	R_PPC64_TOC16_HI           = 49
 	R_PPC64_TOC16_HA           = 50
 	R_PPC64_ADDR16_LO_DS       = 57
+	R_PPC64_GOT16_LO_DS        = 59
 	R_PPC64_TOC16_DS           = 63
 	R_PPC64_TOC16_LO_DS        = 64
 	R_PPC64_REL16_LO           = 250
