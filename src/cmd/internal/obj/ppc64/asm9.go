@@ -1447,7 +1447,11 @@ func addaddrreloc(ctxt *obj.Link, s *obj.LSym, a int64, form int) {
 	rel.Siz = 4
 	rel.Sym = s
 	rel.Add = a
-	rel.Type = obj.R_PPC64_ADDR16_HA
+	if !ctxt.Flag_dynlink {
+		rel.Type = obj.R_PPC64_ADDR16_HA
+	} else {
+		rel.Type = obj.R_PPC64_TOC16_HA
+	}
 	rel = obj.Addrel(ctxt.Cursym)
 	rel.Off = int32(ctxt.Pc) + 4
 	rel.Siz = 4
