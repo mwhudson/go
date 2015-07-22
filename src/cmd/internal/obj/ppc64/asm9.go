@@ -247,7 +247,7 @@ var optab = []Optab{
 	Optab{AMOVBZ, C_ADDR, C_NONE, C_NONE, C_REG, 75, 8, 0},
 	Optab{AMOVB, C_ADDR, C_NONE, C_NONE, C_REG, 76, 12, 0},
 
-	Optab{AMOVD, C_GOTADDR, C_NONE, C_NONE, C_REG, 105, 12, 0},
+	Optab{AMOVD, C_GOTADDR, C_NONE, C_NONE, C_REG, 105, 8, 0},
 
 	/* load constant */
 	Optab{AMOVD, C_SECON, C_NONE, C_NONE, C_REG, 3, 4, REGSB},
@@ -2525,11 +2525,14 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 
 	case 105:
 		v := vregoff(ctxt, &p.To)
+		if v != 0 {
+			panic("argh")
+		}
 
-		o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
-		o2 = AOP_IRR(OPVCC(58, 0, 0, 0), REGTMP, REGTMP, 0)
+		o1 = AOP_IRR(OP_ADDIS, uint32(p.To.Reg), REG_R2, 0)
+		o2 = AOP_IRR(OPVCC(58, 0, 0, 0), uint32(p.To.Reg), uint32(p.To.Reg), 0)
 		addgotreloc(ctxt, p.From.Sym)
-		o3 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, uint32(v))
+		//o3 = AOP_IRR(uint32(opload(ctxt, int(p.As))), uint32(p.To.Reg), REGTMP, uint32(v))
 
 	case 125:
 		if p.From.Offset != 0 {
