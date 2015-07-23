@@ -104,20 +104,23 @@ override_dh_shlibdeps:
 
 debian/build.stamp:
 	rm -f debian/build.stamp
-	mkdir -p $(GOBIN)
-	# Build native tools first, then bootstrap all other GOOS/GOARCH combinations.
-	cd src && bash ./make.bash --no-banner
-	# For the race detector to work (go test -race), we need to install the
-	# std library with the race detector enabled. This will result in
-	# having an additional “architecture” directory, e.g. linux_amd64_race.
-	#
-	# The race detector currently only works on linux/amd64. The check within
-	# the following loop works precisely the same way src/race.bash does.
-	-${FOR_GO_ARCH} \
+	export GOROOT_BOOTSTRAP=$$(mktemp -d) && \
+	mkdir -p $$GOROOT_BOOTSTRAP/bin && \
+	ln -s /usr/bin/go-5 $$GOROOT_BOOTSTRAP/bin/go && \
+	mkdir -p $(GOBIN) && \
+	# Build native tools first, then bootstrap all other GOOS/GOARCH combinations. \
+	cd src && bash ./make.bash --no-banner && \
+	# For the race detector to work (go test -race), we need to install the \
+	# std library with the race detector enabled. This will result in \
+	# having an additional “architecture” directory, e.g. linux_amd64_race. \
+	# \
+	# The race detector currently only works on linux/amd64. The check within \
+	# the following loop works precisely the same way src/race.bash does. \
+	${FOR_GO_ARCH} \
+		echo "Building standard library and commands for $$os/$$arch"; \
 		export GOARCH=$$arch; \
-		export GOOS=$$os; \
-		cd src && bash ./make.bash --no-clean; \
-		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -race std; \
+		export GOOS=$$os; $(GOBIN)/go install -v std cmd; \
+		[ "$$arch" = "amd64" ] && [ "$$os" = "linux" ] && $(GOBIN)/go install -v -race std cmd; \
 		cd ..; \
 	${FOR_GO_ARCH_END}
 	>debian/build.stamp
