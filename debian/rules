@@ -103,6 +103,7 @@ override_dh_shlibdeps:
 	dh_shlibdeps -Xtestdata -Xtest
 
 debian/build.stamp:
+	[ -f VERSION ] || echo "debian snapshot +$$(dpkg-parsechangelog -SVersion)" > VERSION
 	rm -f debian/build.stamp
 	export GOROOT_BOOTSTRAP=$$(mktemp -d) && \
 	mkdir -p $$GOROOT_BOOTSTRAP/bin && \
