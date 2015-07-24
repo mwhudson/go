@@ -781,7 +781,7 @@ func Elfinit() {
 	case '5':
 		// we use EABI on both linux/arm and freebsd/arm.
 		if HEADTYPE == obj.Hlinux || HEADTYPE == obj.Hfreebsd {
-			ehdr.flags = 0x5000002 // has entry point, Version5 EABI
+			ehdr.flags = 0x5000402 // has entry point, Version5 EABI, hard-float ABI
 		}
 		fallthrough
 

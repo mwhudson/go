@@ -1,3 +1,12 @@
+golang (2:1.5~snap~upstream201507222050git92390e4ubuntu1) wily; urgency=medium
+
+  * 1.5 snapshot
+    - native package, create VERSION from debian package version
+    - bootstrap with gccgo, update some paths (not copyright yet)
+    - ubuntu delta included, with updated armhf ELF header patch
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Fri, 24 Jul 2015 10:46:33 +1200
+
 golang (2:1.4.2-3) unstable; urgency=medium
 
   * Add missing "prerm" for our new alternatives (thanks piuparts).
