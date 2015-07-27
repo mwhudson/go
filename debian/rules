@@ -111,7 +111,6 @@ ifeq (,$(filter $(DEB_HOST_ARCH),$(golang_archs)))
 	rm -f debian/golang-go/DEBIAN/p*
 	rm -rf debian/golang-go/usr/share/man
 	install -d -m 755 debian/golang-src/usr/share/go/src
-	install -d -m 755 debian/golang-src/usr/share/go/include
 	install -d -m 755 debian/golang-src/usr/share/go/test
 endif
 

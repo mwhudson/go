@@ -1,3 +1,9 @@
+golang (2:1.5~snap~upstream201507222050git92390e4ubuntu2) wily; urgency=medium
+
+  * Hacky fix to unbreak build on ARM.
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Fri, 24 Jul 2015 14:32:18 +1200
+
 golang (2:1.5~snap~upstream201507222050git92390e4ubuntu1) wily; urgency=medium
 
   * 1.5 snapshot
