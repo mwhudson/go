@@ -9,14 +9,15 @@ datadir := /usr/share/go
 bindir := /bin
 
 DEB_HOST_ARCH := $(shell dpkg-architecture -qDEB_HOST_ARCH)
-golang_archs = armel armhf amd64 i386
+golang_archs = armel armhf amd64 i386 arm64 ppc64el
 
 # We loop over supported operating systems and architectures multiple times,
 # so these two variables contain a centralized version of that code.
 # The variables $$os and $$arch can be used inside such a loop.
 FOR_GO_ARCH := for os in $$(echo linux freebsd windows darwin netbsd); do \
 	archs="amd64 386"; \
-	[ "$$os" = "linux" ] || [ "$$os" = "freebsd" ] && archs="amd64 arm 386"; \
+	[ "$$os" = "linux" ] && archs="amd64 arm 386 arm64 ppc64le"; \
+	[ "$$os" = "freebsd" ] && archs="amd64 arm 386"; \
 	for arch in $$(echo $$archs); do
 FOR_GO_ARCH_END := done; done
 
@@ -56,7 +57,7 @@ gencontrol:
 	cat debian/control.base >> debian/control.tmp
 	${FOR_GO_ARCH} \
 		BUILDARCHS=all; \
-		[ "$$os" = "linux" ] && BUILDARCHS="i386 amd64 armel armhf"; \
+		[ "$$os" = "linux" ] && BUILDARCHS="i386 amd64 armel armhf arm64 ppc64el"; \
 		sed -e "s,@OS@,$$os,g; s,@ARCH@,$$arch,g; s,@BUILDARCHS@,$$BUILDARCHS,g" debian/control.cross >> debian/control.tmp; \
 	${FOR_GO_ARCH_END}
 	mv debian/control.tmp debian/control
@@ -200,6 +201,10 @@ else ifeq ($(DEB_BUILD_ARCH_CPU), arm)
     GOHOSTARCH := arm
 else ifeq ($(DEB_BUILD_ARCH_CPU), armhf)
     GOHOSTARCH := arm
+else ifeq ($(DEB_BUILD_ARCH_CPU), ppc64el)
+    GOHOSTARCH := ppc64le
+else ifeq ($(DEB_BUILD_ARCH_CPU), arm64)
+    GOHOSTARCH := arm64
 else
 #    $(error unrecognized build host instruction set $(DEB_HOST_ARCH_CPU)!)
 endif

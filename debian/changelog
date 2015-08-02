@@ -1,3 +1,28 @@
+golang (2:1.5~snap~upstream201507222050git92390e4ubuntu6) wily; urgency=medium
+
+  * Fix GOHOSTARCH computations. 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Fri, 31 Jul 2015 20:34:52 +1200
+
+golang (2:1.5~snap~upstream201507222050git92390e4ubuntu5) wily; urgency=medium
+
+  * Spell ppc64el right :/ 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Fri, 31 Jul 2015 14:17:24 +1200
+
+golang (2:1.5~snap~upstream201507222050git92390e4ubuntu4) wily; urgency=medium
+
+  * Build native Go on arm64 and ppc64le.
+  * Breaks/Replaces old gotools. 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Fri, 31 Jul 2015 14:00:04 +1200
+
+golang (2:1.5~snap~upstream201507222050git92390e4ubuntu3) wily; urgency=medium
+
+  * Fixes so things can find textflag.h. 
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Mon, 27 Jul 2015 13:30:16 +1200
+
 golang (2:1.5~snap~upstream201507222050git92390e4ubuntu2) wily; urgency=medium
 
   * Hacky fix to unbreak build on ARM.
