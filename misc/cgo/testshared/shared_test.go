@@ -31,9 +31,8 @@ var gopathInstallDir, gorootInstallDir, suffix string
 
 // This is the smallest set of packages we can link into a shared
 // library (runtime/cgo is built implicitly).
-// "sync" is there because of golang.org/issue/11480
-var minpkgs = []string{"runtime", "sync/atomic", "sync"}
-var soname = "libruntime,sync-atomic.so"
+var minpkgs = []string{"runtime", "sync/atomic"}
+var soname string
 
 // run runs a command and calls t.Errorf if it fails.
 func run(t *testing.T, msg string, args ...string) {
