@@ -2724,24 +2724,36 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		/* reloc ops */
 	case 64: /* movT R,addr -> adrp + add + movT R, (REGTMP) */
 		o1 = ADR(1, 0, REGTMP)
-		o2 = opirr(ctxt, AADD) | REGTMP&31<<5 | REGTMP&31
 		rel := obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc)
-		rel.Siz = 8
+		rel.Siz = 4
 		rel.Sym = p.To.Sym
 		rel.Add = p.To.Offset
-		rel.Type = obj.R_ADDRARM64
+		rel.Type = obj.R_AARCH64_ADR_PREL_PG_HI21
+		o2 = opirr(ctxt, AADD) | REGTMP&31<<5 | REGTMP&31
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.To.Sym
+		rel.Add = p.To.Offset
+		rel.Type = obj.R_AARCH64_ADD_ABS_LO12_NC
 		o3 = olsr12u(ctxt, int32(opstr12(ctxt, int(p.As))), 0, REGTMP, int(p.From.Reg))
 
 	case 65: /* movT addr,R -> adrp + add + movT (REGTMP), R */
 		o1 = ADR(1, 0, REGTMP)
-		o2 = opirr(ctxt, AADD) | REGTMP&31<<5 | REGTMP&31
 		rel := obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc)
-		rel.Siz = 8
+		rel.Siz = 4
 		rel.Sym = p.From.Sym
 		rel.Add = p.From.Offset
-		rel.Type = obj.R_ADDRARM64
+		rel.Type = obj.R_AARCH64_ADR_PREL_PG_HI21
+		o2 = opirr(ctxt, AADD) | REGTMP&31<<5 | REGTMP&31
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Add = p.From.Offset
+		rel.Type = obj.R_AARCH64_ADD_ABS_LO12_NC
 		o3 = olsr12u(ctxt, int32(opldr12(ctxt, int(p.As))), 0, REGTMP, int(p.To.Reg))
 
 	case 66: /* ldp O(R)!, (r1, r2); ldp (R)O!, (r1, r2) */
@@ -2776,13 +2788,19 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			ctxt.Diag("invalid load of 32-bit address: %v", p)
 		}
 		o1 = ADR(1, 0, uint32(p.To.Reg))
-		o2 = opirr(ctxt, AADD) | uint32(p.To.Reg&31)<<5 | uint32(p.To.Reg&31)
 		rel := obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc)
-		rel.Siz = 8
+		rel.Siz = 4
 		rel.Sym = p.From.Sym
 		rel.Add = p.From.Offset
-		rel.Type = obj.R_ADDRARM64
+		rel.Type = obj.R_AARCH64_ADR_PREL_PG_HI21
+		o2 = opirr(ctxt, AADD) | uint32(p.To.Reg&31)<<5 | uint32(p.To.Reg&31)
+		rel = obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc) + 4
+		rel.Siz = 4
+		rel.Sym = p.From.Sym
+		rel.Add = p.From.Offset
+		rel.Type = obj.R_AARCH64_ADD_ABS_LO12_NC
 
 	// This is supposed to be something that stops execution.
 	// It's not supposed to be reached, ever, but if it is, we'd
