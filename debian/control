@@ -17,8 +17,8 @@ Package: golang-go
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends},
 	 golang-src (>= ${source:Version}),
-	 golang-go-linux-${go:Hostarch} (= ${source:Version}) [armel armhf amd64 i386 arm64 ppc64le],
-	 gccgo [!armel !armhf !amd64 !i386 !arm64 !ppc64le]
+	 golang-go-linux-${go:Hostarch} (= ${source:Version}) [armel armhf amd64 i386 arm64 ppc64el],
+	 gccgo [!armel !armhf !amd64 !i386 !arm64 !ppc64el]
 Replaces: golang-weekly-go, golang-weekly-tools, golang-tools, golang-golang-x-tools (<= 1:0.0~git20150716.0.87156cb+dfsg1-3)
 Breaks: golang-golang-x-tools (<= 1:0.0~git20150716.0.87156cb+dfsg1-3)
 Conflicts: golang-weekly-go, golang-weekly-tools, golang-tools, golang-go (<< 2:1.3.3-1ubuntu2)
@@ -106,7 +106,7 @@ Description: Go programming language compiler - metapackage
  that (most of) a full Go development environment is installed.
 
 Package: golang-go-linux-amd64
-Architecture: i386 amd64 armel armhf arm64 ppc64le
+Architecture: i386 amd64 armel armhf arm64 ppc64el
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)
@@ -124,7 +124,7 @@ Description: Go standard library compiled for linux_amd64
  linux_amd64, even though you are executing the Go compiler on linux_386.
 
 Package: golang-go-linux-arm
-Architecture: i386 amd64 armel armhf arm64 ppc64le
+Architecture: i386 amd64 armel armhf arm64 ppc64el
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)
@@ -142,7 +142,7 @@ Description: Go standard library compiled for linux_arm
  linux_amd64, even though you are executing the Go compiler on linux_386.
 
 Package: golang-go-linux-386
-Architecture: i386 amd64 armel armhf arm64 ppc64le
+Architecture: i386 amd64 armel armhf arm64 ppc64el
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)
@@ -160,7 +160,7 @@ Description: Go standard library compiled for linux_386
  linux_amd64, even though you are executing the Go compiler on linux_386.
 
 Package: golang-go-linux-arm64
-Architecture: i386 amd64 armel armhf arm64 ppc64le
+Architecture: i386 amd64 armel armhf arm64 ppc64el
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)
@@ -178,7 +178,7 @@ Description: Go standard library compiled for linux_arm64
  linux_amd64, even though you are executing the Go compiler on linux_386.
 
 Package: golang-go-linux-ppc64le
-Architecture: i386 amd64 armel armhf arm64 ppc64le
+Architecture: i386 amd64 armel armhf arm64 ppc64el
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)

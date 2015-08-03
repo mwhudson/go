@@ -1,3 +1,9 @@
+golang (2:1.5~snap~upstream201508020934gitc2db5f4ubuntu1) wily; urgency=medium
+
+  * Update upstream snapshot.
+
+ -- Michael Hudson-Doyle <michael.hudson@canonical.com>  Mon, 03 Aug 2015 10:23:55 +1200
+
 golang (2:1.5~snap~upstream201507222050git92390e4ubuntu6) wily; urgency=medium
 
   * Fix GOHOSTARCH computations. 
