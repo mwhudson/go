@@ -58,6 +58,7 @@ gencontrol:
 	${FOR_GO_ARCH} \
 		BUILDARCHS=all; \
 		[ "$$os" = "linux" ] && BUILDARCHS="i386 amd64 armel armhf arm64 ppc64el"; \
+		[ "$$os" = "linux" ] && [ "$$arch" = "amd64" ] && BUILDARCHS="i386 amd64 armel armhf arm64"; \
 		sed -e "s,@OS@,$$os,g; s,@ARCH@,$$arch,g; s,@BUILDARCHS@,$$BUILDARCHS,g" debian/control.cross >> debian/control.tmp; \
 	${FOR_GO_ARCH_END}
 	mv debian/control.tmp debian/control

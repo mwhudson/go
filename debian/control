@@ -106,7 +106,7 @@ Description: Go programming language compiler - metapackage
  that (most of) a full Go development environment is installed.
 
 Package: golang-go-linux-amd64
-Architecture: i386 amd64 armel armhf arm64 ppc64el
+Architecture: i386 amd64 armel armhf arm64
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
 Breaks: golang-go (<< 2:1.1-2)
 Replaces: golang-go (<< 2:1.1-2)
