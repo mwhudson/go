@@ -71,6 +71,18 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_AARCH64_ADD_ABS_LO12_NC:
 		ld.Thearch.Vput(ld.R_AARCH64_ADD_ABS_LO12_NC | uint64(elfsym)<<32)
 
+	case obj.R_AARCH64_LDST8_ABS_LO12_NC:
+		ld.Thearch.Vput(ld.R_AARCH64_LDST8_ABS_LO12_NC | uint64(elfsym)<<32)
+
+	case obj.R_AARCH64_LDST16_ABS_LO12_NC:
+		ld.Thearch.Vput(ld.R_AARCH64_LDST16_ABS_LO12_NC | uint64(elfsym)<<32)
+
+	case obj.R_AARCH64_LDST32_ABS_LO12_NC:
+		ld.Thearch.Vput(ld.R_AARCH64_LDST32_ABS_LO12_NC | uint64(elfsym)<<32)
+
+	case obj.R_AARCH64_LDST64_ABS_LO12_NC:
+		ld.Thearch.Vput(ld.R_AARCH64_LDST64_ABS_LO12_NC | uint64(elfsym)<<32)
+
 	case obj.R_CALLARM64:
 		if r.Siz != 4 {
 			return -1
@@ -174,7 +186,13 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		default:
 			return -1
 
-		case obj.R_AARCH64_ADR_PREL_PG_HI21, obj.R_AARCH64_ADD_ABS_LO12_NC:
+		case obj.R_AARCH64_ADR_PREL_PG_HI21,
+			obj.R_AARCH64_ADD_ABS_LO12_NC,
+			obj.R_AARCH64_LDST8_ABS_LO12_NC,
+			obj.R_AARCH64_LDST16_ABS_LO12_NC,
+			obj.R_AARCH64_LDST32_ABS_LO12_NC,
+			obj.R_AARCH64_LDST64_ABS_LO12_NC:
+
 			r.Done = 0
 
 			// set up addend for eventual relocation via outer symbol.
@@ -215,6 +233,35 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			ld.Diag("program too large, address relocation distance = %d", t)
 		}
 		*val |= (((t >> 12) & 3) << 29) | (((t >> 12 >> 2) & 0x7ffff) << 5)
+		return 0
+
+	case obj.R_AARCH64_LDST8_ABS_LO12_NC:
+		t := (ld.Symaddr(r.Sym) + r.Add)
+		*val |= (t & 0xfff) << 10
+		return 0
+
+	case obj.R_AARCH64_LDST16_ABS_LO12_NC:
+		t := (ld.Symaddr(r.Sym) + r.Add)
+		if t&0x1 != 0 {
+			ld.Diag("offset for 16-byte load/store has unaligned value %d", t)
+		}
+		*val |= (t & 0xfff) << 9
+		return 0
+
+	case obj.R_AARCH64_LDST32_ABS_LO12_NC:
+		t := (ld.Symaddr(r.Sym) + r.Add)
+		if t&0x3 != 0 {
+			ld.Diag("offset for 32-byte load/store has unaligned value %d", t)
+		}
+		*val |= (t & 0xfff) << 8
+		return 0
+
+	case obj.R_AARCH64_LDST64_ABS_LO12_NC:
+		t := (ld.Symaddr(r.Sym) + r.Add)
+		if t&0x7 != 0 {
+			ld.Diag("offset for 64-byte load/store has unaligned value %d", t)
+		}
+		*val |= (t & 0xfff) << 7
 		return 0
 
 	case obj.R_AARCH64_ADD_ABS_LO12_NC:
