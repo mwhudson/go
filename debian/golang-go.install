@@ -1,5 +1,9 @@
 VERSION /usr/lib/go/
 bin/go /usr/lib/go/bin/
 bin/gofmt /usr/lib/go/bin/
+pkg/*_* /usr/lib/go/pkg/
+pkg/include /usr/lib/go/pkg/
 pkg/obj /usr/lib/go/pkg/
 pkg/tool /usr/lib/go/pkg/
+src /usr/share/go/
+test /usr/share/go/
