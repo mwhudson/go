@@ -419,6 +419,21 @@ const (
 	R_USEFIELD
 	R_POWER_TOC
 	R_GOTPCREL
+
+	// Platform dependent relocations. Architectures with fixed width instructions
+	// have the inherent issue that a 32-bit (or 64-bit!) displacement cannot be
+	// stuffed into a 32-bit instruction, so an address needs to be spread across
+	// several instructions, and in turn this requires a sequence of relocations, each
+	// updating a part of an instruction.  This leads to relocation codes that are
+	// inherently processor specific and have long and ridiculous-seeming names, but
+	// which get easier to read with a bit of practice.
+
+	// Arm64.
+
+	// Set a MOV[NZ] immediate field to bits [15:0] of the offset from the thread
+	// local base to the thread local variable defined by the referenced (thread
+	// local) symbol. Error if the offset does not fit into 16 bits.
+	R_AARCH64_TLSLE_MOVW_TPREL_G0
 )
 
 type Auto struct {
