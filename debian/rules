@@ -21,7 +21,7 @@ override_dh_auto_build: debian/build.stamp
 override_dh_auto_test:
 ifeq ($(RUN_TEST), true)
 	cd $(CURDIR)/src && \
-	$(CURDIR)/debian/test.bash $(GOROOT)/pkg/tool/$(GOHOSTOS)_$(GOHOSTARCH);
+	$(CURDIR)/debian/test.bash
 else
 	:
 endif
@@ -125,6 +125,10 @@ else ifeq ($(DEB_BUILD_ARCH_CPU), arm)
     GOHOSTARCH := arm
 else ifeq ($(DEB_BUILD_ARCH_CPU), armhf)
     GOHOSTARCH := arm
+else ifeq ($(DEB_BUILD_ARCH_CPU), arm64)
+    GOHOSTARCH := arm64
+else ifeq ($(DEB_BUILD_ARCH_CPU), ppc64el)
+    GOHOSTARCH := ppc64le
 else
     $(error unrecognized build host instruction set $(DEB_HOST_ARCH_CPU)!)
 endif
@@ -146,6 +150,10 @@ else ifeq ($(DEB_HOST_ARCH), armhf)
 else
     $(error unrecognized arm architecture $(DEB_HOST_ARCH)!)
 endif
+else ifeq ($(DEB_HOST_ARCH_CPU), arm64)
+    GOHOSTARCH := arm64
+else ifeq ($(DEB_HOST_ARCH_CPU), ppc64el)
+    GOHOSTARCH := ppc64le
 else
     $(error unrecognized instruction set $(DEB_HOST_ARCH_CPU)!)
 endif

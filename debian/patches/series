@@ -1,0 +1,2 @@
+armhf-elf-header.patch
+disable-duffzero-ppc64el.patch

@@ -16,6 +16,7 @@ Homepage: https://golang.org
 Package: golang-go
 Architecture: amd64 arm64 armel armhf i386 ppc64 ppc64el
 Depends: ${shlibs:Depends}, ${misc:Depends}, ${perl:Depends}
+Breaks: golang-golang-x-tools (<= 1:0.0~git20150716.0.87156cb+dfsg1-3)
 Replaces: golang-src,
           golang-go-darwin-386,
           golang-go-darwin-amd64,
@@ -28,7 +29,8 @@ Replaces: golang-src,
           golang-go-netbsd-386,
           golang-go-netbsd-amd64,
           golang-go-windows-386,
-          golang-go-windows-amd64
+          golang-go-windows-amd64,
+          golang-golang-x-tools (<= 1:0.0~git20150716.0.87156cb+dfsg1-3)
 Suggests: bzr, git, golang-go.tools, mercurial, subversion
 Description: Go programming language compiler, linker, source, compiled stdlib
  The Go programming language is an open source project to make

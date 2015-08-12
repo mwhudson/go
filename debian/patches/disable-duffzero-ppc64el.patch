@@ -1,0 +1,29 @@
+From 03f286445eb86e983d7590368c98f5c20e6b63f1 Mon Sep 17 00:00:00 2001
+From: Dave Cheney <dave@cheney.net>
+Date: Wed, 12 Aug 2015 07:55:01 +1000
+Subject: [PATCH] cmd/compile/internal/ppc64: disable DUFFZERO
+
+Update #12108
+
+If DUFFZERO is used within a tail call method it will overwrite the
+link register.
+
+Change-Id: I6abd2fde0f0ad909ccd55eb119b992673a74f0e2
+---
+
+diff --git a/src/cmd/compile/internal/ppc64/ggen.go b/src/cmd/compile/internal/ppc64/ggen.go
+index 1b936b8..ca69b73 100644
+--- a/src/cmd/compile/internal/ppc64/ggen.go
++++ b/src/cmd/compile/internal/ppc64/ggen.go
+@@ -71,7 +71,10 @@
+ 		for i := int64(0); i < cnt; i += int64(gc.Widthptr) {
+ 			p = appendpp(p, ppc64.AMOVD, obj.TYPE_REG, ppc64.REGZERO, 0, obj.TYPE_MEM, ppc64.REGSP, 8+frame+lo+i)
+ 		}
+-	} else if cnt <= int64(128*gc.Widthptr) {
++		// TODO(dfc): https://golang.org/issue/12108
++		// If DUFFZERO is used inside a tail call (see genwrapper) it will
++		// overwrite the link register.
++	} else if false && cnt <= int64(128*gc.Widthptr) {
+ 		p = appendpp(p, ppc64.AADD, obj.TYPE_CONST, 0, 8+frame+lo-8, obj.TYPE_REG, ppc64.REGRT1, 0)
+ 		p.Reg = ppc64.REGSP
+ 		p = appendpp(p, obj.ADUFFZERO, obj.TYPE_NONE, 0, 0, obj.TYPE_MEM, 0, 0)

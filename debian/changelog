@@ -1,5 +1,6 @@
 golang (2:1.5~rc1-1) UNRELEASED; urgency=low
 
+  [ Tianon Gravi ]
   * Upload to experimental.
   * Update to 1.5rc1 upstream release.
     - Compiler and runtime written entirely in Go.
@@ -10,6 +11,13 @@ golang (2:1.5~rc1-1) UNRELEASED; urgency=low
     - Cross-compilation no longer requires a complete rebuild of the stdlib in
       GOROOT, and thus the golang-go-GOHOST-GOARCH packages are removed.
   * Sync debian/copyright with the Ubuntu delta. (thanks doko!)
+
+  [ Michael Hudson-Doyle ]
+  * Update GO{HOST,}ARCH computation
+  * Breaks/Replaces: older golang-golang-x-tools 
+  * Two patches:
+    - correct ELF header on armhf
+    - disable duffzero on ppc64el  
 
  -- Tianon Gravi <admwiggin@gmail.com>  Wed, 22 Jul 2015 21:55:56 -0700
 
