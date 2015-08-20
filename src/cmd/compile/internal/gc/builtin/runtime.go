@@ -10,6 +10,8 @@
 
 package PACKAGE
 
+import "unsafe"
+
 // emitted by compiler, not referred to by go programs
 
 func newobject(typ *byte) *any
@@ -100,6 +102,8 @@ func mapassign1(mapType *byte, hmap map[any]any, key *any, val *any)
 func mapiterinit(mapType *byte, hmap map[any]any, hiter *any)
 func mapdelete(mapType *byte, hmap map[any]any, key *any)
 func mapiternext(hiter *any)
+
+var zeroptr unsafe.Pointer
 
 // *byte is really *runtime.Type
 func makechan(chanType *byte, hint int64) (hchan chan any)

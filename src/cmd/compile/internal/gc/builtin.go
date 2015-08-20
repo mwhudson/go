@@ -4,6 +4,7 @@ package gc
 
 const runtimeimport = "" +
 	"package runtime\n" +
+	"import unsafe \"unsafe\"\n" +
 	"import runtime \"runtime\"\n" +
 	"func @\"\".newobject (@\"\".typ·2 *byte) (? *any)\n" +
 	"func @\"\".panicindex ()\n" +
@@ -82,6 +83,7 @@ const runtimeimport = "" +
 	"func @\"\".mapiterinit (@\"\".mapType·1 *byte, @\"\".hmap·2 map[any]any, @\"\".hiter·3 *any)\n" +
 	"func @\"\".mapdelete (@\"\".mapType·1 *byte, @\"\".hmap·2 map[any]any, @\"\".key·3 *any)\n" +
 	"func @\"\".mapiternext (@\"\".hiter·1 *any)\n" +
+	"var @\"\".zeroptr @\"unsafe\".Pointer\n" +
 	"func @\"\".makechan (@\"\".chanType·2 *byte, @\"\".hint·3 int64) (@\"\".hchan·1 chan any)\n" +
 	"func @\"\".chanrecv1 (@\"\".chanType·1 *byte, @\"\".hchan·2 <-chan any, @\"\".elem·3 *any)\n" +
 	"func @\"\".chanrecv2 (@\"\".chanType·2 *byte, @\"\".hchan·3 <-chan any, @\"\".elem·4 *any) (? bool)\n" +

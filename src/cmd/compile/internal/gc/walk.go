@@ -861,21 +861,20 @@ func walkexpr(np **Node, init **NodeList) {
 
 		// don't generate a = *var if a is _
 		if !isblank(a) {
-			var_ := temp(Ptrto(t.Type))
-			var_.Typecheck = 1
-			n.List.N = var_
-			walkexpr(&n, init)
-			*init = list(*init, n)
-			n = Nod(OAS, a, Nod(OIND, var_, nil))
+			if t.Type.Width <= 256 {
+				var_ := temp(Ptrto(t.Type))
+				var_.Typecheck = 1
+				n.List.N = var_
+				walkexpr(&n, init)
+				*init = list(*init, n)
+				n = Nod(OAS, a, Nod(OIND, var_, nil))
+			} else {
+				panic("XXX OAS2MAPR")
+			}
 		}
 
 		typecheck(&n, Etop)
 		walkexpr(&n, init)
-
-		// mapaccess needs a zero value to be at least this big.
-		if zerosize < t.Type.Width {
-			zerosize = t.Type.Width
-		}
 
 		// TODO: ptr is always non-nil, so disable nil check for this OIND op.
 		goto ret
@@ -1280,15 +1279,41 @@ func walkexpr(np **Node, init **NodeList) {
 			p = "mapaccess1"
 		}
 
-		n = mkcall1(mapfn(p, t), Ptrto(t.Type), init, typename(t), n.Left, key)
-		n = Nod(OIND, n, nil)
-		n.Type = t.Type
-		n.Typecheck = 1
+		if t.Type.Width <= 256 {
+			// *p(key)
+			n = mkcall1(mapfn(p, t), Ptrto(t.Type), init, typename(t), n.Left, key)
+			n = Nod(OIND, n, nil)
+			n.Type = t.Type
+			n.Typecheck = 1
+		} else {
+			// var tmp1 T
+			// if tmp2 := p(key); tmp2 != runtime.zeroptr {
+			//     tmp1 = *tmp2
+			// }
+			// tmp1
 
-		// mapaccess needs a zero value to be at least this big.
-		if zerosize < t.Type.Width {
-			zerosize = t.Type.Width
+			l := n.Left
+			n = temp(t.Type)
+
+			tmp2 := temp(Ptrto(t.Type))
+			nif := Nod(OIF, nil, nil)
+			nas := Nod(OAS, tmp2, mkcall1(mapfn(p, t), Ptrto(t.Type), init, typename(t), l, key))
+			nas.Colas = true
+			nif.Ninit = list1(nas)
+			z := Nod(OCONV, syslook("zeroptr", 1), nil)
+			z.Type = Ptrto(t.Type)
+			nif.Left = Nod(ONE, tmp2, z)
+			nif.Nbody = list(list1(Nod(OAS, n, Nod(OIND, tmp2, nil))), Nod(OVARKILL, n, nil))
+			typecheck(&nif, Etop)
+
+			walkstmt(&nif)
+			*init = list(*init, nif)
+			init := n.Ninit
+			n.Ninit = nil
+			walkexpr(&n, &init)
+			addinit(&n, init)
 		}
+
 		goto ret
 
 	case ORECV:
