@@ -192,8 +192,7 @@ func walkstmt(np **Node) {
 			n.Op = OEMPTY // don't leave plain values as statements.
 		}
 
-		// special case for a receive where we throw away
-	// the value received.
+	// special case for a receive where we throw away the value received.
 	case ORECV:
 		if n.Typecheck == 0 {
 			Fatal("missing typecheck: %v", Nconv(n, obj.FmtSign))
@@ -1279,7 +1278,7 @@ func walkexpr(np **Node, init **NodeList) {
 			p = "mapaccess1"
 		}
 
-		if t.Type.Width <= 256 {
+		if t.Type.Width <= 256 && (Debug['T'] == 0 || t.Type.Width <= 4) {
 			// *p(key)
 			n = mkcall1(mapfn(p, t), Ptrto(t.Type), init, typename(t), n.Left, key)
 			n = Nod(OIND, n, nil)
@@ -1296,6 +1295,7 @@ func walkexpr(np **Node, init **NodeList) {
 			n = temp(t.Type)
 
 			tmp2 := temp(Ptrto(t.Type))
+			nblock := Nod(OBLOCK, nil, nil)
 			nif := Nod(OIF, nil, nil)
 			nas := Nod(OAS, tmp2, mkcall1(mapfn(p, t), Ptrto(t.Type), init, typename(t), l, key))
 			nas.Colas = true
@@ -1305,9 +1305,12 @@ func walkexpr(np **Node, init **NodeList) {
 			nif.Left = Nod(ONE, tmp2, z)
 			nif.Nbody = list(list1(Nod(OAS, n, Nod(OIND, tmp2, nil))), Nod(OVARKILL, n, nil))
 			typecheck(&nif, Etop)
+			ndcl := Nod(ODCL, nil, nil)
+			ndcl.Left = n
+			nblock.List = list(list1(ndcl), nif)
 
 			walkstmt(&nif)
-			*init = list(*init, nif)
+			*init = list(*init, nblock)
 			init := n.Ninit
 			n.Ninit = nil
 			walkexpr(&n, &init)

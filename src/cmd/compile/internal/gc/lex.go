@@ -203,6 +203,7 @@ func Main() {
 	obj.Flagcount("P", "debug peephole optimizer", &Debug['P'])
 	obj.Flagcount("R", "debug register optimizer", &Debug['R'])
 	obj.Flagcount("S", "print assembly listing", &Debug['S'])
+	obj.Flagcount("T", "print assembly listing", &Debug['T'])
 	obj.Flagfn0("V", "print compiler version", doversion)
 	obj.Flagcount("W", "debug parse tree after type checking", &Debug['W'])
 	obj.Flagstr("asmhdr", "write assembly header to `file`", &asmhdr)

@@ -387,6 +387,7 @@ func compile(fn *Node) {
 		}
 	}
 
+	deindexmap(Curfn)
 	order(Curfn)
 	if nerrors != 0 {
 		goto ret

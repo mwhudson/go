@@ -355,6 +355,8 @@ const (
 	OSQRT   // sqrt(float64), on systems that have hw support
 	OGETG   // runtime.getg() (read g pointer)
 
+	OINDEXMAPTMP // intermediary representation of a map index
+
 	OEND
 )
 
