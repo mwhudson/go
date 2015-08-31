@@ -32,6 +32,7 @@
 package ld
 
 import (
+	"cmd/internal/goobj"
 	"cmd/internal/obj"
 	"log"
 	"os"
@@ -64,7 +65,7 @@ var headers = []struct {
 
 func linknew(arch *LinkArch) *Link {
 	ctxt := new(Link)
-	ctxt.Hash = make(map[symVer]*LSym)
+	ctxt.Hash = make(map[goobj.SymID]*LSym)
 	ctxt.Arch = arch
 	ctxt.Version = obj.HistVersion
 	ctxt.Goroot = obj.Getgoroot()
@@ -159,18 +160,12 @@ func linknew(arch *LinkArch) *Link {
 	return ctxt
 }
 
-func linknewsym(ctxt *Link, symb string, v int) *LSym {
-	s := new(LSym)
-	*s = LSym{}
+func linknewsym(ctxt *Link, symid goobj.SymID) *LSym {
+	s := &LSym{Sym: &goobj.Sym{SymID: symid}}
 
 	s.Dynid = -1
 	s.Plt = -1
 	s.Got = -1
-	s.Name = symb
-	s.Type = 0
-	s.Version = int16(v)
-	s.Value = 0
-	s.Size = 0
 	ctxt.Nsymbol++
 
 	s.Allsym = ctxt.Allsym
@@ -179,13 +174,9 @@ func linknewsym(ctxt *Link, symb string, v int) *LSym {
 	return s
 }
 
-type symVer struct {
-	sym string
-	ver int
-}
-
 func _lookup(ctxt *Link, symb string, v int, creat int) *LSym {
-	s := ctxt.Hash[symVer{symb, v}]
+	symid := goobj.SymID{symb, v}
+	s := ctxt.Hash[symid]
 	if s != nil {
 		return s
 	}
@@ -193,9 +184,9 @@ func _lookup(ctxt *Link, symb string, v int, creat int) *LSym {
 		return nil
 	}
 
-	s = linknewsym(ctxt, symb, v)
+	s = linknewsym(ctxt, symid)
 	s.Extname = s.Name
-	ctxt.Hash[symVer{symb, v}] = s
+	ctxt.Hash[symid] = s
 	return s
 }
 

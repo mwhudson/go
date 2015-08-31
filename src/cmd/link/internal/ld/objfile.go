@@ -102,6 +102,7 @@ package ld
 
 import (
 	"bytes"
+	"cmd/internal/goobj"
 	"cmd/internal/obj"
 	"fmt"
 	"log"
@@ -205,7 +206,7 @@ func readsym(ctxt *Link, f *obj.Biobuf, pkg string, pn string) {
 		}
 		if len(s.P) > 0 {
 			dup = s
-			s = linknewsym(ctxt, ".dup", readsym_ndup)
+			s = linknewsym(ctxt, goobj.SymID{".dup", readsym_ndup})
 			readsym_ndup++ // scratch
 		}
 	}

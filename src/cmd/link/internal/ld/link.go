@@ -31,6 +31,7 @@
 package ld
 
 import (
+	"cmd/internal/goobj"
 	"cmd/internal/obj"
 	"debug/elf"
 	"encoding/binary"
@@ -38,11 +39,9 @@ import (
 )
 
 type LSym struct {
-	Name       string
+	*goobj.Sym
 	Extname    string
 	Type       int16
-	Version    int16
-	Dupok      uint8
 	Cfunc      uint8
 	External   uint8
 	Nosplit    uint8
@@ -131,7 +130,7 @@ type Link struct {
 	Bso        *obj.Biobuf
 	Windows    int32
 	Goroot     string
-	Hash       map[symVer]*LSym
+	Hash       map[goobj.SymID]*LSym
 	Allsym     *LSym
 	Nsymbol    int32
 	Tlsg       *LSym

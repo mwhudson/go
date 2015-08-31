@@ -122,7 +122,7 @@ type Sym struct {
 	SymID         // symbol identifier (name and version)
 	Kind  SymKind // kind of symbol
 	DupOK bool    // are duplicate definitions okay?
-	Size  int     // size of corresponding data
+	Size  int     // size of corresponding data TODO(mwhudson): might need to be int64 or uint64?
 	Type  SymID   // symbol for Go type information
 	Data  Data    // memory image of symbol
 	Reloc []Reloc // relocations to apply to Data

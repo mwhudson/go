@@ -37,6 +37,7 @@ var bootstrapDirs = []string{
 	"compile/internal/ppc64",
 	"compile/internal/x86",
 	"internal/gcprog",
+	"internal/goobj",
 	"internal/obj",
 	"internal/obj/arm",
 	"internal/obj/arm64",

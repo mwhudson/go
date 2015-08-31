@@ -2,6 +2,7 @@ package ld
 
 import (
 	"bytes"
+	"cmd/internal/goobj"
 	"cmd/internal/obj"
 	"encoding/binary"
 	"fmt"
@@ -920,14 +921,14 @@ func readelfsym(elfobj *ElfObj, i int, sym *ElfSym, needSym int) (err error) {
 				// local names and hidden visiblity global names are unique
 				// and should only reference by its index, not name, so we
 				// don't bother to add them into hash table
-				s = linknewsym(Ctxt, sym.name, Ctxt.Version)
+				s = linknewsym(Ctxt, goobj.SymID{sym.name, Ctxt.Version})
 
 				s.Type |= obj.SHIDDEN
 			}
 
 		case ElfSymBindWeak:
 			if needSym != 0 {
-				s = linknewsym(Ctxt, sym.name, 0)
+				s = linknewsym(Ctxt, goobj.SymID{sym.name, 0})
 				if sym.other == 2 {
 					s.Type |= obj.SHIDDEN
 				}
