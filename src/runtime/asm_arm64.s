@@ -36,7 +36,7 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	MRS_TPIDR_R0			// load TLS base pointer
 	MOVD	R0, R3			// arg 3: TLS base pointer
 #ifdef TLSG_IS_VARIABLE
-	MOVD	$runtime·tls_g(SB), R2 	// arg 2: &tlsg
+	MOVD	$runtime·tls_g(SB), R2 	// arg 2: &tls_g
 #else
 	MOVD	0, R2		        // arg 2: not used when using platform's TLS
 #endif
