@@ -433,6 +433,11 @@ const (
 	R_USEFIELD
 	R_POWER_TOC
 	R_GOTPCREL
+
+	// R_PPC64_TPREL16 resolves to the offset of the thread-local symbol from the
+	// thread local base and is used to implement the "local exec" model for tls
+	// access and inserts this value into the low 16 bits of an instruction word.
+	R_PPC64_TPREL16
 )
 
 type Auto struct {

@@ -401,6 +401,15 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		*val = ld.Symaddr(r.Sym) + r.Add - symtoc(s)
 
 		return 0
+
+	case obj.R_PPC64_TPREL16:
+		v := r.Sym.Value - 0x7000
+		if v < -32678 || v >= 32678 {
+			ld.Diag("TLS offset out of range %d", v)
+		}
+		*val |= v & 0xffff
+		return 0
+
 	}
 
 	return -1
