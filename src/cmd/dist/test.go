@@ -738,10 +738,6 @@ func (t *tester) cgoTestSOSupported() bool {
 		// No exec facility on Android or iOS.
 		return false
 	}
-	if t.goarch == "ppc64le" || t.goarch == "ppc64" {
-		// External linking not implemented on ppc64 (issue #8912).
-		return false
-	}
 	return true
 }
 
