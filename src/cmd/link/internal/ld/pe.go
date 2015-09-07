@@ -817,7 +817,7 @@ func perelocsect(sect *Section, first *LSym) int {
 
 		for ri = 0; ri < len(sym.R); ri++ {
 			r = &sym.R[ri]
-			if r.Done != 0 {
+			if !r.isExtReloc(sym) {
 				continue
 			}
 			if r.Xsym == nil {

@@ -1589,11 +1589,7 @@ func elfrelocsect(sect *Section, first *LSym) {
 
 		for ri = 0; ri < len(sym.R); ri++ {
 			r = &sym.R[ri]
-			if r.Done != 0 {
-				continue
-			}
-			if r.Xsym == nil {
-				Diag("missing xsym in relocation")
+			if !r.isExtReloc(sym) {
 				continue
 			}
 

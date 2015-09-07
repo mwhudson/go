@@ -96,13 +96,27 @@ func (s *LSym) String() string {
 type Reloc struct {
 	Off     int32
 	Siz     uint8
-	Done    uint8
 	Type    int32
 	Variant int32
 	Add     int64
 	Xadd    int64
 	Sym     *LSym
 	Xsym    *LSym
+}
+
+// Should r (which is relocates part of s) be passed to elfreloc1/machoreloc1/pereloc1
+// or is it entirely handled by relocsym?
+func (r *Reloc) isExtReloc(s *LSym) bool {
+	if Linkmode != LinkExternal || r.Sym == nil || r.Sym.Type == obj.SCONST {
+		return false
+	}
+	switch r.Type {
+	case obj.R_CONST, obj.R_SIZE, obj.R_CALLIND:
+		return false
+	case obj.R_CALL, obj.R_PCREL:
+		return r.Sym.Sect != Ctxt.Cursym.Sect
+	}
+	return true
 }
 
 type Auto struct {

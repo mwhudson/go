@@ -327,7 +327,6 @@ func relocsym(s *LSym) {
 	Ctxt.Cursym = s
 	for ri := int32(0); ri < int32(len(s.R)); ri++ {
 		r = &s.R[ri]
-		r.Done = 1
 		off = r.Off
 		siz = int32(r.Siz)
 		if off < 0 || off+siz > int32(len(s.P)) {
@@ -387,7 +386,6 @@ func relocsym(s *LSym) {
 
 		case obj.R_TLS:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
-				r.Done = 0
 				r.Sym = Ctxt.Tlsg
 				r.Xsym = Ctxt.Tlsg
 				r.Xadd = r.Add
@@ -407,7 +405,6 @@ func relocsym(s *LSym) {
 				break
 			}
 
-			r.Done = 0
 			o = 0
 			if Thearch.Thechar != '6' {
 				o = r.Add
@@ -415,7 +412,6 @@ func relocsym(s *LSym) {
 
 		case obj.R_TLS_LE:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
-				r.Done = 0
 				r.Sym = Ctxt.Tlsg
 				r.Xsym = Ctxt.Tlsg
 				r.Xadd = r.Add
@@ -436,7 +432,6 @@ func relocsym(s *LSym) {
 
 		case obj.R_TLS_IE:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
-				r.Done = 0
 				r.Sym = Ctxt.Tlsg
 				r.Xsym = Ctxt.Tlsg
 				r.Xadd = r.Add
@@ -449,9 +444,7 @@ func relocsym(s *LSym) {
 			log.Fatalf("cannot handle R_TLS_IE when linking internally")
 
 		case obj.R_ADDR:
-			if Linkmode == LinkExternal && r.Sym.Type != obj.SCONST {
-				r.Done = 0
-
+			if r.isExtReloc(s) {
 				// set up addend for eventual relocation via outer symbol.
 				rs = r.Sym
 
@@ -508,9 +501,7 @@ func relocsym(s *LSym) {
 
 			// r->sym can be null when CALL $(constant) is transformed from absolute PC to relative PC call.
 		case obj.R_CALL, obj.R_GOTPCREL, obj.R_PCREL:
-			if Linkmode == LinkExternal && r.Sym != nil && r.Sym.Type != obj.SCONST && (r.Sym.Sect != Ctxt.Cursym.Sect || r.Type == obj.R_GOTPCREL) {
-				r.Done = 0
-
+			if r.isExtReloc(s) {
 				// set up addend for eventual relocation via outer symbol.
 				rs = r.Sym
 

@@ -324,8 +324,6 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 	if ld.Linkmode == ld.LinkExternal {
 		switch r.Type {
 		case obj.R_CALLARM:
-			r.Done = 0
-
 			// set up addend for eventual relocation via outer symbol.
 			rs := r.Sym
 

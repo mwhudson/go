@@ -832,7 +832,7 @@ func machorelocsect(sect *Section, first *LSym) {
 
 		for ri = 0; ri < len(sym.R); ri++ {
 			r = &sym.R[ri]
-			if r.Done != 0 {
+			if !r.isExtReloc(sym) {
 				continue
 			}
 			if Thearch.Machoreloc1(r, int64(uint64(sym.Value+int64(r.Off))-sect.Vaddr)) < 0 {
