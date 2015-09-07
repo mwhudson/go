@@ -164,15 +164,16 @@ type Reloc struct {
 	// The bytes at [Offset, Offset+Size) within the memory image
 	// should be updated to refer to the address Add bytes after the start
 	// of the symbol Sym.
-	Offset int
-	Size   int
+	Offset int32
+	Size   uint8
 	Sym    SymID
-	Add    int
+	Add    int64
 
 	// The Type records the form of address expected in the bytes
 	// described by the previous fields: absolute, PC-relative, and so on.
 	// TODO(rsc): The interpretation of Type is not exposed by this package.
-	Type int
+	Type    int32
+	Variant int32
 }
 
 // A Var describes a variable in a function stack frame: a declared
@@ -357,7 +358,7 @@ func (r *objReader) readFull(b []byte) error {
 }
 
 // readInt reads a zigzag varint from the input file.
-func (r *objReader) readInt() int {
+func (r *objReader) readInt64() int64 {
 	var u uint64
 
 	for shift := uint(0); ; shift += 7 {
@@ -373,11 +374,34 @@ func (r *objReader) readInt() int {
 	}
 
 	v := int64(u>>1) ^ (int64(u) << 63 >> 63)
+	return v
+}
+
+func (r *objReader) readInt32() int32 {
+	v := r.readInt64()
+	if int64(int32(v)) != v {
+		r.error(errCorruptObject) // TODO
+		return 0
+	}
+	return int32(v)
+}
+
+func (r *objReader) readInt() int {
+	v := r.readInt64()
 	if int64(int(v)) != v {
 		r.error(errCorruptObject) // TODO
 		return 0
 	}
 	return int(v)
+}
+
+func (r *objReader) readUint8() uint8 {
+	v := r.readInt64()
+	if int64(uint8(v)) != v {
+		r.error(errCorruptObject) // TODO
+		return 0
+	}
+	return uint8(v)
 }
 
 // readString reads a length-delimited string from the input file.
@@ -612,11 +636,11 @@ func (r *objReader) parseObject(prefix []byte) error {
 		s.Reloc = make([]Reloc, r.readInt())
 		for i := range s.Reloc {
 			rel := &s.Reloc[i]
-			rel.Offset = r.readInt()
-			rel.Size = r.readInt()
-			rel.Type = r.readInt()
-			rel.Add = r.readInt()
-			r.readInt() // Xadd - ignored
+			rel.Offset = r.readInt32()
+			rel.Size = r.readUint8()
+			rel.Type = r.readInt32()
+			rel.Add = r.readInt64()
+			r.readInt64() // Xadd - ignored
 			rel.Sym = r.readSymID()
 			r.readSymID() // Xsym - ignored
 		}

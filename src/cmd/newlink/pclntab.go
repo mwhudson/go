@@ -368,10 +368,10 @@ func (b *SymBuffer) Uint(off int, v uint64, size int) int {
 // just beyond the address.
 func (b *SymBuffer) Addr(off int, sym goobj.SymID, symoff int64) int {
 	b.reloc = append(b.reloc, goobj.Reloc{
-		Offset: off,
-		Size:   b.ptrsize,
+		Offset: int32(off),
+		Size:   uint8(b.ptrsize),
 		Sym:    sym,
-		Add:    int(symoff),
+		Add:    symoff,
 		Type:   obj.R_ADDR,
 	})
 	return off + b.ptrsize

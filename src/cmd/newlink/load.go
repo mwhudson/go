@@ -92,9 +92,9 @@ func (p *Prog) relocateSym(sym *Sym, data []byte) {
 		case obj.R_ADDR, obj.R_CALLIND:
 			// ok
 		case obj.R_PCREL, obj.R_CALL:
-			val -= sym.Addr + Addr(r.Offset+r.Size)
+			val -= sym.Addr + Addr(r.Offset+int32(r.Size))
 		}
-		frag := data[r.Offset : r.Offset+r.Size]
+		frag := data[r.Offset : r.Offset+int32(r.Size)]
 		switch r.Size {
 		default:
 			p.errorf("%v: unknown relocation size %d", sym, r.Size)
