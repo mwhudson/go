@@ -193,7 +193,8 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	ld.Thearch.Lput(uint32(sectoff))
 
-	elfsym := r.Xsym.Elfsym
+	xsym, _ := r.ExtSymAdd()
+	elfsym := xsym.Elfsym
 	switch r.Type {
 	default:
 		return -1
@@ -268,7 +269,7 @@ func elfsetupplt() {
 func machoreloc1(r *ld.Reloc, sectoff int64) int {
 	var v uint32
 
-	rs := r.Xsym
+	rs, _ := r.ExtSymAdd()
 
 	if rs.Type == obj.SHOSTOBJ || r.Type == obj.R_CALLARM {
 		if rs.Dynid < 0 {
@@ -325,22 +326,16 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		switch r.Type {
 		case obj.R_CALLARM:
 			// set up addend for eventual relocation via outer symbol.
+
+			xadd := r.Add
+			if xadd&0x800000 != 0 {
+				xadd |= ^0xffffff
+			}
+			xadd *= 4
 			rs := r.Sym
-
-			r.Xadd = r.Add
-			if r.Xadd&0x800000 != 0 {
-				r.Xadd |= ^0xffffff
-			}
-			r.Xadd *= 4
 			for rs.Outer != nil {
-				r.Xadd += ld.Symaddr(rs) - ld.Symaddr(rs.Outer)
-				rs = rs.Outer
+				xadd += ld.Symaddr(rs) - ld.Symaddr(rs.Outer)
 			}
-
-			if rs.Type != obj.SHOSTOBJ && rs.Sect == nil {
-				ld.Diag("missing section for %s", rs.Name)
-			}
-			r.Xsym = rs
 
 			// ld64 for arm seems to want the symbol table to contain offset
 			// into the section rather than pseudo virtual address that contains
@@ -348,10 +343,10 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			// we need to compensate that by removing the instruction's address
 			// from addend.
 			if ld.HEADTYPE == obj.Hdarwin {
-				r.Xadd -= ld.Symaddr(s) + int64(r.Off)
+				xadd -= ld.Symaddr(s) + int64(r.Off)
 			}
 
-			*val = int64(braddoff(int32(0xff000000&uint32(r.Add)), int32(0xffffff&uint32(r.Xadd/4))))
+			*val = int64(braddoff(int32(0xff000000&uint32(r.Add)), int32(0xffffff&uint32(xadd/4))))
 			return 0
 		}
 

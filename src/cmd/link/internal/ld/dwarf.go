@@ -687,12 +687,10 @@ func mustFind(die *DWDie, name string) *DWDie {
 func adddwarfrel(sec *LSym, sym *LSym, offsetbase int64, siz int, addend int64) {
 	r := Addrel(sec)
 	r.Sym = sym
-	r.Xsym = sym
 	r.Off = int32(Cpos() - offsetbase)
 	r.Siz = uint8(siz)
 	r.Type = obj.R_ADDR
 	r.Add = addend
-	r.Xadd = addend
 	if Iself && Thearch.Thechar == '6' {
 		addend = 0
 	}

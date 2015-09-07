@@ -323,7 +323,8 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	ld.Thearch.Vput(uint64(sectoff))
 
-	elfsym := r.Xsym.Elfsym
+	xsym, xadd := r.ExtSymAdd()
+	elfsym := xsym.Elfsym
 	switch r.Type {
 	default:
 		return -1
@@ -353,7 +354,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 
 	case obj.R_CALL:
 		if r.Siz == 4 {
-			if r.Xsym.Type == obj.SDYNIMPORT {
+			if xsym.Type == obj.SDYNIMPORT {
 				if ld.DynlinkingGo() {
 					ld.Thearch.Vput(ld.R_X86_64_PLT32 | uint64(elfsym)<<32)
 				} else {
@@ -368,7 +369,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 
 	case obj.R_PCREL:
 		if r.Siz == 4 {
-			if r.Xsym.Type == obj.SDYNIMPORT && r.Xsym.ElfType == elf.STT_FUNC {
+			if xsym.Type == obj.SDYNIMPORT && xsym.ElfType == elf.STT_FUNC {
 				ld.Thearch.Vput(ld.R_X86_64_PLT32 | uint64(elfsym)<<32)
 			} else {
 				ld.Thearch.Vput(ld.R_X86_64_PC32 | uint64(elfsym)<<32)
@@ -385,14 +386,14 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		}
 	}
 
-	ld.Thearch.Vput(uint64(r.Xadd))
+	ld.Thearch.Vput(uint64(xadd))
 	return 0
 }
 
 func machoreloc1(r *ld.Reloc, sectoff int64) int {
 	var v uint32
 
-	rs := r.Xsym
+	rs, _ := r.ExtSymAdd()
 
 	if rs.Type == obj.SHOSTOBJ || r.Type == obj.R_PCREL {
 		if rs.Dynid < 0 {
@@ -452,7 +453,7 @@ func machoreloc1(r *ld.Reloc, sectoff int64) int {
 func pereloc1(r *ld.Reloc, sectoff int64) bool {
 	var v uint32
 
-	rs := r.Xsym
+	rs, _ := r.ExtSymAdd()
 
 	if rs.Dynid < 0 {
 		ld.Diag("reloc %d to non-coff symbol %s type=%d", r.Type, rs.Name, rs.Type)

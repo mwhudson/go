@@ -317,7 +317,6 @@ func listsort(l *LSym, cmp func(*LSym, *LSym) int, nextp func(*LSym) **LSym) *LS
 
 func relocsym(s *LSym) {
 	var r *Reloc
-	var rs *LSym
 	var i16 int16
 	var off int32
 	var siz int32
@@ -387,8 +386,6 @@ func relocsym(s *LSym) {
 		case obj.R_TLS:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
 				r.Sym = Ctxt.Tlsg
-				r.Xsym = Ctxt.Tlsg
-				r.Xadd = r.Add
 				o = r.Add
 				break
 			}
@@ -413,8 +410,6 @@ func relocsym(s *LSym) {
 		case obj.R_TLS_LE:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
 				r.Sym = Ctxt.Tlsg
-				r.Xsym = Ctxt.Tlsg
-				r.Xadd = r.Add
 				o = 0
 				if Thearch.Thechar != '6' {
 					o = r.Add
@@ -433,8 +428,6 @@ func relocsym(s *LSym) {
 		case obj.R_TLS_IE:
 			if Linkmode == LinkExternal && Iself && HEADTYPE != obj.Hopenbsd {
 				r.Sym = Ctxt.Tlsg
-				r.Xsym = Ctxt.Tlsg
-				r.Xadd = r.Add
 				o = 0
 				if Thearch.Thechar != '6' {
 					o = r.Add
@@ -446,20 +439,8 @@ func relocsym(s *LSym) {
 		case obj.R_ADDR:
 			if r.isExtReloc(s) {
 				// set up addend for eventual relocation via outer symbol.
-				rs = r.Sym
-
-				r.Xadd = r.Add
-				for rs.Outer != nil {
-					r.Xadd += Symaddr(rs) - Symaddr(rs.Outer)
-					rs = rs.Outer
-				}
-
-				if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
-					Diag("missing section for %s", rs.Name)
-				}
-				r.Xsym = rs
-
-				o = r.Xadd
+				var xsym *LSym
+				xsym, o = r.ExtSymAdd()
 				if Iself {
 					if Thearch.Thechar == '6' {
 						o = 0
@@ -470,12 +451,12 @@ func relocsym(s *LSym) {
 					// table, then it will add o twice into the relocated value.
 					// The workaround is that on arm64 don't ever add symaddr to o and always use
 					// extern relocation by requiring rs->dynid >= 0.
-					if rs.Type != obj.SHOSTOBJ {
-						if Thearch.Thechar == '7' && rs.Dynid < 0 {
-							Diag("R_ADDR reloc to %s+%d is not supported on darwin/arm64", rs.Name, o)
+					if xsym.Type != obj.SHOSTOBJ {
+						if Thearch.Thechar == '7' && xsym.Dynid < 0 {
+							Diag("R_ADDR reloc to %s+%d is not supported on darwin/arm64", xsym.Name, o)
 						}
 						if Thearch.Thechar != '7' {
-							o += Symaddr(rs)
+							o += Symaddr(xsym)
 						}
 					}
 				} else if HEADTYPE == obj.Hwindows {
@@ -503,29 +484,16 @@ func relocsym(s *LSym) {
 		case obj.R_CALL, obj.R_GOTPCREL, obj.R_PCREL:
 			if r.isExtReloc(s) {
 				// set up addend for eventual relocation via outer symbol.
-				rs = r.Sym
-
-				r.Xadd = r.Add
-				for rs.Outer != nil {
-					r.Xadd += Symaddr(rs) - Symaddr(rs.Outer)
-					rs = rs.Outer
-				}
-
-				r.Xadd -= int64(r.Siz) // relative to address after the relocated chunk
-				if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
-					Diag("missing section for %s", rs.Name)
-				}
-				r.Xsym = rs
-
-				o = r.Xadd
+				var xsym *LSym
+				xsym, o = r.ExtSymAdd()
 				if Iself {
 					if Thearch.Thechar == '6' {
 						o = 0
 					}
 				} else if HEADTYPE == obj.Hdarwin {
 					if r.Type == obj.R_CALL {
-						if rs.Type != obj.SHOSTOBJ {
-							o += int64(uint64(Symaddr(rs)) - rs.Sect.Vaddr)
+						if xsym.Type != obj.SHOSTOBJ {
+							o += int64(uint64(Symaddr(xsym)) - xsym.Sect.Vaddr)
 						}
 						o -= int64(r.Off) // relative to section offset, not symbol
 					} else {

@@ -820,14 +820,9 @@ func perelocsect(sect *Section, first *LSym) int {
 			if !r.isExtReloc(sym) {
 				continue
 			}
-			if r.Xsym == nil {
-				Diag("missing xsym in relocation")
-				continue
-			}
-
-			if r.Xsym.Dynid < 0 {
-				Diag("reloc %d to non-coff symbol %s (outer=%s) %d", r.Type, r.Sym.Name, r.Xsym.Name, r.Sym.Type)
-			}
+			//			if r.Xsym.Dynid < 0 {
+			//				Diag("reloc %d to non-coff symbol %s (outer=%s) %d", r.Type, r.Sym.Name, r.Xsym.Name, r.Sym.Type)
+			//			}
 			if !Thearch.PEreloc1(r, int64(uint64(sym.Value+int64(r.Off))-PEBASE)) {
 				Diag("unsupported obj reloc %d/%d to %s", r.Type, r.Siz, r.Sym.Name)
 			}
@@ -988,7 +983,7 @@ func pegenasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 	if Linkmode == LinkExternal {
 		for d := dr; d != nil; d = d.next {
 			for m := d.ms; m != nil; m = m.next {
-				s := m.s.R[0].Xsym
+				s, _ := m.s.R[0].ExtSymAdd()
 				put(s, s.Name, 'U', 0, int64(Thearch.Ptrsize), 0, nil)
 			}
 		}

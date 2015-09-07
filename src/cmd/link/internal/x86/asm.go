@@ -231,7 +231,8 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	ld.Thearch.Lput(uint32(sectoff))
 
-	elfsym := r.Xsym.Elfsym
+	xsym, _ := r.ExtSymAdd()
+	elfsym := xsym.Elfsym
 	switch r.Type {
 	default:
 		return -1
@@ -265,7 +266,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 func machoreloc1(r *ld.Reloc, sectoff int64) int {
 	var v uint32
 
-	rs := r.Xsym
+	rs, _ := r.ExtSymAdd()
 
 	if rs.Type == obj.SHOSTOBJ {
 		if rs.Dynid < 0 {
@@ -321,7 +322,7 @@ func machoreloc1(r *ld.Reloc, sectoff int64) int {
 func pereloc1(r *ld.Reloc, sectoff int64) bool {
 	var v uint32
 
-	rs := r.Xsym
+	rs, _ := r.ExtSymAdd()
 
 	if rs.Dynid < 0 {
 		ld.Diag("reloc %d to non-coff symbol %s type=%d", r.Type, rs.Name, rs.Type)

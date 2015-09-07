@@ -99,9 +99,7 @@ type Reloc struct {
 	Type    int32
 	Variant int32
 	Add     int64
-	Xadd    int64
 	Sym     *LSym
-	Xsym    *LSym
 }
 
 // Should r (which is relocates part of s) be passed to elfreloc1/machoreloc1/pereloc1
@@ -117,6 +115,29 @@ func (r *Reloc) isExtReloc(s *LSym) bool {
 		return r.Sym.Sect != Ctxt.Cursym.Sect
 	}
 	return true
+}
+
+func (r *Reloc) ExtSymAdd() (*LSym, int64) {
+	rs := r.Sym
+
+	xadd := r.Add
+	for rs.Outer != nil {
+		xadd += Symaddr(rs) - Symaddr(rs.Outer)
+		rs = rs.Outer
+	}
+
+	switch r.Type {
+	case obj.R_CALL, obj.R_GOTPCREL, obj.R_PCREL:
+		xadd -= 4
+	}
+
+	//if rs.Type != obj.SHOSTOBJ && rs.Type != obj.SDYNIMPORT && rs.Sect == nil {
+	//	Diag("missing section for %s", rs.Name)
+	//}
+	if false && r.Type == obj.R_CALLARM64 && HEADTYPE == obj.Hdarwin {
+		xadd = 0
+	}
+	return rs, xadd
 }
 
 type Auto struct {

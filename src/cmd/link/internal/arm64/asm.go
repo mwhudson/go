@@ -51,7 +51,8 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	ld.Thearch.Vput(uint64(sectoff))
 
-	elfsym := r.Xsym.Elfsym
+	xsym, xadd := r.ExtSymAdd()
+	elfsym := xsym.Elfsym
 	switch r.Type {
 	default:
 		return -1
@@ -69,7 +70,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_ADDRARM64:
 		// two relocations: R_AARCH64_ADR_PREL_PG_HI21 and R_AARCH64_ADD_ABS_LO12_NC
 		ld.Thearch.Vput(ld.R_AARCH64_ADR_PREL_PG_HI21 | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
+		ld.Thearch.Vput(uint64(xadd))
 		ld.Thearch.Vput(uint64(sectoff + 4))
 		ld.Thearch.Vput(ld.R_AARCH64_ADD_ABS_LO12_NC | uint64(elfsym)<<32)
 
@@ -80,7 +81,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		ld.Thearch.Vput(ld.R_AARCH64_CALL26 | uint64(elfsym)<<32)
 
 	}
-	ld.Thearch.Vput(uint64(r.Xadd))
+	ld.Thearch.Vput(uint64(xadd))
 
 	return 0
 }
@@ -93,7 +94,7 @@ func elfsetupplt() {
 func machoreloc1(r *ld.Reloc, sectoff int64) int {
 	var v uint32
 
-	rs := r.Xsym
+	rs, xadd := r.ExtSymAdd()
 
 	// ld64 has a bug handling MACHO_ARM64_RELOC_UNSIGNED with !extern relocation.
 	// see cmd/internal/ld/data.go for details. The workarond is that don't use !extern
@@ -122,8 +123,8 @@ func machoreloc1(r *ld.Reloc, sectoff int64) int {
 		v |= ld.MACHO_ARM64_RELOC_UNSIGNED << 28
 
 	case obj.R_CALLARM64:
-		if r.Xadd != 0 {
-			ld.Diag("ld64 doesn't allow BR26 reloc with non-zero addend: %s+%d", rs.Name, r.Xadd)
+		if xadd != 0 {
+			ld.Diag("ld64 doesn't allow BR26 reloc with non-zero addend: %s+%d", rs.Name, xadd)
 		}
 
 		v |= 1 << 24 // pc-relative bit
@@ -132,16 +133,16 @@ func machoreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_ADDRARM64:
 		r.Siz = 4
 		// Two relocation entries: MACHO_ARM64_RELOC_PAGEOFF12 MACHO_ARM64_RELOC_PAGE21
-		// if r.Xadd is non-zero, add two MACHO_ARM64_RELOC_ADDEND.
-		if r.Xadd != 0 {
+		// if xadd is non-zero, add two MACHO_ARM64_RELOC_ADDEND.
+		if xadd != 0 {
 			ld.Thearch.Lput(uint32(sectoff + 4))
-			ld.Thearch.Lput((ld.MACHO_ARM64_RELOC_ADDEND << 28) | (2 << 25) | uint32(r.Xadd&0xffffff))
+			ld.Thearch.Lput((ld.MACHO_ARM64_RELOC_ADDEND << 28) | (2 << 25) | uint32(xadd&0xffffff))
 		}
 		ld.Thearch.Lput(uint32(sectoff + 4))
 		ld.Thearch.Lput(v | (ld.MACHO_ARM64_RELOC_PAGEOFF12 << 28) | (2 << 25))
-		if r.Xadd != 0 {
+		if xadd != 0 {
 			ld.Thearch.Lput(uint32(sectoff))
-			ld.Thearch.Lput((ld.MACHO_ARM64_RELOC_ADDEND << 28) | (2 << 25) | uint32(r.Xadd&0xffffff))
+			ld.Thearch.Lput((ld.MACHO_ARM64_RELOC_ADDEND << 28) | (2 << 25) | uint32(xadd&0xffffff))
 		}
 		v |= 1 << 24 // pc-relative bit
 		v |= ld.MACHO_ARM64_RELOC_PAGE21 << 28
@@ -177,18 +178,6 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 
 		case obj.R_ADDRARM64:
 			// set up addend for eventual relocation via outer symbol.
-			rs := r.Sym
-			r.Xadd = r.Add
-			for rs.Outer != nil {
-				r.Xadd += ld.Symaddr(rs) - ld.Symaddr(rs.Outer)
-				rs = rs.Outer
-			}
-
-			if rs.Type != obj.SHOSTOBJ && rs.Sect == nil {
-				ld.Diag("missing section for %s", rs.Name)
-			}
-			r.Xsym = rs
-
 			// Note: ld64 currently has a bug that any non-zero addend for BR26 relocation
 			// will make the linking fail because it thinks the code is not PIC even though
 			// the BR26 relocation should be fully resolved at link time.
@@ -209,9 +198,9 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 				// can only encode 24-bit of signed addend, but the instructions
 				// supports 33-bit of signed addend, so we always encode the
 				// addend in place.
-				o0 |= (uint32((r.Xadd>>12)&3) << 29) | (uint32((r.Xadd>>12>>2)&0x7ffff) << 5)
-				o1 |= uint32(r.Xadd&0xfff) << 10
-				r.Xadd = 0
+				_, xadd := r.ExtSymAdd()
+				o0 |= (uint32((xadd>>12)&3) << 29) | (uint32((xadd>>12>>2)&0x7ffff) << 5)
+				o1 |= uint32(xadd&0xfff) << 10
 
 				// when laid out, the instruction order must always be o1, o2.
 				if ld.Ctxt.Arch.ByteOrder == binary.BigEndian {
@@ -224,8 +213,6 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			return 0
 
 		case obj.R_CALLARM64:
-			r.Xsym = r.Sym
-			r.Xadd = r.Add
 			return 0
 		}
 	}
