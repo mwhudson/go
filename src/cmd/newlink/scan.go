@@ -27,7 +27,7 @@ func (p *Prog) scan(mainfile string) {
 
 	var missing []string
 	for sym := range p.Missing {
-		if !p.isAuto(sym) {
+		if !p.isAuto(p.Syms[sym].Sym) {
 			missing = append(missing, sym.String())
 		}
 	}
@@ -50,6 +50,91 @@ func (p *Prog) initScan() {
 	p.Missing[p.startSym] = true
 }
 
+func (p *Prog) findSym(symid goobj.SymID) *goobj.Sym {
+	s := p.Syms[symid]
+	if s == nil {
+		return nil
+	}
+	return s.Sym
+}
+
+func (p *Prog) defineSym(pkg *Package, gs *goobj.Sym) {
+	if gs.Data.Size > 0 {
+		switch gs.Kind {
+		case goobj.SBSS:
+			gs.Kind = goobj.SDATA
+		case goobj.SNOPTRBSS:
+			gs.Kind = goobj.SNOPTRDATA
+		}
+	}
+
+	if gs.Version != 0 {
+		gs.Version += p.MaxVersion
+	}
+	for i := range gs.Reloc {
+		r := &gs.Reloc[i]
+		if r.Sym.Version != 0 {
+			r.Sym.Version += p.MaxVersion
+		}
+		if p.Syms[r.Sym.SymID] == nil {
+			p.Missing[r.Sym.SymID] = true
+		}
+	}
+	if gs.Func != nil {
+		for i := range gs.Func.FuncData {
+			fdata := &gs.Func.FuncData[i]
+			if fdata.Sym.Name != "" {
+				if fdata.Sym.Version != 0 {
+					fdata.Sym.Version += p.MaxVersion
+				}
+				if p.Syms[fdata.Sym.SymID] == nil {
+					p.Missing[fdata.Sym.SymID] = true
+				}
+			}
+		}
+	}
+	if old := p.Syms[gs.SymID]; old != nil {
+		// Duplicate definition of symbol. Is it okay?
+		// TODO(rsc): Write test for this code.
+		switch {
+		// If both symbols are BSS (no data), take max of sizes
+		// but otherwise ignore second symbol.
+		case old.Data.Size == 0 && gs.Data.Size == 0:
+			if old.Size < gs.Size {
+				old.Size = gs.Size
+			}
+			return
+
+		// If one is in BSS and one is not, use the one that is not.
+		case old.Data.Size > 0 && gs.Data.Size == 0:
+			return
+		case gs.Data.Size > 0 && old.Data.Size == 0:
+			break // install gs as new symbol below
+
+		// If either is marked as DupOK, we can keep either one.
+		// Keep the one that we saw first.
+		case old.DupOK || gs.DupOK:
+			return
+
+		// Otherwise, there's an actual conflict:
+		default:
+			p.errorf("symbol %s defined in both %s and %s %v %v", gs.SymID, old.Package.File, pkg.File, old.Data, gs.Data)
+			return
+		}
+	}
+	s := &Sym{
+		Sym:     gs,
+		Package: pkg,
+	}
+	p.addSym(s)
+	delete(p.Missing, gs.SymID)
+
+	if s.Data.Size > int64(s.Size) {
+		p.errorf("%s: initialized data larger than symbol (%d > %d)", s, s.Data.Size, s.Size)
+	}
+
+}
+
 // scanFile reads file to learn about the package with the given import path.
 func (p *Prog) scanFile(pkgpath string, file string) {
 	pkg := &Package{
@@ -62,7 +147,7 @@ func (p *Prog) scanFile(pkgpath string, file string) {
 		p.errorf("%v", err)
 		return
 	}
-	gp, err := goobj.Parse(f, pkgpath)
+	gp, err := goobj.Parse(f, pkgpath, p.findSym, func(gs *goobj.Sym) { p.defineSym(pkg, gs) })
 	f.Close()
 	if err != nil {
 		p.errorf("reading %s: %v", file, err)
@@ -74,82 +159,6 @@ func (p *Prog) scanFile(pkgpath string, file string) {
 
 	pkg.Package = gp
 
-	for _, gs := range gp.Syms {
-		// TODO(rsc): Fix file format instead of this workaround.
-		if gs.Data.Size > 0 {
-			switch gs.Kind {
-			case goobj.SBSS:
-				gs.Kind = goobj.SDATA
-			case goobj.SNOPTRBSS:
-				gs.Kind = goobj.SNOPTRDATA
-			}
-		}
-
-		if gs.Version != 0 {
-			gs.Version += p.MaxVersion
-		}
-		for i := range gs.Reloc {
-			r := &gs.Reloc[i]
-			if r.Sym.Version != 0 {
-				r.Sym.Version += p.MaxVersion
-			}
-			if p.Syms[r.Sym] == nil {
-				p.Missing[r.Sym] = true
-			}
-		}
-		if gs.Func != nil {
-			for i := range gs.Func.FuncData {
-				fdata := &gs.Func.FuncData[i]
-				if fdata.Sym.Name != "" {
-					if fdata.Sym.Version != 0 {
-						fdata.Sym.Version += p.MaxVersion
-					}
-					if p.Syms[fdata.Sym] == nil {
-						p.Missing[fdata.Sym] = true
-					}
-				}
-			}
-		}
-		if old := p.Syms[gs.SymID]; old != nil {
-			// Duplicate definition of symbol. Is it okay?
-			// TODO(rsc): Write test for this code.
-			switch {
-			// If both symbols are BSS (no data), take max of sizes
-			// but otherwise ignore second symbol.
-			case old.Data.Size == 0 && gs.Data.Size == 0:
-				if old.Size < gs.Size {
-					old.Size = gs.Size
-				}
-				continue
-
-			// If one is in BSS and one is not, use the one that is not.
-			case old.Data.Size > 0 && gs.Data.Size == 0:
-				continue
-			case gs.Data.Size > 0 && old.Data.Size == 0:
-				break // install gs as new symbol below
-
-			// If either is marked as DupOK, we can keep either one.
-			// Keep the one that we saw first.
-			case old.DupOK || gs.DupOK:
-				continue
-
-			// Otherwise, there's an actual conflict:
-			default:
-				p.errorf("symbol %s defined in both %s and %s %v %v", gs.SymID, old.Package.File, file, old.Data, gs.Data)
-				continue
-			}
-		}
-		s := &Sym{
-			Sym:     gs,
-			Package: pkg,
-		}
-		p.addSym(s)
-		delete(p.Missing, gs.SymID)
-
-		if s.Data.Size > int64(s.Size) {
-			p.errorf("%s: initialized data larger than symbol (%d > %d)", s, s.Data.Size, s.Size)
-		}
-	}
 	p.MaxVersion += pkg.MaxVersion
 
 	for i, pkgpath := range pkg.Imports {

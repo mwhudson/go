@@ -26,7 +26,7 @@ func TestLayout(t *testing.T) {
 	}
 
 	for _, sym := range p.SymOrder {
-		if p.isAuto(sym.SymID) {
+		if p.isAuto(sym.Sym) {
 			continue
 		}
 		if sym.Section == nil {

@@ -123,7 +123,7 @@ type Sym struct {
 	Kind  SymKind // kind of symbol
 	DupOK bool    // are duplicate definitions okay?
 	Size  int     // size of corresponding data
-	Type  SymID   // symbol for Go type information
+	Type  *Sym    // symbol for Go type information
 	Data  Data    // memory image of symbol
 	Reloc []Reloc // relocations to apply to Data
 	Func  *Func   // additional data for functions
@@ -166,7 +166,7 @@ type Reloc struct {
 	// of the symbol Sym.
 	Offset int32
 	Size   uint8
-	Sym    SymID
+	Sym    *Sym
 	Add    int64
 
 	// The Type records the form of address expected in the bytes
@@ -186,7 +186,7 @@ type Var struct {
 	Kind   int    // TODO(rsc): Define meaning.
 	Offset int    // Frame offset. TODO(rsc): Define meaning.
 
-	Type SymID // Go type for variable.
+	Type *Sym // Go type for variable.
 }
 
 // Func contains additional per-symbol information specific to functions.
@@ -208,7 +208,7 @@ type Func struct {
 
 // A FuncData is a single function-specific data value.
 type FuncData struct {
-	Sym    SymID // symbol holding data
+	Sym    *Sym  // symbol holding data
 	Offset int64 // offset into symbol for funcdata pointer
 }
 
@@ -239,6 +239,8 @@ type objReader struct {
 	p         *Package
 	b         *bufio.Reader
 	f         io.ReadSeeker
+	finder    SymFinder
+	adder     SymAdder
 	err       error
 	offset    int64
 	limit     int64
@@ -287,9 +289,11 @@ func importPathToPrefix(s string) string {
 }
 
 // init initializes r to read package p from f.
-func (r *objReader) init(f io.ReadSeeker, p *Package) {
+func (r *objReader) init(f io.ReadSeeker, p *Package, finder SymFinder, adder SymAdder) {
 	r.f = f
 	r.p = p
+	r.finder = finder
+	r.adder = adder
 	r.offset, _ = f.Seek(0, 1)
 	r.limit, _ = f.Seek(0, 2)
 	f.Seek(r.offset, 0)
@@ -432,6 +436,10 @@ func (r *objReader) readSymID() SymID {
 	return SymID{name, vers}
 }
 
+func (r *objReader) readSym() *Sym {
+	return r.finder(r.readSymID())
+}
+
 // readData reads a data reference from the input file.
 func (r *objReader) readData() Data {
 	n := r.readInt()
@@ -468,9 +476,12 @@ func (r *objReader) skip(n int64) {
 	}
 }
 
+type SymFinder func(symid SymID) *Sym
+type SymAdder func(sym *Sym)
+
 // Parse parses an object file or archive from r,
 // assuming that its import path is pkgpath.
-func Parse(r io.ReadSeeker, pkgpath string) (*Package, error) {
+func Parse(r io.ReadSeeker, pkgpath string, finder SymFinder, adder SymAdder) (*Package, error) {
 	if pkgpath == "" {
 		pkgpath = `""`
 	}
@@ -478,7 +489,7 @@ func Parse(r io.ReadSeeker, pkgpath string) (*Package, error) {
 	p.ImportPath = pkgpath
 
 	var rd objReader
-	rd.init(r, p)
+	rd.init(r, p, finder, adder)
 	err := rd.readFull(rd.tmp[:8])
 	if err != nil {
 		if err == io.EOF {
@@ -626,12 +637,11 @@ func (r *objReader) parseObject(prefix []byte) error {
 
 		typ := r.readInt()
 		s := &Sym{SymID: r.readSymID()}
-		r.p.Syms = append(r.p.Syms, s)
 		s.Kind = SymKind(typ)
 		flags := r.readInt()
 		s.DupOK = flags&1 != 0
 		s.Size = r.readInt()
-		s.Type = r.readSymID()
+		s.Type = r.readSym()
 		s.Data = r.readData()
 		s.Reloc = make([]Reloc, r.readInt())
 		for i := range s.Reloc {
@@ -641,8 +651,8 @@ func (r *objReader) parseObject(prefix []byte) error {
 			rel.Type = r.readInt32()
 			rel.Add = r.readInt64()
 			r.readInt64() // Xadd - ignored
-			rel.Sym = r.readSymID()
-			r.readSymID() // Xsym - ignored
+			rel.Sym = r.readSym()
+			r.readSym() // Xsym - ignored
 		}
 
 		if s.Kind == STEXT {
@@ -659,7 +669,7 @@ func (r *objReader) parseObject(prefix []byte) error {
 				v.Name = r.readSymID().Name
 				v.Offset = r.readInt()
 				v.Kind = r.readInt()
-				v.Type = r.readSymID()
+				v.Type = r.readSym()
 			}
 
 			f.PCSP = r.readData()
@@ -671,7 +681,7 @@ func (r *objReader) parseObject(prefix []byte) error {
 			}
 			f.FuncData = make([]FuncData, r.readInt())
 			for i := range f.FuncData {
-				f.FuncData[i].Sym = r.readSymID()
+				f.FuncData[i].Sym = r.readSym()
 			}
 			for i := range f.FuncData {
 				f.FuncData[i].Offset = int64(r.readInt()) // TODO
@@ -681,6 +691,7 @@ func (r *objReader) parseObject(prefix []byte) error {
 				f.File[i] = r.readSymID().Name
 			}
 		}
+		r.adder(s)
 	}
 
 	r.readFull(r.tmp[:7])

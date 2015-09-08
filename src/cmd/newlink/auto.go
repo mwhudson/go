@@ -41,7 +41,7 @@ var linkerDefined = map[string]bool{
 }
 
 // isAuto reports whether sym is an automatically-generated data or constant symbol.
-func (p *Prog) isAuto(sym goobj.SymID) bool {
+func (p *Prog) isAuto(sym *goobj.Sym) bool {
 	return strings.HasPrefix(sym.Name, "go.weak.") ||
 		strings.HasPrefix(sym.Name, "$f64.") ||
 		strings.HasPrefix(sym.Name, "$f32.") ||

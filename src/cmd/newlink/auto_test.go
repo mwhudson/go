@@ -54,7 +54,7 @@ func TestAuto(t *testing.T) {
 			return
 		}
 	Data:
-		for i := 0; i < len(data); i += 16 {
+		for i := int32(0); i < int32(len(data)); i += 16 {
 			have := p.byteorder.Uint64(data[i : i+8])
 			want := p.byteorder.Uint64(data[i+8 : i+16])
 			if have != want {

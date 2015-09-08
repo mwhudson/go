@@ -97,7 +97,7 @@ func (p *Prog) pclntab() {
 		// indexOff is the current position in the table index;
 		// we add an entry in the index pointing at off.
 		off = (buf.Size() + p.ptrsize - 1) &^ (p.ptrsize - 1)
-		indexOff = buf.Addr(indexOff, sym.SymID, 0)
+		indexOff = buf.Addr(indexOff, sym.Sym, 0)
 		indexOff = buf.Uint(indexOff, uint64(off), p.ptrsize)
 
 		// The Func encoding starts with a header giving offsets
@@ -121,7 +121,7 @@ func (p *Prog) pclntab() {
 		// this function's SP to its caller's SP, which does include
 		// the caller PC. Add p.ptrsize to f.Frame to adjust.
 		// TODO(rsc): Record the same frame size in the object file.
-		off = buf.Addr(off, sym.SymID, 0)
+		off = buf.Addr(off, sym.Sym, 0)
 		off = buf.Uint32(off, uint32(addString(buf, sym.Name)))
 		off = buf.Uint32(off, uint32(f.Args))
 		off = buf.Uint32(off, uint32(f.Frame+p.ptrsize))
@@ -158,7 +158,7 @@ func (p *Prog) pclntab() {
 	}
 
 	// Final entry of index is end PC of last function.
-	indexOff = buf.Addr(indexOff, lastSym.SymID, int64(lastSym.Size))
+	indexOff = buf.Addr(indexOff, lastSym.Sym, int64(lastSym.Size))
 
 	// Start file table.
 	// Function index is immediately followed by offset to file table.
@@ -366,7 +366,7 @@ func (b *SymBuffer) Uint(off int, v uint64, size int) int {
 // Addr sets the pointer-sized address at offset off to refer
 // to symoff bytes past the start of sym. It returns the offset
 // just beyond the address.
-func (b *SymBuffer) Addr(off int, sym goobj.SymID, symoff int64) int {
+func (b *SymBuffer) Addr(off int, sym *goobj.Sym, symoff int64) int {
 	b.reloc = append(b.reloc, goobj.Reloc{
 		Offset: int32(off),
 		Size:   uint8(b.ptrsize),

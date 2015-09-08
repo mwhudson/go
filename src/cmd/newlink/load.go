@@ -80,7 +80,7 @@ func (p *Prog) loadPackage(pkg *Package) {
 func (p *Prog) relocateSym(sym *Sym, data []byte) {
 	for i := range sym.Reloc {
 		r := &sym.Reloc[i]
-		targ := p.Syms[r.Sym]
+		targ := p.Syms[r.Sym.SymID]
 		if targ == nil {
 			p.errorf("%v: reference to undefined symbol %v", sym, r.Sym)
 			continue

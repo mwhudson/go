@@ -51,7 +51,7 @@ type Prog struct {
 	Packages   map[string]*Package  // loaded packages, by import path
 	Syms       map[goobj.SymID]*Sym // defined symbols, by symbol ID
 	Missing    map[goobj.SymID]bool // missing symbols
-	Dead       map[goobj.SymID]bool // symbols removed as dead
+	Dead       map[*goobj.Sym]bool  // symbols removed as dead
 	SymOrder   []*Sym               // order syms were scanned
 	MaxVersion int                  // max SymID.Version, for generating fresh symbol IDs
 

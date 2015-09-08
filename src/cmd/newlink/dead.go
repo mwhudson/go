@@ -13,21 +13,22 @@ import "cmd/internal/goobj"
 // symbols reachable from the entry (startSymID) and then delete
 // the rest.
 func (p *Prog) dead() {
-	p.Dead = make(map[goobj.SymID]bool)
-	reachable := make(map[goobj.SymID]bool)
-	p.walkDead(p.startSym, reachable)
+	p.Dead = make(map[*goobj.Sym]bool)
+	reachable := make(map[*goobj.Sym]bool)
+	p.walkDead(p.Syms[p.startSym].Sym, reachable)
 
-	for sym := range p.Syms {
-		if !reachable[sym] {
-			delete(p.Syms, sym)
-			p.Dead[sym] = true
+	for _, sym := range p.Syms {
+		if !reachable[sym.Sym] {
+			delete(p.Syms, sym.SymID)
+			p.Dead[sym.Sym] = true
 		}
 	}
 
 	for sym := range p.Missing {
-		if !reachable[sym] {
+		s := p.Syms[sym].Sym
+		if !reachable[s] {
 			delete(p.Missing, sym)
-			p.Dead[sym] = true
+			p.Dead[s] = true
 		}
 	}
 
@@ -40,9 +41,9 @@ func (p *Prog) dead() {
 
 // walkDead traverses the symbols reachable from sym, adding them to reachable.
 // The caller has verified that reachable[sym] = false.
-func (p *Prog) walkDead(sym goobj.SymID, reachable map[goobj.SymID]bool) {
+func (p *Prog) walkDead(sym *goobj.Sym, reachable map[*goobj.Sym]bool) {
 	reachable[sym] = true
-	s := p.Syms[sym]
+	s := p.Syms[sym.SymID]
 	if s == nil {
 		return
 	}
@@ -63,10 +64,10 @@ func (p *Prog) walkDead(sym goobj.SymID, reachable map[goobj.SymID]bool) {
 
 // removeDead removes unreachable (dead) symbols from syms,
 // returning a shortened slice using the same underlying array.
-func removeDead(syms []*Sym, reachable map[goobj.SymID]bool) []*Sym {
+func removeDead(syms []*Sym, reachable map[*goobj.Sym]bool) []*Sym {
 	keep := syms[:0]
 	for _, sym := range syms {
-		if reachable[sym.SymID] {
+		if reachable[sym.Sym] {
 			keep = append(keep, sym)
 		}
 	}
