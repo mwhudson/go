@@ -438,6 +438,9 @@ const (
 	// thread local base and is used to implement the "local exec" model for tls
 	// access and inserts this value into the low 16 bits of an instruction word.
 	R_PPC64_TPREL16
+
+	// TODO(mwhudson): document
+	R_ADDRPOWER_DS
 )
 
 type Auto struct {
