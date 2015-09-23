@@ -776,12 +776,14 @@ func Elfinit() {
 		ehdr.phentsize = ELF64PHDRSIZE /* Must be ELF64PHDRSIZE */
 		ehdr.shentsize = ELF64SHDRSIZE /* Must be ELF64SHDRSIZE */
 
-		// we use EABI on both linux/arm and freebsd/arm.
+	// we use EABI on both linux/arm and freebsd/arm.
 	// 32-bit architectures
 	case '5':
 		// we use EABI on both linux/arm and freebsd/arm.
 		if HEADTYPE == obj.Hlinux || HEADTYPE == obj.Hfreebsd {
-			ehdr.flags = 0x5000002 // has entry point, Version5 EABI
+			// This can be overridden by a cgo_arm_floatabi directive (see
+			// go.go:loadcgo) to specify the hard-float ABI.
+			ehdr.flags = 0x5000002 // has entry point, Version5 EABI, soft-float ABI
 		}
 		fallthrough
 

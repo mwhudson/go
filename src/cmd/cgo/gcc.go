@@ -892,6 +892,11 @@ func (p *Package) gccDefines(stdin []byte) string {
 	return stdout
 }
 
+func (p *Package) gccDumpMachine() string {
+	stdout, _ := runGcc([]byte{}, append(p.gccBaseCmd(), "-dumpmachine"))
+	return stdout
+}
+
 // gccErrors runs gcc over the C program stdin and returns
 // the errors that gcc prints.  That is, this function expects
 // gcc to fail.

@@ -529,6 +529,23 @@ func loadcgo(file string, pkg string, p string) {
 			ldflag = append(ldflag, f[1])
 			continue
 		}
+
+		if f[0] == "cgo_arm_floatabi" {
+			if len(f) != 2 {
+				goto err
+			}
+			if Iself {
+				if Thearch.Thechar != '5' {
+					goto err
+				}
+				if f[1] == "hard" {
+					ehdr.flags = 0x5000402 // has entry point, Version5 EABI, hard-float ABI
+				} else if f[1] != "soft" {
+					goto err
+				}
+			}
+			continue
+		}
 	}
 
 	return

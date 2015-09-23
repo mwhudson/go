@@ -47,6 +47,15 @@ func (p *Package) writeDefs() {
 	}
 	fflg.Close()
 
+	if goarch == "arm" {
+		gccMachine := p.gccDumpMachine()
+		floatabi := "soft"
+		if strings.Contains(gccMachine, "eabihf") {
+			floatabi = "hard"
+		}
+		fmt.Fprintf(fgo2, "//go:cgo_arm_floatabi %q\n", floatabi)
+	}
+
 	// Write C main file for using gcc to resolve imports.
 	fmt.Fprintf(fm, "int main() { return 0; }\n")
 	if *importRuntimeCgo {

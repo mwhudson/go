@@ -1814,6 +1814,17 @@ func pragcgo(text string) {
 		return
 
 	}
+
+	if verb == "cgo_arm_floatabi" {
+		p, ok := getquoted(&q)
+		if !ok {
+			Yyerror("usage: //go:cgo_arm_floatabi \"arg\"")
+			return
+		}
+		pragcgobuf += fmt.Sprintf("cgo_arm_floatabi %v\n", plan9quote(p))
+		return
+
+	}
 }
 
 type yy struct{}
