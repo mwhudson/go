@@ -206,6 +206,7 @@ const (
 	SHT_GNU_VERNEED      = 0x6ffffffe
 	SHT_GNU_VERSYM       = 0x6fffffff
 	SHT_LOPROC           = 0x70000000
+	SHT_ARM_ATTRIBUTES   = 0x70000003
 	SHT_HIPROC           = 0x7fffffff
 	SHT_LOUSER           = 0x80000000
 	SHT_HIUSER           = 0xffffffff
@@ -776,12 +777,14 @@ func Elfinit() {
 		ehdr.phentsize = ELF64PHDRSIZE /* Must be ELF64PHDRSIZE */
 		ehdr.shentsize = ELF64SHDRSIZE /* Must be ELF64SHDRSIZE */
 
-		// we use EABI on both linux/arm and freebsd/arm.
+	// we use EABI on both linux/arm and freebsd/arm.
 	// 32-bit architectures
 	case '5':
 		// we use EABI on both linux/arm and freebsd/arm.
 		if HEADTYPE == obj.Hlinux || HEADTYPE == obj.Hfreebsd {
-			ehdr.flags = 0x5000002 // has entry point, Version5 EABI
+			// This can be overridden when reading an ELF object produced by
+			// the system compiler (see ldelf.go:parseArmAttributes).
+			ehdr.flags = 0x5000202 // has entry point, Version5 EABI, soft-float ABI
 		}
 		fallthrough
 
