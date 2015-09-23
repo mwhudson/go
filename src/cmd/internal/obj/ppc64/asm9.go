@@ -281,6 +281,7 @@ var optab = []Optab{
 	{ABEQ, C_NONE, C_NONE, C_NONE, C_SBRA, 16, 4, 0},
 	{ABEQ, C_CREG, C_NONE, C_NONE, C_SBRA, 16, 4, 0},
 	{ABR, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},
+	{ABR, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 11, 8, 0},
 	{ABC, C_SCON, C_REG, C_NONE, C_SBRA, 16, 4, 0},
 	{ABC, C_SCON, C_REG, C_NONE, C_LBRA, 17, 4, 0},
 	{ABR, C_NONE, C_NONE, C_NONE, C_LR, 18, 4, 0},
@@ -393,8 +394,10 @@ var optab = []Optab{
 	{obj.APCDATA, C_LCON, C_NONE, C_NONE, C_LCON, 0, 0, 0},
 	{obj.AFUNCDATA, C_SCON, C_NONE, C_NONE, C_ADDR, 0, 0, 0},
 	{obj.ANOP, C_NONE, C_NONE, C_NONE, C_NONE, 0, 0, 0},
-	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
-	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
+	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},    // same as ABR/ABL
+	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},    // same as ABR/ABL
+	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 11, 8, 0}, // same as ABR/ABL
+	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 11, 8, 0}, // same as ABR/ABL
 
 	{obj.AXXX, C_NONE, C_NONE, C_NONE, C_NONE, 0, 4, 0},
 }
@@ -704,6 +707,9 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_DCON
 
 	case obj.TYPE_BRANCH:
+		if a.Sym != nil && ctxt.Flag_dynlink {
+			return C_LBRAPIC
+		}
 		return C_SBRA
 	}
 
@@ -1679,7 +1685,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		}
 		o1 = AOP_RRR(uint32(oprrr(ctxt, int(p.As))), uint32(p.To.Reg), uint32(p.From.Reg), uint32(r))
 
-	case 11: /* br/bl lbra */
+	case 11, 80: /* br/bl lbra */
 		v := int32(0)
 
 		if p.Pcond != nil {
@@ -1709,6 +1715,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			rel.Add = int64(v)
 			rel.Type = obj.R_CALLPOWER
 		}
+		o2 = 0x60000000 // nop, only used when -dynlink
 
 	case 12: /* movb r,r (extsb); movw r,r (extsw) */
 		if p.To.Reg == REGZERO && p.From.Type == obj.TYPE_CONST {

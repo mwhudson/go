@@ -20,6 +20,7 @@ var cnames9 = []string{
 	"DACON",
 	"SBRA",
 	"LBRA",
+	"LBRAPIC",
 	"SAUTO",
 	"LAUTO",
 	"SEXT",
