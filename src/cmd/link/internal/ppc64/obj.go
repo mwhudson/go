@@ -111,6 +111,10 @@ func archinit() {
 		break
 	}
 
+	if ld.DynlinkingGo() {
+		ld.Linklookup(ld.Ctxt, ".TOC.", 0).Type = obj.SDYNIMPORT
+	}
+
 	switch ld.HEADTYPE {
 	default:
 		ld.Exitf("unknown -H option: %v", ld.HEADTYPE)
