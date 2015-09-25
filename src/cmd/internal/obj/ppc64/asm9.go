@@ -416,8 +416,14 @@ func span9(ctxt *obj.Link, cursym *obj.LSym) {
 	if p == nil || p.Link == nil { // handle external functions and ELF section symbols
 		return
 	}
+
+	fixedStackSize := int64(8)
+	if ctxt.Flag_dynlink {
+		fixedStackSize = 32
+	}
+
 	ctxt.Cursym = cursym
-	ctxt.Autosize = int32(p.To.Offset + 8)
+	ctxt.Autosize = int32(p.To.Offset + fixedStackSize)
 
 	if oprange[AANDN&obj.AMask].start == nil {
 		buildop(ctxt)
@@ -603,7 +609,11 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 			return C_LAUTO
 
 		case obj.NAME_PARAM:
-			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset + 8
+			fixedStackSize := int64(8)
+			if ctxt.Flag_dynlink {
+				fixedStackSize = 32
+			}
+			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset + fixedStackSize
 			if ctxt.Instoffset >= -BIG && ctxt.Instoffset < BIG {
 				return C_SAUTO
 			}
@@ -666,7 +676,11 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 			return C_LACON
 
 		case obj.NAME_PARAM:
-			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset + 8
+			fixedStackSize := int64(8)
+			if ctxt.Flag_dynlink {
+				fixedStackSize = 32
+			}
+			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset + fixedStackSize
 			if ctxt.Instoffset >= -BIG && ctxt.Instoffset < BIG {
 				return C_SACON
 			}
