@@ -440,6 +440,7 @@ const (
 
 	// TODO(mwhudson): document
 	R_ADDRPOWER_DS
+	R_ADDRPOWER_PCREL
 )
 
 type Auto struct {

@@ -337,14 +337,14 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				rel := obj.Addrel(ctxt.Cursym)
 				q = obj.Appendp(ctxt, q)
 				q.As = AWORD
-				q.Lineno = p.Lineno
+				q.Li1neno = p.Lineno
 				q.From.Type = obj.TYPE_CONST
 				q.From.Offset = 0x38420000
 				rel = obj.Addrel(ctxt.Cursym)
 				rel.Off = 0
 				rel.Siz = 4
 				rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
-				//rel.Type = obj.R_PPC64_REL16
+				rel.Type = obj.R_ADDRPOWER_PCREL
 			}
 
 			if p.From3.Offset&obj.NOSPLIT == 0 {
