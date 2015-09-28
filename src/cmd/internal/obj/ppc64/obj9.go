@@ -337,7 +337,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				rel := obj.Addrel(ctxt.Cursym)
 				q = obj.Appendp(ctxt, q)
 				q.As = AWORD
-				q.Li1neno = p.Lineno
+				q.Lineno = p.Lineno
 				q.From.Type = obj.TYPE_CONST
 				q.From.Offset = 0x38420000
 				rel = obj.Addrel(ctxt.Cursym)
