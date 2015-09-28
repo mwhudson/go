@@ -379,37 +379,6 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				// std r31, 16(r1)
 				// std r2, 24(r1)
 
-				if autosize >= -BIG && autosize <= BIG {
-					// X \in [-BIG,BIG] then stdu r1, -X(r1)
-					q = obj.Appendp(ctxt, q)
-					q.As = AMOVDU
-					q.Lineno = p.Lineno
-					q.From.Type = obj.TYPE_REG
-					q.From.Reg = REGSP
-					q.To.Type = obj.TYPE_MEM
-					q.To.Offset = int64(-autosize)
-					q.To.Reg = REGSP
-					q.Spadj = int32(autosize)
-				} else {
-					//                  else lis r0, ha(-X), addi r0, r0, lo(-X), stdux r1, r1, r0
-					q = obj.Appendp(ctxt, q)
-					q.As = AMOVD
-					q.Lineno = p.Lineno
-					q.From.Type = obj.TYPE_CONST
-					q.From.Offset = int64(-autosize)
-					q.To.Type = obj.TYPE_REG
-					q.To.Reg = REGTMP
-					q = obj.Appendp(ctxt, q)
-					q.As = AMOVDU
-					q.Lineno = p.Lineno
-					q.From.Type = obj.TYPE_REG
-					q.From.Reg = REGSP
-					q.To.Type = obj.TYPE_MEM
-					q.To.Reg = REGSP
-					q.To.Index = REGTMP
-					q.To.Scale = 1
-					q.Spadj = int32(autosize)
-				}
 				// mflr r31
 				q = obj.Appendp(ctxt, q)
 				q.As = AMOVD
@@ -418,15 +387,37 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.From.Reg = REG_LR
 				q.To.Type = obj.TYPE_REG
 				q.To.Reg = REGTMP
-				// std r31, 16(r1)
-				q = obj.Appendp(ctxt, q)
-				q.As = AMOVD
-				q.Lineno = p.Lineno
-				q.From.Type = obj.TYPE_REG
-				q.From.Reg = REGTMP
-				q.To.Type = obj.TYPE_MEM
-				q.To.Offset = 16
-				q.To.Reg = REGSP
+				if autosize >= -BIG && autosize <= BIG {
+					// X \in [-BIG,BIG] then stdu r31, -X(r1)
+					q = obj.Appendp(ctxt, q)
+					q.As = AMOVDU
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_REG
+					q.From.Reg = REGTMP
+					q.To.Type = obj.TYPE_MEM
+					q.To.Offset = int64(-autosize)
+					q.To.Reg = REGSP
+					q.Spadj = int32(autosize)
+				} else {
+					//                  else lis r3, ha(-X), addi r3, r3, lo(-X), stdux r1, r1, r3
+					q = obj.Appendp(ctxt, q)
+					q.As = AMOVD
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_CONST
+					q.From.Offset = int64(-autosize)
+					q.To.Type = obj.TYPE_REG
+					q.To.Reg = REG_R3
+					q = obj.Appendp(ctxt, q)
+					q.As = AMOVDU
+					q.Lineno = p.Lineno
+					q.From.Type = obj.TYPE_REG
+					q.From.Reg = REGTMP
+					q.To.Type = obj.TYPE_MEM
+					q.To.Reg = REGSP
+					q.To.Index = REG_R3
+					q.To.Scale = 1
+					q.Spadj = int32(autosize)
+				}
 				// std r2, 24(r1)
 				q = obj.Appendp(ctxt, q)
 				q.As = AMOVD
@@ -613,11 +604,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			p.As = AMOVD
 			p.From.Type = obj.TYPE_MEM
-			if ctxt.Flag_dynlink {
-				p.From.Offset = 16
-			} else {
-				p.From.Offset = 0
-			}
+			p.From.Offset = 0
 			p.From.Reg = REGSP
 			p.To.Type = obj.TYPE_REG
 			p.To.Reg = REGTMP
