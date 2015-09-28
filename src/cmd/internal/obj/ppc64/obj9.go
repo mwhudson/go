@@ -613,7 +613,11 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			p.As = AMOVD
 			p.From.Type = obj.TYPE_MEM
-			p.From.Offset = 0
+			if ctxt.Flag_dynlink {
+				p.From.Offset = 16
+			} else {
+				p.From.Offset = 0
+			}
 			p.From.Reg = REGSP
 			p.To.Type = obj.TYPE_REG
 			p.To.Reg = REGTMP
