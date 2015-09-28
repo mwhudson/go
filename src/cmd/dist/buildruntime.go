@@ -92,5 +92,5 @@ func stackGuardMultiplier() int {
 			return 2
 		}
 	}
-	return 1
+	return 2
 }
