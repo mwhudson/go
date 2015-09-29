@@ -689,7 +689,11 @@ TEXT runtime·jmpdefer(SB), NOSPLIT, $-8-16
 
 	MOVD	fv+0(FP), R11
 	MOVD	argp+8(FP), R1
+#ifdef shared
+	SUB	$32, R1
+#else
 	SUB	$8, R1
+#endif
 	MOVD	0(R11), R12
 	MOVD	R12, CTR
 	BR	(CTR)
