@@ -297,7 +297,7 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		if callback != nil || printing {
 			frame.argp = frame.fp
 			if usesLR {
-				frame.argp += ptrSize
+				frame.argp += ptrSize * (1 + goarch_ppc64le*shared*3)
 			}
 			setArgInfo(&frame, f, callback != nil)
 		}
@@ -396,7 +396,7 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		// before faking a call to sigpanic.
 		if usesLR && waspanic {
 			x := *(*uintptr)(unsafe.Pointer(frame.sp))
-			frame.sp += ptrSize
+			frame.sp += ptrSize * (1 + goarch_ppc64le*shared*3)
 			if GOARCH == "arm64" {
 				// arm64 needs 16-byte aligned SP, always
 				frame.sp += ptrSize
@@ -498,7 +498,7 @@ func setArgInfo(frame *stkframe, f *_func, needArgMap bool) {
 		case "reflect.makeFuncStub", "reflect.methodValueCall":
 			arg0 := frame.sp
 			if usesLR {
-				arg0 += ptrSize
+				arg0 += ptrSize * (1 + goarch_ppc64le*shared*3)
 			}
 			fn := *(**[2]uintptr)(unsafe.Pointer(arg0))
 			if fn[0] != f.entry {
