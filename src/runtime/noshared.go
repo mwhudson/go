@@ -2,4 +2,4 @@
 
 package runtime
 
-const shared int = 0
+const shared = 0

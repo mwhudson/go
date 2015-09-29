@@ -231,9 +231,9 @@ TEXT runtime·_sigtramp(SB),NOSPLIT,$64
 	BEQ	2(PC)
 	BL	runtime·load_g(SB)
 
-	MOVW	R3, 8(R1)
-	MOVD	R4, 16(R1)
-	MOVD	R5, 24(R1)
+	MOVD	R3, ARGBASE+0(R1)
+	MOVD	R4, ARGBASE+8(R1)
+	MOVD	R5, ARGBASE+16(R1)
 	MOVD	$runtime·sigtrampgo(SB), R12
 	MOVD	R12, CTR
 	BL	(CTR)
@@ -316,6 +316,7 @@ TEXT runtime·clone(SB),NOSPLIT,$-8
 	// Initialize m->procid to Linux tid
 	SYSCALL $SYS_gettid
 
+        // XXXXX ??
 	MOVD	-24(R1), R12       // fn
 	MOVD	-16(R1), R8        // g
 	MOVD	-8(R1), R7         // m

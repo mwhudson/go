@@ -16,8 +16,8 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	BL	runtime·reginit(SB)
 
 	SUB	$24, R1
-	MOVW	R3, 8(R1) // argc
-	MOVD	R4, 16(R1) // argv
+	MOVW	R3, ARGBASE(R1) // argc
+	MOVD	R4, ARGBASE+8(R1) // argv
 
 	// create istack out of the given (operating system) stack.
 	// _cgo_init may update stackguard.
@@ -73,6 +73,11 @@ nocgo:
 	MOVDU	R3, -8(R1)
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
+#ifdef shared
+	MOVDU	R0, -8(R1)
+	MOVDU	R0, -8(R1)
+	MOVDU	R0, -8(R1)
+#endif
 	BL	runtime·newproc(SB)
 	ADD	$24, R1
 
@@ -173,6 +178,11 @@ TEXT runtime·mcall(SB), NOSPLIT, $-8-8
 	MOVD	(g_sched+gobuf_sp)(g), R1	// sp = m->g0->sched.sp
 	MOVDU	R3, -8(R1)
 	MOVDU	R0, -8(R1)
+#ifdef shared
+	MOVDU	R0, -8(R1)
+	MOVDU	R0, -8(R1)
+	MOVDU	R0, -8(R1)
+#endif
 	BL	(CTR)
 	BR	runtime·badmcall2(SB)
 
@@ -375,6 +385,8 @@ TEXT ·reflectcall(SB), NOSPLIT, $-8-32
 	MOVD	R12, CTR
 	BR	(CTR)
 
+
+/// XXXXX needs fixing for shared case at least twice
 #define CALLFN(NAME,MAXSIZE)			\
 TEXT NAME(SB), WRAPPER, $MAXSIZE-24;		\
 	NO_LOCAL_POINTERS;			\
@@ -751,11 +763,11 @@ g0:
 // cgocallback_gofunc.
 TEXT runtime·cgocallback(SB),NOSPLIT,$24-24
 	MOVD	$fn+0(FP), R3
-	MOVD	R3, 8(R1)
+	MOVD	R3, ARGBASE+0(R1)
 	MOVD	frame+8(FP), R3
-	MOVD	R3, 16(R1)
+	MOVD	R3, ARGBASE+8(R1)
 	MOVD	framesize+16(FP), R3
-	MOVD	R3, 24(R1)
+	MOVD	R3, ARGBASE+16(R1)
 	MOVD	$runtime·cgocallback_gofunc(SB), R12
 	MOVD	R12, CTR
 	BL	(CTR)
@@ -834,6 +846,7 @@ havem:
 	MOVD	(g_sched+gobuf_pc)(g), R5
 	MOVD	R5, -24(R4)
 	MOVD	$-24(R4), R1
+        // XXXXXX ??
 	BL	runtime·cgocallbackg(SB)
 
 	// Restore g->sched (== m->curg->sched) from saved values.
@@ -891,7 +904,7 @@ TEXT setg_gcc<>(SB),NOSPLIT,$-8-0
 	RET
 
 TEXT runtime·getcallerpc(SB),NOSPLIT,$8-16
-	MOVD	16(R1), R3		// LR saved by caller
+	MOVD	(2*ARGBASE)(R1), R3		// LR saved by caller
 	MOVD	runtime·stackBarrierPC(SB), R4
 	CMP	R3, R4
 	BNE	nobar
@@ -912,7 +925,7 @@ TEXT runtime·setcallerpc(SB),NOSPLIT,$8-16
 	RET
 setbar:
 	// Set the stack barrier return PC.
-	MOVD	R3, 8(R1)
+	MOVD	R3, ARGBASE(R1)
 	BL	runtime·setNextBarrierPC(SB)
 	RET
 
@@ -950,9 +963,9 @@ TEXT runtime·memhash_varlen(SB),NOSPLIT,$40-24
 	MOVD	p+0(FP), R3
 	MOVD	h+8(FP), R4
 	MOVD	8(R11), R5
-	MOVD	R3, 8(R1)
-	MOVD	R4, 16(R1)
-	MOVD	R5, 24(R1)
+	MOVD	R3, ARGBASE+0(R1)
+	MOVD	R4, ARGBASE+8(R1)
+	MOVD	R5, ARGBASE+16(R1)
 	BL	runtime·memhash(SB)
 	MOVD	32(R1), R3
 	MOVD	R3, ret+16(FP)
@@ -997,9 +1010,9 @@ TEXT runtime·memequal_varlen(SB),NOSPLIT,$40-17
 	CMP	R3, R4
 	BEQ	eq
 	MOVD	8(R11), R5    // compiler stores size at offset 8 in the closure
-	MOVD	R3, 8(R1)
-	MOVD	R4, 16(R1)
-	MOVD	R5, 24(R1)
+	MOVD	R3, ARGBASE+0(R1)
+	MOVD	R4, ARGBASE+8(R1)
+	MOVD	R5, ARGBASE+16(R1)
 	BL	runtime·memeq(SB)
 	MOVBZ	32(R1), R3
 	MOVB	R3, ret+16(FP)

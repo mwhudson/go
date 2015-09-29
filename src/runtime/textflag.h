@@ -24,3 +24,15 @@
 // Allocate a word of thread local storage and store the offset from the
 // thread local base to the thread local storage in this variable.
 #define TLSBSS	256
+
+#ifdef GOARCH_ppc64le
+#ifdef shared
+#define ARGBASE 32
+#else
+#define ARGBASE 8
+#endif
+#endif
+
+#ifdef GOARCH_ppc64
+#define ARGBASE 8
+#endif
