@@ -313,12 +313,12 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 	for p := cursym.Text; p != nil; p = p.Link {
 		switch int(p.As) {
 		case obj.ATEXT:
-			if textstksiz <= 0 {
+			if textstksiz < 0 {
 				autosize = 0
 			} else {
 				autosize = int32(textstksiz + fixedStackSize)
 			}
-			if (p.Mark&LEAF != 0) && autosize <= 8 {
+			if (p.Mark&LEAF != 0) && autosize <= int32(fixedStackSize) {
 				autosize = 0
 			} else if autosize&4 != 0 {
 				autosize += 4
