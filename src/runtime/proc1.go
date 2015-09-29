@@ -2258,7 +2258,7 @@ func newproc1(fn *funcval, argp *uint8, narg int32, nret int32, callerpc uintptr
 
 	totalSize := 4*regSize + uintptr(siz) // extra space in case of reads slightly beyond frame
 	if hasLinkRegister {
-		totalSize += ptrSize
+		totalSize += ptrSize * (1 + goarch_ppc64le*shared*3)
 	}
 	totalSize += -totalSize & (spAlign - 1) // align to spAlign
 	sp := newg.stack.hi - totalSize
@@ -2266,7 +2266,7 @@ func newproc1(fn *funcval, argp *uint8, narg int32, nret int32, callerpc uintptr
 	if hasLinkRegister {
 		// caller's LR
 		*(*unsafe.Pointer)(unsafe.Pointer(sp)) = nil
-		spArg += ptrSize
+		spArg += ptrSize * (1 + goarch_ppc64le*shared*3)
 	}
 	memmove(unsafe.Pointer(spArg), unsafe.Pointer(argp), uintptr(narg))
 
