@@ -28,7 +28,7 @@ func rewindmorestack(buf *gobuf) {
 		inst = *(*uint32)(unsafe.Pointer(buf.pc + shared*4))
 		if inst>>26 == 18 && inst&3 == 0 {
 			//print("runtime: rewind pc=", hex(buf.pc), " to pc=", hex(uintptr(buf.pc + int32(inst<<6)>>6)), "\n");
-			buf.pc += uintptr(int32(inst<<6) >> 6)
+			buf.pc += uintptr(int32(inst<<6)>>6) + shared*4
 			return
 		}
 	}
