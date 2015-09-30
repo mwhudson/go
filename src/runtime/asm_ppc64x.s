@@ -224,7 +224,11 @@ switch:
 	// save our state in g->sched.  Pretend to
 	// be systemstack_switch if the G stack is scanned.
 	MOVD	$runtime·systemstack_switch(SB), R6
+#ifdef shared
+	ADD	$16, R6	// get past prologue
+#else
 	ADD	$8, R6	// get past prologue
+#endif
         // XXXXX
 	MOVD	R6, (g_sched+gobuf_pc)(g)
 	MOVD	R1, (g_sched+gobuf_sp)(g)
