@@ -1926,6 +1926,7 @@ func entersyscallblock(dummy int32) {
 	// Leave SP around for GC and traceback.
 	pc := getcallerpc(unsafe.Pointer(&dummy))
 	sp := getcallersp(unsafe.Pointer(&dummy))
+	print(hex(pc))
 	save(pc, sp)
 	_g_.syscallsp = _g_.sched.sp
 	_g_.syscallpc = _g_.sched.pc
