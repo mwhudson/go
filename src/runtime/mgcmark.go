@@ -506,6 +506,11 @@ func scanframeworker(frame *stkframe, unused unsafe.Pointer, gcw *gcWork) {
 		minsize = 0
 	case '7':
 		minsize = spAlign
+	case '9':
+		if shared == 1 {
+			minsize = 32
+		}
+		fallthrough
 	default:
 		minsize = ptrSize
 	}
