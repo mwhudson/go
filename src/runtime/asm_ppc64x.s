@@ -225,6 +225,7 @@ switch:
 	// be systemstack_switch if the G stack is scanned.
 	MOVD	$runtime·systemstack_switch(SB), R6
 	ADD	$8, R6	// get past prologue
+        // XXXXX
 	MOVD	R6, (g_sched+gobuf_pc)(g)
 	MOVD	R1, (g_sched+gobuf_sp)(g)
 	MOVD	R0, (g_sched+gobuf_lr)(g)
@@ -914,7 +915,7 @@ TEXT runtime·getcallerpc(SB),NOSPLIT,$8-16
 	BNE	nobar
 	// Get original return PC.
 	BL	runtime·nextBarrierPC(SB)
-	MOVD	8(R1), R3
+	MOVD	ARGBASE(R1), R3
 nobar:
 	MOVD	R3, ret+8(FP)
 	RET
