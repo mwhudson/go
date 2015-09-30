@@ -481,6 +481,12 @@ func adjustframe(frame *stkframe, arg unsafe.Pointer) bool {
 		minsize = 0
 	case '7':
 		minsize = spAlign
+	case '9':
+		if shared == 1 {
+			minsize = 32
+			break
+		}
+		fallthrough
 	default:
 		minsize = ptrSize
 	}
