@@ -937,7 +937,7 @@ setbar:
 TEXT runtime·getcallersp(SB),NOSPLIT,$0-16
 	MOVD	argp+0(FP), R3
 #ifdef shared
-	SUB	$8, R3
+	SUB	$32, R3
 #else
 	SUB	$8, R3
 #endif
