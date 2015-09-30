@@ -168,7 +168,7 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		frame.lr = lr0
 	}
 	waspanic := false
-	printing := true // pcbuf == nil && callback == nil
+	printing := pcbuf == nil && callback == nil
 	_defer := gp._defer
 
 	for _defer != nil && uintptr(_defer.sp) == _NoArgs {
