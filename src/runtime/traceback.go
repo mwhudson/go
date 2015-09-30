@@ -234,6 +234,9 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		if topofstack(f) {
 			frame.lr = 0
 			flr = nil
+			if callback != nil && v == nil {
+				println("top of stack")
+			}
 		} else if usesLR && f.entry == jmpdeferPC {
 			// jmpdefer modifies SP/LR/PC non-atomically.
 			// If a profiling interrupt arrives during jmpdefer,

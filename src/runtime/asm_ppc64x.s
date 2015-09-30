@@ -240,7 +240,11 @@ switch:
 	BL	runtime·save_g(SB)
 	MOVD	(g_sched+gobuf_sp)(g), R3
 	// make it look like mstart called systemstack on g0, to stop traceback
+#ifdef shared
+	SUB	$32, R3
+#else
 	SUB	$8, R3
+#endif
 	MOVD	$runtime·mstart(SB), R4
 	MOVD	R4, 0(R3)
 	MOVD	R3, R1
