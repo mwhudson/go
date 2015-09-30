@@ -1817,6 +1817,7 @@ func save(pc, sp uintptr) {
 //
 //go:nosplit
 func reentersyscall(pc, sp uintptr) {
+	print(hex(pc))
 	_g_ := getg()
 
 	// Disable preemption because during this function g is in Gsyscall status,
