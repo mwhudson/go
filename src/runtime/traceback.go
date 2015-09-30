@@ -224,6 +224,9 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 				sp = gp.m.curg.sched.sp
 				stkbar = gp.m.curg.stkbar[gp.m.curg.stkbarPos:]
 			}
+			if callback != nil && v == nil {
+				print("spdelta: ", funcspdelta(f, frame.pc), " ")
+			}
 			frame.fp = sp + uintptr(funcspdelta(f, frame.pc))
 			if !usesLR {
 				// On x86, call instruction pushes return PC before entering new function.
