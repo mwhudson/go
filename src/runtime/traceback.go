@@ -121,6 +121,9 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 	if goexitPC == 0 {
 		throw("gentraceback before goexitPC initialization")
 	}
+	if callback != nil && v == nil {
+		println("--> gentraceback starting")
+	}
 	g := getg()
 	if g == gp && g == g.m.curg {
 		// The starting sp has been passed in as a uintptr, and the caller may
