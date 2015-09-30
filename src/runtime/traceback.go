@@ -210,6 +210,9 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		//	The caller's program counter is lr, unless lr is zero, in which case it is *(uintptr*)sp.
 		f = frame.fn
 
+		if callback != nil && v == nil {
+			print(funcname(f), " ")
+		}
 		// Found an actual function.
 		// Derive frame pointer and link register.
 		if frame.fp == 0 {
@@ -265,6 +268,9 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 				}
 				frame.lr = stkbar[0].savedLRVal
 				stkbar = stkbar[1:]
+			}
+			if callback != nil && v == nil {
+				println(hex(frame.lr))
 			}
 			flr = findfunc(frame.lr)
 			if flr == nil {
