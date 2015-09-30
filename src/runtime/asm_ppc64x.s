@@ -909,13 +909,13 @@ TEXT setg_gcc<>(SB),NOSPLIT,$-8-0
 	RET
 
 TEXT runtime·getcallerpc(SB),NOSPLIT,$8-16
-	MOVD	(2*ARGBASE)(R1), R3		// LR saved by caller
+	MOVD	(ARGBASE+8)(R1), R3		// LR saved by caller
 	MOVD	runtime·stackBarrierPC(SB), R4
 	CMP	R3, R4
 	BNE	nobar
 	// Get original return PC.
 	BL	runtime·nextBarrierPC(SB)
-	MOVD	ARGBASE(R1), R3
+	MOVD	8(R1), R3
 nobar:
 	MOVD	R3, ret+8(FP)
 	RET
