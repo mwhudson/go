@@ -394,7 +394,7 @@ TEXT NAME(SB), WRAPPER, $MAXSIZE-24;		\
 	MOVD	arg+16(FP), R3;			\
 	MOVWZ	argsize+24(FP), R4;			\
 	MOVD	R1, R5;				\
-	ADD	$(8-1), R5;			\
+	ADD	$(ARGBASE-1), R5;			\
 	SUB	$1, R3;				\
 	ADD	R5, R4;				\
 	CMP	R5, R4;				\
@@ -416,7 +416,7 @@ TEXT NAME(SB), WRAPPER, $MAXSIZE-24;		\
 	ADD	R6, R5; 			\
 	ADD	R6, R3;				\
 	SUB	R6, R4;				\
-	ADD	$(8-1), R5;			\
+	ADD	$(ARGBASE-1), R5;			\
 	SUB	$1, R3;				\
 	ADD	R5, R4;				\
 loop:						\
@@ -431,10 +431,10 @@ end:						\
 	MOVD	arg+16(FP), R3;			\
 	MOVWZ	n+24(FP), R4;			\
 	MOVWZ	retoffset+28(FP), R6;		\
-	MOVD	R7, 8(R1);			\
-	MOVD	R3, 16(R1);			\
-	MOVD	R4, 24(R1);			\
-	MOVD	R6, 32(R1);			\
+	MOVD	R7, ARGBASE+0(R1);			\
+	MOVD	R3, ARGBASE+8(R1);			\
+	MOVD	R4, ARGBASE+16(R1);			\
+	MOVD	R6, ARGBASE+24(R1);			\
 	BL	runtime·callwritebarrier(SB);	\
 	RET
 
