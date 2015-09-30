@@ -925,7 +925,7 @@ TEXT runtime·setcallerpc(SB),NOSPLIT,$8-16
 	MOVD	runtime·stackBarrierPC(SB), R5
 	CMP	R4, R5
 	BEQ	setbar
-	MOVD	R3, 16(R1)		// set LR in caller
+	MOVD	R3, (2*ARGBASE)(R1)		// set LR in caller XXXXX ??
 	RET
 setbar:
 	// Set the stack barrier return PC.
@@ -935,7 +935,11 @@ setbar:
 
 TEXT runtime·getcallersp(SB),NOSPLIT,$0-16
 	MOVD	argp+0(FP), R3
+#ifdef shared
+	SUB	$32, R3
+#else
 	SUB	$8, R3
+#endif
 	MOVD	R3, ret+8(FP)
 	RET
 
