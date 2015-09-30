@@ -335,6 +335,9 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 			(*[1 << 20]uintptr)(unsafe.Pointer(pcbuf))[n] = frame.pc
 		}
 		if callback != nil {
+			if v == nil {
+				println(funcname(f))
+			}
 			if !callback((*stkframe)(noescape(unsafe.Pointer(&frame))), v) {
 				return n
 			}
