@@ -509,6 +509,7 @@ func scanframeworker(frame *stkframe, unused unsafe.Pointer, gcw *gcWork) {
 	case '9':
 		if shared == 1 {
 			minsize = 32
+			break
 		}
 		fallthrough
 	default:
