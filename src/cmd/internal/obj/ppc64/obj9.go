@@ -428,7 +428,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.To.Offset = 24
 				q.To.Reg = REGSP
 
-				if autosize > 32 && autosize < 1000 {
+				if autosize > 32 && autosize < 4000 {
 					q = obj.Appendp(ctxt, q)
 					q.As = AMOVD
 					q.Lineno = p.Lineno
