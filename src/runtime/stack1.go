@@ -22,7 +22,7 @@ const (
 
 const (
 	uintptrMask = 1<<(8*ptrSize) - 1
-	poisonStack = uintptrMask & 0x6868686868686868
+	poisonStack = uintptrMask & 0xdeadbeefdeadbeef
 
 	// Goroutine preemption request.
 	// Stored into g->stackguard0 to cause split stack check failure.
