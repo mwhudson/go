@@ -12,10 +12,10 @@ const (
 	//            == 2: logging of per-frame operations
 	//            == 3: logging of per-word updates
 	//            == 4: logging of per-word reads
-	stackDebug       = 0 * shared
+	stackDebug       = 4 * shared
 	stackFromSystem  = 0          // allocate stacks from system memory instead of the heap
 	stackFaultOnFree = 0          // old stacks are mapped noaccess to detect use after free
-	stackPoisonCopy  = 0 * shared // fill stack that should not be accessed with garbage, to detect bad dereferences during copy
+	stackPoisonCopy  = 1 * shared // fill stack that should not be accessed with garbage, to detect bad dereferences during copy
 
 	stackCache = 1
 )
