@@ -433,9 +433,9 @@ func adjustpointers(scanp unsafe.Pointer, cbv *bitvector, adjinfo *adjustinfo, f
 			if f != nil && 0 < p && p < _PageSize && debug.invalidptr != 0 || p == poisonStack {
 				// Looks like a junk value in a pointer slot.
 				// Live analysis wrong?
-				getg().m.traceback = 2
+				//getg().m.traceback = 2
 				print("runtime: bad pointer in frame ", funcname(f), " at ", pp, ": ", hex(p), "\n")
-				throw("invalid stack pointer")
+				//throw("invalid stack pointer")
 			}
 			if minp <= p && p < maxp {
 				if stackDebug >= 3 {
