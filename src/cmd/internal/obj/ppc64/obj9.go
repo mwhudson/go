@@ -428,12 +428,12 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.To.Offset = 24
 				q.To.Reg = REGSP
 
-				for o := int64(32); o < int64(autosize); o += 8 {
+				for o := int64(32); o < int64(autosize); o += 2 {
 					q = obj.Appendp(ctxt, q)
-					q.As = AMOVD
+					q.As = AMOVH
 					q.Lineno = p.Lineno
 					q.From.Type = obj.TYPE_CONST
-					q.From.Offset = 0x7eadbeefdeadbeef
+					q.From.Offset = 0x6e6e
 					q.To.Type = obj.TYPE_MEM
 					q.To.Offset = o
 					q.To.Reg = REGSP
