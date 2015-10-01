@@ -327,29 +327,29 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			q = p
 
-			if ctxt.Flag_dynlink {
-				// In dynlink mode, all functions must start
-				// with instructions to load the TOC pointer
-				// into r2:
-				// addis r2, r12, .TOC.-func@ha
-				// addi r2, r2, .TOC.-func@l
-				q = obj.Appendp(ctxt, q)
-				q.As = AWORD
-				q.Lineno = p.Lineno
-				q.From.Type = obj.TYPE_CONST
-				q.From.Offset = 0x3c4c0000
-				rel := obj.Addrel(ctxt.Cursym)
-				q = obj.Appendp(ctxt, q)
-				q.As = AWORD
-				q.Lineno = p.Lineno
-				q.From.Type = obj.TYPE_CONST
-				q.From.Offset = 0x38420000
-				rel = obj.Addrel(ctxt.Cursym)
-				rel.Off = 0
-				rel.Siz = 4
-				rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
-				rel.Type = obj.R_ADDRPOWER_PCREL
-			}
+			// if ctxt.Flag_dynlink {
+			// 	// In dynlink mode, all functions must start
+			// 	// with instructions to load the TOC pointer
+			// 	// into r2:
+			// 	// addis r2, r12, .TOC.-func@ha
+			// 	// addi r2, r2, .TOC.-func@l
+			// 	q = obj.Appendp(ctxt, q)
+			// 	q.As = AWORD
+			// 	q.Lineno = p.Lineno
+			// 	q.From.Type = obj.TYPE_CONST
+			// 	q.From.Offset = 0x3c4c0000
+			// 	rel := obj.Addrel(ctxt.Cursym)
+			// 	q = obj.Appendp(ctxt, q)
+			// 	q.As = AWORD
+			// 	q.Lineno = p.Lineno
+			// 	q.From.Type = obj.TYPE_CONST
+			// 	q.From.Offset = 0x38420000
+			// 	rel = obj.Addrel(ctxt.Cursym)
+			// 	rel.Off = 0
+			// 	rel.Siz = 4
+			// 	rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
+			// 	rel.Type = obj.R_ADDRPOWER_PCREL
+			// }
 
 			if p.From3.Offset&obj.NOSPLIT == 0 {
 				q = stacksplit(ctxt, q, autosize) // emit split check
