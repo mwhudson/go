@@ -418,7 +418,7 @@ func span9(ctxt *obj.Link, cursym *obj.LSym) {
 	}
 
 	fixedStackSize := int64(8)
-	if ctxt.Flag_dynlink {
+	if ctxt.Flag_dynlink || true {
 		fixedStackSize = 32
 	}
 
@@ -610,7 +610,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 
 		case obj.NAME_PARAM:
 			fixedStackSize := int64(8)
-			if ctxt.Flag_dynlink {
+			if ctxt.Flag_dynlink || true {
 				fixedStackSize = 32
 			}
 			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset + fixedStackSize
@@ -677,7 +677,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 
 		case obj.NAME_PARAM:
 			fixedStackSize := int64(8)
-			if ctxt.Flag_dynlink {
+			if ctxt.Flag_dynlink || true {
 				fixedStackSize = 32
 			}
 			ctxt.Instoffset = int64(ctxt.Autosize) + a.Offset + fixedStackSize
@@ -721,7 +721,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_DCON
 
 	case obj.TYPE_BRANCH:
-		if a.Sym != nil && ctxt.Flag_dynlink {
+		if a.Sym != nil && (ctxt.Flag_dynlink || true) {
 			return C_LBRAPIC
 		}
 		return C_SBRA

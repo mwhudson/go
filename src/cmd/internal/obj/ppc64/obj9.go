@@ -303,7 +303,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 	}
 
 	fixedStackSize := int64(8)
-	if ctxt.Flag_dynlink {
+	if ctxt.Flag_dynlink || true {
 		fixedStackSize = 32
 	}
 
@@ -327,7 +327,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			q = p
 
-			if ctxt.Flag_dynlink {
+			if ctxt.Flag_dynlink || true {
 				// In dynlink mode, all functions must start
 				// with instructions to load the TOC pointer
 				// into r2:
@@ -369,7 +369,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				}
 			}
 
-			if ctxt.Flag_dynlink {
+			if ctxt.Flag_dynlink || true {
 				// X = autosize (inc 32 bytes for back chain, cr, reserved, lr, toc)
 
 				// X \in [-BIG,BIG] then stdu r1, -X(r1)

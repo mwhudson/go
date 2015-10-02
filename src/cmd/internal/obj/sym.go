@@ -88,11 +88,6 @@ func Linknew(arch *LinkArch) *Link {
 		ctxt.Windows = 1
 	}
 
-	if runtime.GOARCH == "ppc64le" {
-		ctxt.Flag_shared = 1
-		ctxt.Flag_dynlink = true
-	}
-
 	var buf string
 	buf, _ = os.Getwd()
 	if buf == "" {

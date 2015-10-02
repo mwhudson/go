@@ -2528,7 +2528,7 @@ func FixedStackSize() int64 {
 		if Ctxt.Flag_dynlink {
 			return 32
 		} else {
-			return 8
+			return 32
 		}
 	default:
 		return int64(Widthptr)
