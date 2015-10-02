@@ -1,4 +1,4 @@
-// +build !shared
+// +build !ppc64le
 
 package runtime
 

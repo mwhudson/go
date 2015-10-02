@@ -26,11 +26,10 @@
 #define TLSBSS	256
 
 #ifdef GOARCH_ppc64le
-#ifdef shared
+#define shared
 #define ARGBASE 32
 #else
 #define ARGBASE 8
-#endif
 #endif
 
 #ifdef GOARCH_ppc64
