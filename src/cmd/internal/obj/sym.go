@@ -89,6 +89,7 @@ func Linknew(arch *LinkArch) *Link {
 	}
 
 	if runtime.GOARCH == "ppc64le" {
+		ctxt.Flag_shared = 1
 		ctxt.Flag_dynlink = true
 	}
 
