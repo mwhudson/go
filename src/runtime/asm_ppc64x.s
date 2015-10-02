@@ -917,7 +917,7 @@ TEXT setg_gcc<>(SB),NOSPLIT,$-8-0
 	RET
 
 TEXT runtime·getcallerpc(SB),NOSPLIT,$8-16
-	MOVD	(ARGBASE+8)(R1), R3		// LR saved by caller
+	MOVD	ARGBASE+8(R1), R3		// LR saved by caller
 	MOVD	runtime·stackBarrierPC(SB), R4
 	CMP	R3, R4
 	BNE	nobar
@@ -930,11 +930,11 @@ nobar:
 
 TEXT runtime·setcallerpc(SB),NOSPLIT,$8-16
 	MOVD	pc+8(FP), R3
-	MOVD	16(R1), R4
+	MOVD	ARGBASE+8(R1), R4
 	MOVD	runtime·stackBarrierPC(SB), R5
 	CMP	R4, R5
 	BEQ	setbar
-	MOVD	R3, (2*ARGBASE)(R1)		// set LR in caller XXXXX ??
+	MOVD	R3, ARGBASE+8(R1)		// set LR in caller XXXXX ??
 	RET
 setbar:
 	// Set the stack barrier return PC.
