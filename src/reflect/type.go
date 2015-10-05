@@ -1862,7 +1862,7 @@ func ArrayOf(count int, elem Type) Type {
 	ckey := cacheKey{Array, typ, nil, uintptr(count)}
 	if array := cacheGet(ckey); array != nil {
 		println("found by cacheGet")
-		if ckey != array.Kind() {
+		if ckey.kind != array.Kind() {
 			println("wtf")
 		}
 		return array
