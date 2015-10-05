@@ -1862,7 +1862,8 @@ func ArrayOf(count int, elem Type) Type {
 	ckey := cacheKey{Array, typ, nil, uintptr(count)}
 	if array := cacheGet(ckey); array != nil {
 		println("found by cacheGet")
-		ckey2 := cacheKey{array.kind, array.elem, nil, array.size / array.elem.size}
+		a := array.(*arraytTpe)
+		ckey2 := cacheKey{array.Kind(), a.elem, nil, a.size / a.elem.size}
 		if ckey != ckey2 {
 			println("wtf")
 		}
