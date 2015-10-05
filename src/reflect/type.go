@@ -1861,6 +1861,7 @@ func ArrayOf(count int, elem Type) Type {
 	// Look in cache.
 	ckey := cacheKey{Array, typ, nil, uintptr(count)}
 	if array := cacheGet(ckey); array != nil {
+		println("found by cacheGet")
 		return array
 	}
 
@@ -1870,7 +1871,7 @@ func ArrayOf(count int, elem Type) Type {
 	for _, tt := range typesByString(s) {
 		array := (*arrayType)(unsafe.Pointer(tt))
 		if array.elem == typ {
-			println("found ", s, " in cache")
+			println("found ", s, " in named times")
 			return cachePut(ckey, tt)
 		}
 	}
