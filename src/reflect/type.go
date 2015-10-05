@@ -1376,15 +1376,24 @@ type cacheKey struct {
 // If not, it returns nil with the cache locked.
 // The caller is expected to use cachePut to unlock the cache.
 func cacheGet(k cacheKey) Type {
+	var t Type
 	lookupCache.RLock()
-	t := lookupCache.m[k]
+	for k2, v := range lookupCache.m {
+		if k2 == k {
+			t = v
+		}
+	}
 	lookupCache.RUnlock()
 	if t != nil {
 		return t
 	}
 
 	lookupCache.Lock()
-	t = lookupCache.m[k]
+	for k2, v := range lookupCache.m {
+		if k2 == k {
+			t = v
+		}
+	}
 	if t != nil {
 		lookupCache.Unlock()
 		return t
