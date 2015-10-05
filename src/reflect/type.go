@@ -1411,7 +1411,6 @@ func cacheGet(k cacheKey) Type {
 // because cacheGet returned nil.
 func cachePut(k cacheKey, t *rtype) Type {
 	lookupCache.m[k] = t
-	println("cachePut", *t.string)
 	lookupCache.Unlock()
 	return t
 }
@@ -1861,7 +1860,6 @@ const maxPtrmaskBytes = 2048
 // If the resulting type would be larger than the available address space,
 // ArrayOf panics.
 func ArrayOf(count int, elem Type) Type {
-	println("hello", count)
 	typ := elem.(*rtype)
 	// call SliceOf here as it calls cacheGet/cachePut.
 	// ArrayOf also calls cacheGet/cachePut and thus may modify the state of
@@ -1871,22 +1869,14 @@ func ArrayOf(count int, elem Type) Type {
 	// Look in cache.
 	ckey := cacheKey{Array, typ, nil, uintptr(count)}
 	if array := cacheGet(ckey); array != nil {
-		println("lookupCache.m", len(lookupCache.m))
-		for k, v := range lookupCache.m {
-			if ckey == k {
-				println("found", *v.string)
-			}
-		}
 		return array
 	}
 
 	// Look in known types.
 	s := "[" + strconv.Itoa(count) + "]" + *typ.string
-	println("looking for ", s, " in cache")
 	for _, tt := range typesByString(s) {
 		array := (*arrayType)(unsafe.Pointer(tt))
 		if array.elem == typ {
-			println("found ", s, " in named times")
 			return cachePut(ckey, tt)
 		}
 	}
