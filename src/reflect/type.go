@@ -1861,6 +1861,7 @@ func ArrayOf(count int, elem Type) Type {
 	// Look in cache.
 	ckey := cacheKey{Array, typ, nil, uintptr(count)}
 	if array := cacheGet(ckey); array != nil {
+		println("lookupCache.m", len(lookupCache.m))
 		for k, v := range lookupCache.m {
 			if ckey == k {
 				println("found", *v.string)
