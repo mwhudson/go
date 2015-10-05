@@ -1865,6 +1865,7 @@ func ArrayOf(count int, elem Type) Type {
 
 	// Look in known types.
 	s := "[" + strconv.Itoa(count) + "]" + *typ.string
+	println("looking for ", s, " in cache")
 	for _, tt := range typesByString(s) {
 		array := (*arrayType)(unsafe.Pointer(tt))
 		if array.elem == typ {
