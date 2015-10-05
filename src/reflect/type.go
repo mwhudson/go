@@ -1851,6 +1851,7 @@ const maxPtrmaskBytes = 2048
 // If the resulting type would be larger than the available address space,
 // ArrayOf panics.
 func ArrayOf(count int, elem Type) Type {
+	println("hello", count)
 	typ := elem.(*rtype)
 	// call SliceOf here as it calls cacheGet/cachePut.
 	// ArrayOf also calls cacheGet/cachePut and thus may modify the state of
