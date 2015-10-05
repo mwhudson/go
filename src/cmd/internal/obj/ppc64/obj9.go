@@ -412,8 +412,8 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 					q.From.Type = obj.TYPE_REG
 					q.From.Reg = REGTMP
 					q.To.Type = obj.TYPE_MEM
-					q.To.Reg = REGSP
-					q.To.Index = REG_R3
+					q.To.Reg = REG_R3
+					q.To.Index = REGSP
 					q.To.Scale = 1
 					q.Spadj = int32(autosize)
 				}
