@@ -1402,6 +1402,7 @@ func cacheGet(k cacheKey) Type {
 // because cacheGet returned nil.
 func cachePut(k cacheKey, t *rtype) Type {
 	lookupCache.m[k] = t
+	println("cachePut", *t.string)
 	lookupCache.Unlock()
 	return t
 }
