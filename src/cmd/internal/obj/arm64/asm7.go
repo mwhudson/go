@@ -32,6 +32,7 @@ package arm64
 
 import (
 	"cmd/internal/obj"
+	"errors"
 	"fmt"
 	"log"
 	"math"
@@ -192,9 +193,9 @@ var optab = []Optab{
 	{AAND, C_REG, C_NONE, C_REG, 1, 4, 0, 0, 0},
 	{ABIC, C_REG, C_REG, C_REG, 1, 4, 0, 0, 0},
 	{ABIC, C_REG, C_NONE, C_REG, 1, 4, 0, 0, 0},
-	// TODO: these don't work properly.
-	// {AAND, C_BITCON, C_REG, C_REG, 53, 4, 0, 0, 0},
-	// {AAND, C_BITCON, C_NONE, C_REG, 53, 4, 0, 0, 0},
+	{AAND, C_BITCON, C_REG, C_REG, 53, 4, 0, 0, 0},
+	{AAND, C_BITCON, C_NONE, C_REG, 53, 4, 0, 0, 0},
+	// TODO: what does BIC with immediate mean?
 	// {ABIC, C_BITCON, C_REG, C_REG, 53, 4, 0, 0, 0},
 	// {ABIC, C_BITCON, C_NONE, C_REG, 53, 4, 0, 0, 0},
 	{AAND, C_VCON, C_REG, C_REG, 28, 8, 0, LFROM, 0},
@@ -761,11 +762,6 @@ func addpool(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) {
 		Because of this, we need to load the constant from memory. */
 		C_ADDCON,
 
-		/* These are here because they are disabled in optab.
-		Because of this, we need to load the constant from memory. */
-		C_BITCON,
-		C_ABCON,
-		C_MBCON,
 		C_PSAUTO,
 		C_PPAUTO,
 		C_UAUTO4K,
@@ -842,11 +838,142 @@ func isaddcon(v int64) bool {
 	return v <= 0xFFF
 }
 
+var bitcon64s map[uint64]uint32
+
+type BitMask struct {
+	size uint8
+	val  uint64
+}
+
+func NewBitMask(size uint8, val uint64) BitMask {
+	mask := uint64((1 << size) - 1)
+	return BitMask{size: size, val: val & mask}
+}
+
+func BitMaskOnes(size uint8) BitMask {
+	return NewBitMask(size, 0xffffffffffffffff)
+}
+
+func (bm BitMask) HighestBitSet() int8 {
+	i := int8(bm.size - 1)
+	for i >= 0 {
+		if bm.val&(1<<uint8(i)) != 0 {
+			return i
+		}
+		i -= 1
+	}
+	return -1
+}
+
+func (bm BitMask) Invert() BitMask {
+	return NewBitMask(bm.size, ^bm.val)
+}
+
+func (bm BitMask) ZeroExtend(size uint8) BitMask {
+	return NewBitMask(size, bm.val)
+}
+
+func (bm BitMask) Repeat(count uint8) BitMask {
+	v := uint64(0)
+	for i := uint8(0); i < count; i++ {
+		v = (v << bm.size) | bm.val
+	}
+	return NewBitMask(bm.size*count, v)
+}
+
+func (bm BitMask) ROR(amount uint8) BitMask {
+	amount %= bm.size
+	return NewBitMask(
+		bm.size,
+		(bm.val>>amount)|(bm.val<<(bm.size-amount)))
+}
+
+func (bm BitMask) BitString() string {
+	s := ""
+	for i := uint8(0); i < bm.size; i++ {
+		if bm.val&(1<<(i-1)) != 0 {
+			s += "1"
+		} else {
+			s += "."
+		}
+	}
+	return s
+}
+
+func (bm BitMask) String() string {
+	return fmt.Sprintf(
+		"BitMask<%d>(%d / %x / %s)",
+		bm.size, bm.val, bm.val, bm.BitString())
+}
+
+func BitMaskAND(left, right BitMask) BitMask {
+	if left.size != right.size {
+		panic("left.size != right.size")
+	}
+	return NewBitMask(left.size, left.val&right.val)
+}
+
+func BitMaskConcat(left, right BitMask) BitMask {
+	return NewBitMask(
+		left.size+right.size,
+		(left.val<<right.size)|right.val)
+}
+
+var ReservedValue = errors.New("ReservedValue")
+
+func DecodeBitMasks(M, N, s, r uint8) (BitMask, error) {
+	immN := NewBitMask(1, uint64(N))
+	imms := NewBitMask(6, uint64(s))
+	immr := NewBitMask(6, uint64(r))
+	length := BitMaskConcat(immN, imms.Invert()).HighestBitSet()
+	if length < 1 {
+		return BitMask{}, ReservedValue
+	}
+	if M < (1 << uint64(length)) {
+		panic("M < (1 << length)")
+	}
+	levels := BitMaskOnes(uint8(length)).ZeroExtend(6)
+	if BitMaskAND(imms, levels) == levels {
+		return BitMask{}, ReservedValue
+	}
+	S := uint8(BitMaskAND(imms, levels).val)
+	R := uint8(BitMaskAND(immr, levels).val)
+	esize := uint8(1 << uint8(length))
+	if M%esize != 0 {
+		panic("M%esize != 0")
+	}
+	welem := BitMaskOnes(S + 1).ZeroExtend(esize)
+	return welem.ROR(R).Repeat(M / esize), nil
+}
+
+func makeBitconTable(M uint8) map[uint64]uint32 {
+	vals := make(map[uint64]uint32)
+	for _, immN := range []uint8{0, 1} {
+		if M == 32 && immN == 1 {
+			continue
+		}
+		for imms := uint8(0); imms < 64; imms++ {
+			for immr := uint8(0); immr < 64; immr++ {
+				x, err := DecodeBitMasks(M, immN, imms, immr)
+				if err != nil {
+					continue
+				}
+				vals[x.val] = uint32(immN)<<22 | uint32(immr)<<16 | uint32(imms)<<10
+			}
+		}
+	}
+	return vals
+
+}
+
 func isbitcon(v uint64) bool {
-	/*  fancy bimm32 or bimm64? */
-	// TODO(aram):
-	return false
-	// return findmask(v) != nil || (v>>32) == 0 && findmask(v|(v<<32)) != nil
+	/*  fancy bimm64? */
+	// TODO(mwhudson): enable bimm32 too
+	if bitcon64s == nil {
+		bitcon64s = makeBitconTable(64)
+	}
+	_, ok := bitcon64s[v]
+	return ok
 }
 
 func autoclass(l int64) int {
@@ -1009,6 +1136,9 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 			}
 			if isaddcon(v) {
 				if v <= 0xFFF {
+					if isbitcon(uint64(v)) {
+						return C_ABCON0
+					}
 					return C_ADDCON0
 				}
 				if isbitcon(uint64(v)) {
@@ -1016,7 +1146,6 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 				}
 				return C_ADDCON
 			}
-
 			t := movcon(v)
 			if t >= 0 {
 				if isbitcon(uint64(v)) {
@@ -1134,6 +1263,8 @@ func oplook(ctxt *obj.Link, p *obj.Prog) *Optab {
 	return &o[0]
 }
 
+// a and b are C_xxx values. Return true iff all instructions that can
+// take an argument of type b can also take one of type a.
 func cmp(a int, b int) bool {
 	if a == b {
 		return true
@@ -1150,27 +1281,27 @@ func cmp(a int, b int) bool {
 		}
 
 	case C_ADDCON0:
-		if b == C_ZCON {
+		if b == C_ZCON || b == C_ABCON0 {
 			return true
 		}
 
 	case C_ADDCON:
-		if b == C_ZCON || b == C_ADDCON0 || b == C_ABCON {
+		if b == C_ZCON || b == C_ADDCON0 || b == C_ABCON0 || b == C_ABCON {
 			return true
 		}
 
 	case C_BITCON:
-		if b == C_ABCON || b == C_MBCON {
+		if b == C_ABCON || b == C_MBCON || b == C_ABCON0 {
 			return true
 		}
 
 	case C_MOVCON:
-		if b == C_MBCON || b == C_ZCON || b == C_ADDCON0 {
+		if b == C_MBCON || b == C_ZCON || b == C_ADDCON0 || b == C_ABCON0 {
 			return true
 		}
 
 	case C_LCON:
-		if b == C_ZCON || b == C_BITCON || b == C_ADDCON || b == C_ADDCON0 || b == C_ABCON || b == C_MBCON || b == C_MOVCON {
+		if b == C_ZCON || b == C_BITCON || b == C_ADDCON || b == C_ADDCON0 || b == C_ABCON || b == C_MBCON || b == C_MOVCON || b == C_ABCON0 {
 			return true
 		}
 
@@ -2601,7 +2732,21 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		o1 |= uint32((p.From.Offset & 0x7F) << 5)
 
 	case 53: /* and/or/eor/bic/... $bimmN, Rn, Rd -> op (N,r,s), Rn, Rd */
-		ctxt.Diag("bitmask immediate not implemented\n%v", p)
+		o1 = opirr(ctxt, int(p.As))
+
+		rt := int(p.To.Reg)
+		r := int(p.Reg)
+		if p.To.Type == obj.TYPE_NONE {
+			rt = REGZERO
+		}
+		if r == 0 {
+			r = rt
+		}
+		Nrs, ok := bitcon64s[uint64(p.From.Offset)]
+		if !ok {
+			ctxt.Diag("bitcon param for %v not found", p.From.Offset)
+		}
+		o1 |= Nrs | (uint32(r&31) << 5) | uint32(rt&31)
 
 	case 54: /* floating point arith */
 		o1 = oprrr(ctxt, int(p.As))

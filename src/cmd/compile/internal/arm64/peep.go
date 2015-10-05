@@ -152,7 +152,13 @@ loop1:
 			continue
 		}
 		p1 = r1.Prog
-		if p1.As != arm64.AADD && p1.As != arm64.ASUB { // TODO(aram): also logical after we have bimm.
+		switch p1.As {
+		case arm64.AADD,
+			arm64.ASUB,
+			arm64.AANDS,
+			arm64.AEOR,
+			arm64.AORR:
+		default:
 			continue
 		}
 		if p1.From.Type != obj.TYPE_REG || p1.From.Reg != p.To.Reg {
