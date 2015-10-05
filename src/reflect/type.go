@@ -1868,6 +1868,7 @@ func ArrayOf(count int, elem Type) Type {
 	for _, tt := range typesByString(s) {
 		array := (*arrayType)(unsafe.Pointer(tt))
 		if array.elem == typ {
+			println("found ", s, " in cache")
 			return cachePut(ckey, tt)
 		}
 	}
