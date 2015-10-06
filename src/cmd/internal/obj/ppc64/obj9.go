@@ -327,7 +327,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			q = p
 
-			if (ctxt.Flag_dynlink || true) && cursym.Name != "_cgo_topofstack" {
+			if (ctxt.Flag_dynlink || true) && cursym.Name != "_cgo_topofstack" && cursym.Name != "runtime·load_g" {
 				// In dynlink mode, all functions must start
 				// with instructions to load the TOC pointer
 				// into r2:
