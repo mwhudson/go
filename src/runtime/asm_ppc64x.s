@@ -984,7 +984,7 @@ TEXT runtime·memhash_varlen(SB),NOSPLIT,$40-24
 	MOVD	R4, ARGBASE+8(R1)
 	MOVD	R5, ARGBASE+16(R1)
 	BL	runtime·memhash(SB)
-	MOVD	32(R1), R3
+	MOVD	ARGBASE+24(R1), R3
 	MOVD	R3, ret+16(FP)
 	RET
 
