@@ -60,6 +60,9 @@ func TestGdbPython(t *testing.T) {
 	if runtime.GOOS == "darwin" {
 		t.Skip("gdb does not work on darwin")
 	}
+	if runtime.GOARCH == "ppc64le" {
+		t.Skip("gdb does not work on ppc64le for now")
+	}
 
 	checkGdbPython(t)
 
