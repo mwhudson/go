@@ -923,7 +923,7 @@ TEXT runtime·getcallerpc(SB),NOSPLIT,$8-16
 	BNE	nobar
 	// Get original return PC.
 	BL	runtime·nextBarrierPC(SB)
-	MOVD	8(R1), R3
+	MOVD	ARGBASE+0(R1), R3
 nobar:
 	MOVD	R3, ret+8(FP)
 	RET
@@ -1031,7 +1031,7 @@ TEXT runtime·memequal_varlen(SB),NOSPLIT,$40-17
 	MOVD	R4, ARGBASE+8(R1)
 	MOVD	R5, ARGBASE+16(R1)
 	BL	runtime·memeq(SB)
-	MOVBZ	32(R1), R3
+	MOVBZ	ARGBASE+24(R1), R3
 	MOVB	R3, ret+16(FP)
 	RET
 eq:
