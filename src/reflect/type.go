@@ -1384,7 +1384,7 @@ func cacheGet(k cacheKey) Type {
 	}
 
 	lookupCache.Lock()
-	t := lookupCache.m[k]
+	t = lookupCache.m[k]
 	if t != nil {
 		lookupCache.Unlock()
 		return t
