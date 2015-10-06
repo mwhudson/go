@@ -225,7 +225,7 @@ switch:
 	// be systemstack_switch if the G stack is scanned.
 	MOVD	$runtime·systemstack_switch(SB), R6
 #ifdef shared
-	ADD	$16, R6	// get past prologue
+	ADD	$8, R6	// get past prologue
 #else
 	ADD	$8, R6	// get past prologue
 #endif
