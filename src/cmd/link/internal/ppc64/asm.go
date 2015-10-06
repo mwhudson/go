@@ -481,7 +481,7 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 	case obj.R_CALLPOWER:
 		// Bits 6 through 29 = (S + A - P) >> 2
 
-		t := ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
+		t := ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off)) + 8 // XXXXXXXXXXXXXXX
 		if t&3 != 0 {
 			ld.Ctxt.Diag("relocation for %s+%d is not aligned: %d", r.Sym.Name, r.Off, t)
 		}
