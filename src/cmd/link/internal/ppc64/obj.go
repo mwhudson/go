@@ -112,7 +112,7 @@ func archinit() {
 	}
 
 	//if ld.DynlinkingGo() {
-	ld.Linklookup(ld.Ctxt, ".TOC.", 0).Type = obj.SDYNIMPORT
+	//ld.Linklookup(ld.Ctxt, ".TOC.", 0).Type = obj.SDYNIMPORT
 	//}
 
 	switch ld.HEADTYPE {
