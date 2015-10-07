@@ -857,8 +857,8 @@ havem:
 	BL	runtime·save_g(SB)
 	MOVD	(g_sched+gobuf_sp)(g), R4 // prepare stack as R4
 	MOVD	(g_sched+gobuf_pc)(g), R5
-	MOVD	R5, -24(R4)
-	MOVD	$-24(R4), R1
+	MOVD	R5, -(ARGBASE+16)(R4)
+	MOVD	$-(ARGBASE+16)(R4), R1
         // XXXXXX ??
 	BL	runtime·cgocallbackg(SB)
 
