@@ -240,7 +240,7 @@ func cgocallbackg1() {
 		// On ppc64, stack frame is two words and there's a
 		// saved LR between SP and the stack frame and between
 		// the stack frame and the arguments.
-		cb = (*args)(unsafe.Pointer(sp + 4*ptrSize))
+		cb = (*args)(unsafe.Pointer(sp + 4*ptrSize + 3*shared*ptrSize))
 	}
 
 	// Invoke callback.
