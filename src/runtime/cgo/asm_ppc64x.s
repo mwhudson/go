@@ -21,12 +21,12 @@ TEXT crosscall2(SB),NOSPLIT,$-8
 
 	BL	saveregs2<>(SB)
 
-	MOVDU	R1, (-288-3*8)(R1)
+	MOVDU	R1, (-288-2*8-ARGBASE)(R1)
 
 	// Initialize Go ABI environment
 	BL	runtime·reginit(SB)
 	BL	runtime·load_g(SB)
-
+        // Move to r12 too
 	MOVD	R3, CTR
 	MOVD	R4, 8(R1)
 	MOVD	R5, 16(R1)

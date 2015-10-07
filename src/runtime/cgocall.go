@@ -240,7 +240,8 @@ func cgocallbackg1() {
 		// On ppc64, stack frame is two words and there's a
 		// saved LR between SP and the stack frame and between
 		// the stack frame and the arguments.
-		cb = (*args)(unsafe.Pointer(sp + 4*ptrSize + 3*shared*ptrSize))
+		const fixed_stack_pointers = 1 + 3*shared
+		cb = (*args)(unsafe.Pointer(sp + (2*fixed_stack_pointers+2)*ptrSize))
 	}
 
 	// Invoke callback.
@@ -278,7 +279,8 @@ func unwindm(restore *bool) {
 	case "arm64":
 		sched.sp = *(*uintptr)(unsafe.Pointer(sched.sp + 16))
 	case "ppc64", "ppc64le":
-		sched.sp = *(*uintptr)(unsafe.Pointer(sched.sp + 8))
+		// XXXX
+		sched.sp = *(*uintptr)(unsafe.Pointer(sched.sp + 8*(1+3*shared)))
 	}
 	releasem(mp)
 }
