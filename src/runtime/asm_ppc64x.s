@@ -865,7 +865,7 @@ havem:
 	// Restore g->sched (== m->curg->sched) from saved values.
 	MOVD	0(R1), R5
 	MOVD	R5, (g_sched+gobuf_pc)(g)
-	MOVD	$24(R1), R4
+	MOVD	$(ARGBASE+16)(R1), R4
 	MOVD	R4, (g_sched+gobuf_sp)(g)
 
 	// Switch back to m->g0's stack and restore m->g0->sched.sp.
