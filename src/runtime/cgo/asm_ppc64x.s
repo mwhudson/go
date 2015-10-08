@@ -28,8 +28,8 @@ TEXT crosscall2(SB),NOSPLIT,$-8
 	BL	runtime·load_g(SB)
         // Move to r12 too
 	MOVD	R3, CTR
-	MOVD	R4, 8(R1)
-	MOVD	R5, 16(R1)
+	MOVD	R4, ARGBASE(R1)
+	MOVD	R5, ARGBASE+8(R1)
 	BL	(CTR)
 
 	ADD	$(288+2*8+ARGBASE), R1
