@@ -426,27 +426,6 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.To.Type = obj.TYPE_MEM
 				q.To.Offset = 24
 				q.To.Reg = REGSP
-
-				if autosize > 32 && autosize < 3000 {
-					q = obj.Appendp(ctxt, q)
-					q.As = AMOVD
-					q.Lineno = p.Lineno
-					q.From.Type = obj.TYPE_CONST
-					q.From.Offset = 0xdeadbeef
-					q.To.Type = obj.TYPE_REG
-					q.To.Reg = REGTMP
-
-					for o := int64(32); o < int64(autosize); o += 4 {
-						q = obj.Appendp(ctxt, q)
-						q.As = AMOVW
-						q.Lineno = p.Lineno
-						q.From.Type = obj.TYPE_REG
-						q.From.Reg = REGTMP
-						q.To.Type = obj.TYPE_MEM
-						q.To.Offset = o
-						q.To.Reg = REGSP
-					}
-				}
 			} else {
 				mov := AMOVD
 				aoffset := 0

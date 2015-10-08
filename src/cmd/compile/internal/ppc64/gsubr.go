@@ -578,9 +578,6 @@ func rawgins(as int, f *gc.Node, t *gc.Node) *obj.Prog {
 
 	switch as {
 	case obj.ACALL:
-		if p.To.Type == obj.TYPE_REG && p.To.Reg == ppc64.REG_CTR {
-			panic("hey what")
-		}
 		if p.To.Type == obj.TYPE_REG && p.To.Reg != ppc64.REG_CTR {
 			// Allow front end to emit CALL REG, and rewrite into MOV REG, CTR; CALL CTR.
 			if gc.Ctxt.Flag_dynlink {

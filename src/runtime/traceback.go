@@ -121,9 +121,6 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 	if goexitPC == 0 {
 		throw("gentraceback before goexitPC initialization")
 	}
-	// if callback != nil && v == nil {
-	// 	println("--> gentraceback starting")
-	// }
 	g := getg()
 	if g == gp && g == g.m.curg {
 		// The starting sp has been passed in as a uintptr, and the caller may
@@ -210,9 +207,6 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		//	The caller's program counter is lr, unless lr is zero, in which case it is *(uintptr*)sp.
 		f = frame.fn
 
-		// if callback != nil && v == nil {
-		// 	print(funcname(f), " ")
-		// }
 		// Found an actual function.
 		// Derive frame pointer and link register.
 		if frame.fp == 0 {
@@ -224,9 +218,6 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 				sp = gp.m.curg.sched.sp
 				stkbar = gp.m.curg.stkbar[gp.m.curg.stkbarPos:]
 			}
-			// if callback != nil && v == nil {
-			// 	print("spdelta: ", funcspdelta(f, frame.pc), " ")
-			// }
 			frame.fp = sp + uintptr(funcspdelta(f, frame.pc))
 			if !usesLR {
 				// On x86, call instruction pushes return PC before entering new function.
@@ -237,9 +228,6 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 		if topofstack(f) {
 			frame.lr = 0
 			flr = nil
-			// if callback != nil && v == nil {
-			// 	println("top of stack")
-			// }
 		} else if usesLR && f.entry == jmpdeferPC {
 			// jmpdefer modifies SP/LR/PC non-atomically.
 			// If a profiling interrupt arrives during jmpdefer,
@@ -275,9 +263,6 @@ func gentraceback(pc0, sp0, lr0 uintptr, gp *g, skip int, pcbuf *uintptr, max in
 				frame.lr = stkbar[0].savedLRVal
 				stkbar = stkbar[1:]
 			}
-			// if callback != nil && v == nil {
-			// 	println(hex(frame.lr))
-			// }
 			flr = findfunc(frame.lr)
 			if flr == nil {
 				// This happens if you get a profiling interrupt at just the wrong time.
