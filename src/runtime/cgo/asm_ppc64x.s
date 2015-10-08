@@ -32,7 +32,7 @@ TEXT crosscall2(SB),NOSPLIT,$-8
 	MOVD	R5, 16(R1)
 	BL	(CTR)
 
-	ADD	$(288+3*8), R1
+	ADD	$(288+2*8+ARGBASE), R1
 
 	BL	restoreregs2<>(SB)
 
