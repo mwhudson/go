@@ -101,7 +101,7 @@ and test commands:
 		arguments to pass on each go tool link invocation.
 	-linkshared
 		link against shared libraries previously created with
-		-buildmode=shared
+		-buildmode=shared.
 	-pkgdir dir
 		install and load all packages from dir instead of the usual locations.
 		For example, when building with a non-standard configuration,
@@ -388,7 +388,7 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch platform {
-			case "linux/386", "linux/amd64", "linux/arm", "linux/arm64":
+			case "linux/386", "linux/amd64", "linux/arm", "linux/arm64", "linux/ppc64le":
 				buildAsmflags = append(buildAsmflags, "-D=GOBUILDMODE_shared=1")
 			default:
 				fatalf("-buildmode=shared not supported on %s\n", platform)
@@ -407,7 +407,7 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch platform {
-			case "linux/386", "linux/amd64", "linux/arm", "linux/arm64":
+			case "linux/386", "linux/amd64", "linux/arm", "linux/arm64", "linux/ppc64le":
 				buildAsmflags = append(buildAsmflags, "-D=GOBUILDMODE_shared=1")
 			default:
 				fatalf("-buildmode=shared not supported on %s\n", platform)
