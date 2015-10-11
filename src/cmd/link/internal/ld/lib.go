@@ -1497,12 +1497,8 @@ var morestack *LSym
 // TODO: Record enough information in new object files to
 // allow stack checks here.
 
-func haslinkregister() bool {
-	return Thearch.Thechar == '5' || Thearch.Thechar == '9' || Thearch.Thechar == '7'
-}
-
 func callsize() int {
-	if haslinkregister() {
+	if Thearch.Thechar == '5' || Thearch.Thechar == '9' || Thearch.Thechar == '7' {
 		return 0
 	}
 	return Thearch.Regsize
@@ -1606,10 +1602,7 @@ func stkcheck(up *Chain, depth int) int {
 			return 0
 		}
 		// Raise limit to allow frame.
-		limit = int(obj.StackLimit + s.Locals)
-		if haslinkregister() {
-			limit += Thearch.Regsize
-		}
+		limit = int(obj.StackLimit+s.Locals) + int(Ctxt.FixedFrameSize())
 	}
 
 	// Walk through sp adjustments in function, consuming relocs.
@@ -1686,8 +1679,8 @@ func stkprint(ch *Chain, limit int) {
 			fmt.Printf("\t%d\tguaranteed after split check in %s\n", ch.limit, name)
 		}
 	} else {
-		stkprint(ch.up, ch.limit+callsize())
-		if !haslinkregister() {
+		stkprint(ch.up, ch.limit+int(Ctxt.FixedFrameSize()))
+		if Ctxt.FixedFrameSize() == 0 {
 			fmt.Printf("\t%d\ton entry to %s\n", ch.limit, name)
 		}
 	}
