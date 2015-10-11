@@ -363,6 +363,9 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch platform {
+			case "linux/ppc64le":
+				buildAsmflags = append(buildAsmflags, "-D=shared=1")
+				buildContext.BuildTags = append(buildContext.BuildTags, "shared")
 			case "linux/amd64":
 			default:
 				fatalf("-buildmode=shared not supported on %s\n", platform)
@@ -380,9 +383,13 @@ func buildModeInit() {
 		if gccgo {
 			codegenArg = "-fPIC"
 		} else {
-			if platform != "linux/amd64" {
-				fmt.Fprintf(os.Stderr, "go %s: -linkshared is only supported on linux/amd64\n", flag.Args()[0])
-				os.Exit(2)
+			switch platform {
+			case "linux/ppc64le":
+				buildAsmflags = append(buildAsmflags, "-D=shared=1")
+				buildContext.BuildTags = append(buildContext.BuildTags, "shared")
+			case "linux/amd64":
+			default:
+				fatalf("-linkshared not supported on %s\n", platform)
 			}
 			codegenArg = "-dynlink"
 			// TODO(mwhudson): remove -w when that gets fixed in linker.
