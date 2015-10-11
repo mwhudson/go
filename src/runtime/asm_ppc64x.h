@@ -14,5 +14,9 @@
 #endif
 
 #ifdef GOARCH_ppc64le
+#ifdef shared
+#define FIXED_FRAME 32
+#else
 #define FIXED_FRAME 8
+#endif
 #endif

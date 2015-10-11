@@ -539,6 +539,11 @@ func (ctxt *Link) FixedFrameSize() int64 {
 	switch ctxt.Arch.Thechar {
 	case '6', '8':
 		return 0
+	case '9':
+		if ctxt.Flag_dynlink {
+			return int64(4 * ctxt.Arch.Ptrsize)
+		}
+		fallthrough
 	default:
 		return int64(ctxt.Arch.Ptrsize)
 	}
