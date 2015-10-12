@@ -246,6 +246,7 @@ var optab = []Optab{
 	{AMOVB, C_ADDR, C_NONE, C_NONE, C_REG, 76, 12, 0},
 
 	{AMOVD, C_TLS_LE, C_NONE, C_NONE, C_REG, 79, 4, 0},
+	{AMOVD, C_TLS_IE, C_NONE, C_NONE, C_REG, 80, 8, 0},
 
 	/* load constant */
 	{AMOVD, C_SECON, C_NONE, C_NONE, C_REG, 3, 4, REGSB},
@@ -586,7 +587,11 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 			ctxt.Instoffset = a.Offset
 			if a.Sym != nil { // use relocation
 				if a.Sym.Type == obj.STLSBSS {
-					return C_TLS_LE
+					if ctxt.Flag_dynlink {
+						return C_TLS_IE
+					} else {
+						return C_TLS_LE
+					}
 				}
 				return C_ADDR
 			}
@@ -2449,6 +2454,18 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		rel.Siz = 4
 		rel.Sym = p.From.Sym
 		rel.Type = obj.R_POWER_TLS_LE
+
+	case 80:
+		if p.From.Offset != 0 {
+			ctxt.Diag("invalid offset against tls var %v", p)
+		}
+		o1 = AOP_IRR(OP_ADDIS, uint32(p.To.Reg), REG_R2, 0)
+		o2 = AOP_IRR(opload(AMOVD), uint32(p.To.Reg), uint32(p.To.Reg), 0)
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 8
+		rel.Sym = p.From.Sym
+		rel.Type = obj.R_PPC64_TLS_IE
 
 	}
 
