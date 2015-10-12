@@ -38,12 +38,10 @@ package obj
 // TODO(rsc): Share Go definitions with linkers directly.
 
 const (
-	STACKSYSTEM = 0
-	StackSystem = STACKSYSTEM
+	StackSystem = 0
 	StackBig    = 4096
 	StackGuard  = 640*stackGuardMultiplier + StackSystem
 	StackSmall  = 128
-	StackLimit  = StackGuard - StackSystem - StackSmall
 )
 
 const (

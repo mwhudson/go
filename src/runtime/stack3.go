@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build ppc64le,shared
+// +build !shared !ppc64le
 
 package runtime
 
 const (
-	minFrameSize          = 32
-	stackGuardMultiplier2 = 2
+	stackGuardMultiplier2 = 1
 )
