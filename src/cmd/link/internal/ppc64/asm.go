@@ -293,7 +293,12 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 }
 
 func elfreloc1(r *ld.Reloc, sectoff int64) int {
-	ld.Thearch.Vput(uint64(sectoff))
+	put1 := func(rType uint64, bias int64) {
+		ld.Thearch.Vput(uint64(sectoff))
+		ld.Thearch.Vput(rType | uint64(r.Xsym.Elfsym)<<32)
+		ld.Thearch.Vput(uint64(r.Xadd + bias))
+		sectoff += 4
+	}
 
 	elfsym := r.Xsym.Elfsym
 	switch r.Type {
@@ -303,66 +308,50 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 	case obj.R_ADDR:
 		switch r.Siz {
 		case 4:
-			ld.Thearch.Vput(ld.R_PPC64_ADDR32 | uint64(elfsym)<<32)
+			put1(ld.R_PPC64_ADDR32, 0)
 		case 8:
-			ld.Thearch.Vput(ld.R_PPC64_ADDR64 | uint64(elfsym)<<32)
+			put1(ld.R_PPC64_ADDR64, 0)
 		default:
 			return -1
 		}
 
 	case obj.R_POWER_TLS_LE:
-		ld.Thearch.Vput(ld.R_PPC64_TPREL16 | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_TPREL16, 0)
 
 	case obj.R_ADDRPOWER:
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_ADDR16_HA, 0)
+		put1(ld.R_PPC64_ADDR16_LO, 0)
 
 	case obj.R_ADDRPOWER_DS:
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO_DS | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_ADDR16_HA, 0)
+		put1(ld.R_PPC64_ADDR16_LO_DS, 0)
 
 	case obj.R_ADDRPOWER_GOT:
-		ld.Thearch.Vput(ld.R_PPC64_GOT16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_GOT16_LO_DS | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_GOT16_HA, 0)
+		put1(ld.R_PPC64_GOT16_LO_DS, -4)
 
 	case obj.R_ADDRPOWER_PCREL:
-		ld.Thearch.Vput(ld.R_PPC64_REL16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_REL16_LO | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_REL16_HA, 0)
+		put1(ld.R_PPC64_REL16_LO_DS, -4)
 
 	case obj.R_ADDRPOWER_TOCREL:
-		ld.Thearch.Vput(ld.R_PPC64_TOC16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_TOC16_LO | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_TOC16_HA, 0)
+		put1(ld.R_PPC64_TOC16_LO, -4)
 
 	case obj.R_ADDRPOWER_TOCREL_DS:
-		ld.Thearch.Vput(ld.R_PPC64_TOC16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_TOC16_LO_DS | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_TOC16_HA, 0)
+		put1(ld.R_PPC64_TOC16_LO_DS, -4)
 
 	case obj.R_POWER_TLS_IE:
-		ld.Thearch.Vput(ld.R_PPC64_GOT_TPREL16_HA | uint64(elfsym)<<32)
-		ld.Thearch.Vput(uint64(r.Xadd))
-		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_GOT_TPREL16_LO_DS | uint64(elfsym)<<32)
+		put1(ld.R_PPC64_GOT_TPREL16_HA, 0)
+		put1(ld.R_PPC64_GOT_TPREL16_HA, -4)
 
 	case obj.R_CALLPOWER:
 		if r.Siz != 4 {
 			return -1
 		}
-		ld.Thearch.Vput(ld.R_PPC64_REL24 | uint64(elfsym)<<32)
-
+		put1(ld.R_PPC64_REL24, 0)
 	}
-	ld.Thearch.Vput(uint64(r.Xadd))
 
 	return 0
 }
