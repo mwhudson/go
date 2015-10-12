@@ -300,7 +300,6 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		sectoff += 4
 	}
 
-	elfsym := r.Xsym.Elfsym
 	switch r.Type {
 	default:
 		return -1
