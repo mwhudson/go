@@ -327,23 +327,23 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 
 	case obj.R_ADDRPOWER_GOT:
 		put1(ld.R_PPC64_GOT16_HA, 0)
-		put1(ld.R_PPC64_GOT16_LO_DS, -4)
+		put1(ld.R_PPC64_GOT16_LO_DS, +4)
 
 	case obj.R_ADDRPOWER_PCREL:
 		put1(ld.R_PPC64_REL16_HA, 0)
-		put1(ld.R_PPC64_REL16_LO, -4)
+		put1(ld.R_PPC64_REL16_LO, +4)
 
 	case obj.R_ADDRPOWER_TOCREL:
 		put1(ld.R_PPC64_TOC16_HA, 0)
-		put1(ld.R_PPC64_TOC16_LO, -4)
+		put1(ld.R_PPC64_TOC16_LO, +4)
 
 	case obj.R_ADDRPOWER_TOCREL_DS:
 		put1(ld.R_PPC64_TOC16_HA, 0)
-		put1(ld.R_PPC64_TOC16_LO_DS, -4)
+		put1(ld.R_PPC64_TOC16_LO_DS, +4)
 
 	case obj.R_POWER_TLS_IE:
 		put1(ld.R_PPC64_GOT_TPREL16_HA, 0)
-		put1(ld.R_PPC64_GOT_TPREL16_HA, -4)
+		put1(ld.R_PPC64_GOT_TPREL16_HA, +4)
 
 	case obj.R_CALLPOWER:
 		if r.Siz != 4 {
