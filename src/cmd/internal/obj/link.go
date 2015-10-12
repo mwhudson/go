@@ -441,6 +441,8 @@ const (
 	R_POWER_TLS_IE
 	// TODO(mwhudson): document
 	R_ADDRPOWER_DS
+	// TODO(mwhudson): document
+	R_ADDRPOWER_GOT
 )
 
 type Auto struct {
