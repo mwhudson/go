@@ -455,11 +455,34 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			p.To.Offset = int64(autosize)
 
-			if p.From3.Offset&obj.NOSPLIT == 0 {
-				p = stacksplit(ctxt, p, autosize) // emit split check
+			q = p
+
+			if ctxt.Flag_dynlink {
+				// In dynlink mode, all functions must start
+				// with instructions to load the TOC pointer
+				// into r2:
+				// addis r2, r12, .TOC.-func@ha
+				// addi r2, r2, .TOC.-func@l
+				q = obj.Appendp(ctxt, q)
+				q.As = AWORD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_CONST
+				q.From.Offset = 0x3c4c0000
+				q = obj.Appendp(ctxt, q)
+				q.As = AWORD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_CONST
+				q.From.Offset = 0x38420000
+				rel := obj.Addrel(ctxt.Cursym)
+				rel.Off = 0
+				rel.Siz = 4
+				rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
+				rel.Type = obj.R_ADDRPOWER_PCREL
 			}
 
-			q = p
+			if cursym.Text.From3.Offset&obj.NOSPLIT == 0 {
+				q = stacksplit(ctxt, q, autosize) // emit split check
+			}
 
 			if autosize != 0 {
 				/* use MOVDU to adjust R1 when saving R31, if autosize is small */
@@ -467,7 +490,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 					mov = AMOVDU
 					aoffset = int(-autosize)
 				} else {
-					q = obj.Appendp(ctxt, p)
+					q = obj.Appendp(ctxt, q)
 					q.As = AADD
 					q.Lineno = p.Lineno
 					q.From.Type = obj.TYPE_CONST
@@ -506,6 +529,17 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			q.To.Reg = REGSP
 			if q.As == AMOVDU {
 				q.Spadj = int32(-aoffset)
+			}
+
+			if ctxt.Flag_dynlink {
+				q = obj.Appendp(ctxt, q)
+				q.As = AMOVD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_REG
+				q.From.Reg = REG_R2
+				q.To.Type = obj.TYPE_MEM
+				q.To.Reg = REGSP
+				q.To.Offset = 24
 			}
 
 			if cursym.Text.From3.Offset&obj.WRAPPER != 0 {

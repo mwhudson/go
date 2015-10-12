@@ -284,6 +284,7 @@ var optab = []Optab{
 	{ABEQ, C_NONE, C_NONE, C_NONE, C_SBRA, 16, 4, 0},
 	{ABEQ, C_CREG, C_NONE, C_NONE, C_SBRA, 16, 4, 0},
 	{ABR, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},
+	{ABR, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 11, 8, 0},
 	{ABC, C_SCON, C_REG, C_NONE, C_SBRA, 16, 4, 0},
 	{ABC, C_SCON, C_REG, C_NONE, C_LBRA, 17, 4, 0},
 	{ABR, C_NONE, C_NONE, C_NONE, C_LR, 18, 4, 0},
@@ -714,6 +715,9 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_DCON
 
 	case obj.TYPE_BRANCH:
+		if a.Sym != nil && ctxt.Flag_dynlink {
+			return C_LBRAPIC
+		}
 		return C_SBRA
 	}
 
@@ -1719,6 +1723,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			rel.Add = int64(v)
 			rel.Type = obj.R_CALLPOWER
 		}
+		o2 = 0x60000000 // Only used in PIC
 
 	case 12: /* movb r,r (extsb); movw r,r (extsw) */
 		if p.To.Reg == REGZERO && p.From.Type == obj.TYPE_CONST {
@@ -2465,7 +2470,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			ctxt.Diag("invalid offset against tls var %v", p)
 		}
 		o1 = AOP_IRR(OP_ADDIS, uint32(p.To.Reg), REG_R2, 0)
-		o2 = AOP_IRR(opload(AMOVD), uint32(p.To.Reg), uint32(p.To.Reg), 0)
+		o2 = AOP_IRR(uint32(opload(ctxt, AMOVD)), uint32(p.To.Reg), uint32(p.To.Reg), 0)
 		rel := obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc)
 		rel.Siz = 8
@@ -2479,7 +2484,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		}
 
 		o1 = AOP_IRR(OP_ADDIS, uint32(p.To.Reg), REG_R2, 0)
-		o2 = AOP_IRR(opload(AMOVD), uint32(p.To.Reg), uint32(p.To.Reg), 0)
+		o2 = AOP_IRR(uint32(opload(ctxt, AMOVD)), uint32(p.To.Reg), uint32(p.To.Reg), 0)
 		rel := obj.Addrel(ctxt.Cursym)
 		rel.Off = int32(ctxt.Pc)
 		rel.Siz = 8
