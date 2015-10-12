@@ -339,7 +339,7 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 
 	case obj.R_ADDRPOWER_TOCREL_DS:
 		put1(ld.R_PPC64_TOC16_HA, 0)
-		put1(ld.R_PPC64_TOC16_LO_DS)
+		put1(ld.R_PPC64_TOC16_LO_DS, 0)
 
 	case obj.R_POWER_TLS_IE:
 		put1(ld.R_PPC64_GOT_TPREL16_HA, 0)
