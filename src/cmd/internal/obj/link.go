@@ -445,6 +445,10 @@ const (
 	R_ADDRPOWER_GOT
 	// TODO(mwhudson): document
 	R_ADDRPOWER_PCREL
+	// TODO(mwhudson): document
+	R_ADDRPOWER_TOCREL
+	// TODO(mwhudson): document
+	R_ADDRPOWER_TOCREL_DS
 )
 
 type Auto struct {
