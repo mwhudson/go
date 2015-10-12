@@ -138,7 +138,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p1.From.Type = obj.TYPE_CONST
 		p1.From.Offset = offset
 		p1.To.Type = obj.TYPE_REG
-		p1.To.Reg = REGTMP
+		p1.To.Reg = REG_R12
 		p2 := obj.Appendp(ctxt, p1)
 		p2.As = AMOVD
 		p2.From.Type = obj.TYPE_REG
