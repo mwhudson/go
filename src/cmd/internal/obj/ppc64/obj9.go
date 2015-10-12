@@ -145,7 +145,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		p2.From.Reg = REG_R12
 		p2.To.Type = obj.TYPE_REG
 		p2.To.Reg = REG_CTR
-		p3 := obj.Appendp(ctxt, p1)
+		p3 := obj.Appendp(ctxt, p2)
 		p3.As = obj.ACALL
 		p3.From.Type = obj.TYPE_REG
 		p3.From.Reg = REG_R12
