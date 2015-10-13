@@ -945,8 +945,10 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	p.As = ABL
 	p.To.Type = obj.TYPE_BRANCH
 	prefix := "runtime."
+	local := false
 	if ctxt.Flag_dynlink {
 		prefix = "local."
+		local = true
 	}
 	if ctxt.Cursym.Cfunc != 0 {
 		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestackc", 0)
@@ -955,6 +957,7 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	} else {
 		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestack", 0)
 	}
+	p.To.Sym.Local = local
 
 	// BR	start
 	p = obj.Appendp(ctxt, p)
