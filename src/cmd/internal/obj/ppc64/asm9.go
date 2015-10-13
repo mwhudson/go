@@ -715,7 +715,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_DCON
 
 	case obj.TYPE_BRANCH:
-		if a.Sym != nil && ctxt.Flag_dynlink {
+		if a.Sym != nil && ctxt.Flag_dynlink && !a.Sym.Local {
 			return C_LBRAPIC
 		}
 		return C_SBRA
