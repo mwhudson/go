@@ -80,7 +80,7 @@ nocgo:
 	MOVDU	R0, -8(R1)
 #endif
 	BL	runtime·newproc(SB)
-	ADD	$24, R1
+	ADD	$(FIXED_FRAME+16), R1
 
 	// start this M
 	BL	runtime·mstart(SB)
