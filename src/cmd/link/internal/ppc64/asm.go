@@ -39,102 +39,145 @@ import (
 )
 
 func gentext() {
-	var s *ld.LSym
-	var stub *ld.LSym
-	var pprevtextp **ld.LSym
-	var r *ld.Reloc
-	var n string
-	var o1 uint32
-	var i int
-
-	// The ppc64 ABI PLT has similar concepts to other
-	// architectures, but is laid out quite differently.  When we
-	// see an R_PPC64_REL24 relocation to a dynamic symbol
-	// (indicating that the call needs to go through the PLT), we
-	// generate up to three stubs and reserve a PLT slot.
-	//
-	// 1) The call site will be bl x; nop (where the relocation
-	//    applies to the bl).  We rewrite this to bl x_stub; ld
-	//    r2,24(r1).  The ld is necessary because x_stub will save
-	//    r2 (the TOC pointer) at 24(r1) (the "TOC save slot").
-	//
-	// 2) We reserve space for a pointer in the .plt section (once
-	//    per referenced dynamic function).  .plt is a data
-	//    section filled solely by the dynamic linker (more like
-	//    .plt.got on other architectures).  Initially, the
-	//    dynamic linker will fill each slot with a pointer to the
-	//    corresponding x@plt entry point.
-	//
-	// 3) We generate the "call stub" x_stub (once per dynamic
-	//    function/object file pair).  This saves the TOC in the
-	//    TOC save slot, reads the function pointer from x's .plt
-	//    slot and calls it like any other global entry point
-	//    (including setting r12 to the function address).
-	//
-	// 4) We generate the "symbol resolver stub" x@plt (once per
-	//    dynamic function).  This is solely a branch to the glink
-	//    resolver stub.
-	//
-	// 5) We generate the glink resolver stub (only once).  This
-	//    computes which symbol resolver stub we came through and
-	//    invokes the dynamic resolver via a pointer provided by
-	//    the dynamic linker.  This will patch up the .plt slot to
-	//    point directly at the function so future calls go
-	//    straight from the call stub to the real function, and
-	//    then call the function.
-
-	// NOTE: It's possible we could make ppc64 closer to other
-	// architectures: ppc64's .plt is like .plt.got on other
-	// platforms and ppc64's .glink is like .plt on other
-	// platforms.
-
-	// Find all R_PPC64_REL24 relocations that reference dynamic
-	// imports.  Reserve PLT entries for these symbols and
-	// generate call stubs.  The call stubs need to live in .text,
-	// which is why we need to do this pass this early.
-	//
-	// This assumes "case 1" from the ABI, where the caller needs
-	// us to save and restore the TOC pointer.
-	pprevtextp = &ld.Ctxt.Textp
-
-	for s = *pprevtextp; s != nil; pprevtextp, s = &s.Next, s.Next {
-		for i = range s.R {
-			r = &s.R[i]
-			if r.Type != 256+ld.R_PPC64_REL24 || r.Sym.Type != obj.SDYNIMPORT {
-				continue
+	if ld.DynlinkingGo() {
+		for _, morestackfunc := range []string{"morestack", "morestack_noctxt", "morestackc"} {
+			runtime_func := ld.Linkrlookup(ld.Ctxt, "runtime."+morestackfunc, 0)
+			runtime_func.Reachable = true
+			local_func := ld.Linklookup(ld.Ctxt, "local."+morestackfunc, 0)
+			local_func.Type = obj.STEXT
+			local_func.Local = true
+			local_func.Reachable = true
+			o := func(op uint32) {
+				ld.Adduint32(ld.Ctxt, local_func, op)
 			}
-
-			// Reserve PLT entry and generate symbol
-			// resolver
-			addpltsym(ld.Ctxt, r.Sym)
-
-			// Generate call stub
-			n = fmt.Sprintf("%s.%s", s.Name, r.Sym.Name)
-
-			stub = ld.Linklookup(ld.Ctxt, n, 0)
-			stub.Reachable = stub.Reachable || s.Reachable
-			if stub.Size == 0 {
-				// Need outer to resolve .TOC.
-				stub.Outer = s
-
-				// Link in to textp before s (we could
-				// do it after, but would have to skip
-				// the subsymbols)
-				*pprevtextp = stub
-
-				stub.Next = s
-				pprevtextp = &stub.Next
-
-				gencallstub(1, stub, r.Sym)
+			// mflr r31
+			o(0x7fe802a6)
+			// stdu r31, -32(r1)
+			o(0xfbe1ffe1)
+			// bl $runtime_func + R_PPC64_REL24
+			rel := ld.Addrel(local_func)
+			rel.Off = int32(local_func.Size)
+			rel.Siz = 4
+			rel.Sym = runtime_func
+			rel.Type = obj.R_CALLPOWER
+			o(0x48000001)
+			// nop
+			o(0x60000000)
+			// ld r31, 0(r1)
+			o(0xebe10000)
+			// mtlr r31
+			o(0x7fe803a6)
+			// addi r1,r1,32
+			o(0x38210020)
+			// blr
+			o(0x4e800020)
+			if ld.Ctxt.Etextp != nil {
+				ld.Ctxt.Etextp.Next = local_func
+			} else {
+				ld.Ctxt.Textp = local_func
 			}
+			ld.Ctxt.Etextp = local_func
+		}
+	}
 
-			// Update the relocation to use the call stub
-			r.Sym = stub
+	if ld.Linkmode == ld.LinkInternal {
+		var s *ld.LSym
+		var stub *ld.LSym
+		var pprevtextp **ld.LSym
+		var r *ld.Reloc
+		var n string
+		var o1 uint32
+		var i int
 
-			// Restore TOC after bl.  The compiler put a
-			// nop here for us to overwrite.
-			o1 = 0xe8410018 // ld r2,24(r1)
-			ld.Ctxt.Arch.ByteOrder.PutUint32(s.P[r.Off+4:], o1)
+		// The ppc64 ABI PLT has similar concepts to other
+		// architectures, but is laid out quite differently.  When we
+		// see an R_PPC64_REL24 relocation to a dynamic symbol
+		// (indicating that the call needs to go through the PLT), we
+		// generate up to three stubs and reserve a PLT slot.
+		//
+		// 1) The call site will be bl x; nop (where the relocation
+		//    applies to the bl).  We rewrite this to bl x_stub; ld
+		//    r2,24(r1).  The ld is necessary because x_stub will save
+		//    r2 (the TOC pointer) at 24(r1) (the "TOC save slot").
+		//
+		// 2) We reserve space for a pointer in the .plt section (once
+		//    per referenced dynamic function).  .plt is a data
+		//    section filled solely by the dynamic linker (more like
+		//    .plt.got on other architectures).  Initially, the
+		//    dynamic linker will fill each slot with a pointer to the
+		//    corresponding x@plt entry point.
+		//
+		// 3) We generate the "call stub" x_stub (once per dynamic
+		//    function/object file pair).  This saves the TOC in the
+		//    TOC save slot, reads the function pointer from x's .plt
+		//    slot and calls it like any other global entry point
+		//    (including setting r12 to the function address).
+		//
+		// 4) We generate the "symbol resolver stub" x@plt (once per
+		//    dynamic function).  This is solely a branch to the glink
+		//    resolver stub.
+		//
+		// 5) We generate the glink resolver stub (only once).  This
+		//    computes which symbol resolver stub we came through and
+		//    invokes the dynamic resolver via a pointer provided by
+		//    the dynamic linker.  This will patch up the .plt slot to
+		//    point directly at the function so future calls go
+		//    straight from the call stub to the real function, and
+		//    then call the function.
+
+		// NOTE: It's possible we could make ppc64 closer to other
+		// architectures: ppc64's .plt is like .plt.got on other
+		// platforms and ppc64's .glink is like .plt on other
+		// platforms.
+
+		// Find all R_PPC64_REL24 relocations that reference dynamic
+		// imports.  Reserve PLT entries for these symbols and
+		// generate call stubs.  The call stubs need to live in .text,
+		// which is why we need to do this pass this early.
+		//
+		// This assumes "case 1" from the ABI, where the caller needs
+		// us to save and restore the TOC pointer.
+		pprevtextp = &ld.Ctxt.Textp
+
+		for s = *pprevtextp; s != nil; pprevtextp, s = &s.Next, s.Next {
+			for i = range s.R {
+				r = &s.R[i]
+				if r.Type != 256+ld.R_PPC64_REL24 || r.Sym.Type != obj.SDYNIMPORT {
+					continue
+				}
+
+				// Reserve PLT entry and generate symbol
+				// resolver
+				addpltsym(ld.Ctxt, r.Sym)
+
+				// Generate call stub
+				n = fmt.Sprintf("%s.%s", s.Name, r.Sym.Name)
+
+				stub = ld.Linklookup(ld.Ctxt, n, 0)
+				stub.Reachable = stub.Reachable || s.Reachable
+				if stub.Size == 0 {
+					// Need outer to resolve .TOC.
+					stub.Outer = s
+
+					// Link in to textp before s (we could
+					// do it after, but would have to skip
+					// the subsymbols)
+					*pprevtextp = stub
+
+					stub.Next = s
+					pprevtextp = &stub.Next
+
+					gencallstub(1, stub, r.Sym)
+				}
+
+				// Update the relocation to use the call stub
+				r.Sym = stub
+
+				// Restore TOC after bl.  The compiler put a
+				// nop here for us to overwrite.
+				o1 = 0xe8410018 // ld r2,24(r1)
+				ld.Ctxt.Arch.ByteOrder.PutUint32(s.P[r.Off+4:], o1)
+			}
 		}
 	}
 }

@@ -944,12 +944,16 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 
 	p.As = ABL
 	p.To.Type = obj.TYPE_BRANCH
+	prefix := "runtime."
+	if ctxt.Flag_dynlink {
+		prefix = "local."
+	}
 	if ctxt.Cursym.Cfunc != 0 {
-		p.To.Sym = obj.Linklookup(ctxt, "runtime.morestackc", 0)
+		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestackc", 0)
 	} else if ctxt.Cursym.Text.From3.Offset&obj.NEEDCTXT == 0 {
-		p.To.Sym = obj.Linklookup(ctxt, "runtime.morestack_noctxt", 0)
+		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestack_noctxt", 0)
 	} else {
-		p.To.Sym = obj.Linklookup(ctxt, "runtime.morestack", 0)
+		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestack", 0)
 	}
 
 	// BR	start
