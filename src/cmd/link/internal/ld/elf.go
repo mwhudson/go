@@ -556,6 +556,7 @@ const (
 	R_PPC64_REL16_LO           = 250
 	R_PPC64_REL16_HI           = 251
 	R_PPC64_REL16_HA           = 252
+	R_PPC64_TLS                = 67
 	R_SPARC_NONE               = 0
 	R_SPARC_8                  = 1
 	R_SPARC_16                 = 2

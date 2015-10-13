@@ -1650,6 +1650,13 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			if v != 0 {
 				ctxt.Diag("illegal indexed instruction\n%v", p)
 			}
+			if ctxt.Flag_dynlink && r == REG_R13 {
+				rel := obj.Addrel(ctxt.Cursym)
+				rel.Off = int32(ctxt.Pc)
+				rel.Siz = 4
+				rel.Sym = obj.Linklookup(ctxt, "runtime.tls_g", 0) // ARGH
+				rel.Type = obj.R_POWER_TLS
+			}
 			o1 = AOP_RRR(uint32(opstorex(ctxt, int(p.As))), uint32(p.From.Reg), uint32(p.To.Index), uint32(r))
 		} else {
 			if int32(int16(v)) != v {
@@ -1668,6 +1675,13 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		if p.From.Type == obj.TYPE_MEM && p.From.Index != 0 {
 			if v != 0 {
 				ctxt.Diag("illegal indexed instruction\n%v", p)
+			}
+			if ctxt.Flag_dynlink && r == REG_R13 {
+				rel := obj.Addrel(ctxt.Cursym)
+				rel.Off = int32(ctxt.Pc)
+				rel.Siz = 4
+				rel.Sym = obj.Linklookup(ctxt, "runtime.tls_g", 0) // ARGH
+				rel.Type = obj.R_POWER_TLS
 			}
 			o1 = AOP_RRR(uint32(oploadx(ctxt, int(p.As))), uint32(p.To.Reg), uint32(p.From.Index), uint32(r))
 		} else {
