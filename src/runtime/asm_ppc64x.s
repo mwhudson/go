@@ -751,7 +751,9 @@ g0:
 	MOVD	R12, CTR
 	MOVD	R4, R3		// arg in r3
 	BL	(CTR)
-	MAYBE_RELOAD_TOC
+#ifdef shared
+        MOVD	72(R1), R2
+#endif
 
 	// C code can clobber R0, so set it back to 0.	F27-F31 are
 	// callee save, so we don't need to recover those.
