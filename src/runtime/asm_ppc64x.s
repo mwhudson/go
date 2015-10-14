@@ -45,9 +45,6 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	RLDCR	$0, R1, $~15, R1	// 16-byte align
 	BL	(CTR)			// may clobber R0, R3-R12
 	MOVD	R14, R1			// restore stack
-#ifdef shared
-	MOVD	72(R1), R2
-#endif
 	XOR	R0, R0			// fix R0
 
 nocgo:
