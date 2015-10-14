@@ -685,7 +685,11 @@ again:
 // 3. BR to fn
 TEXT runtime·jmpdefer(SB), NOSPLIT|NOFRAME, $0-16
 	MOVD	0(R1), R31
-	SUB	$(4*(1+shared)), R31
+#ifdef shared
+	SUB	$8, R31
+#else
+	SUB	$4, R31
+#endif
 	MOVD	R31, LR
 
 	MOVD	fv+0(FP), R11
