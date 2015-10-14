@@ -79,7 +79,7 @@ func genaddmoduledata() {
 	// stdu r31, -32(r1)
 	o(0xfbe1ffe1)
 	// addis r3, r2, local.moduledata@got@ha
-	o(0x30620000)
+	o(0x3c620000)
 	// ld r3, local.moduledata@got@l(r3)
 	o(0xe8630000)
 	// bl runtime.addmoduledata
