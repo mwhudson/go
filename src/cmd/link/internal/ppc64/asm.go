@@ -96,6 +96,7 @@ func genaddmoduledata() {
 	// mtlr r31
 	o(0x7fe803a6)
 	// addi r1,r1,32
+	o(0x38210020)
 	// blr
 	o(0x4e800020)
 
