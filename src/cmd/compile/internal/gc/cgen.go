@@ -6,6 +6,7 @@ package gc
 
 import (
 	"cmd/internal/obj"
+	"cmd/internal/obj/ppc64"
 	"fmt"
 )
 
@@ -2335,7 +2336,16 @@ func Ginscall(f *Node, proc int) {
 				// insert an actual hardware NOP that will have the right line number.
 				// This is different from obj.ANOP, which is a virtual no-op
 				// that doesn't make it into the instruction stream.
-				Thearch.Ginsnop()
+				if Thearch.Thechar == '9' && Ctxt.Flag_dynlink {
+					p := Thearch.Gins(ppc64.AMOVD, nil, nil)
+					p.From.Type = obj.TYPE_MEM
+					p.From.Offset = 24
+					p.From.Reg = ppc64.REGSP
+					p.To.Type = obj.TYPE_REG
+					p.To.Reg = ppc64.REG_R2
+				} else {
+					Thearch.Ginsnop()
+				}
 			}
 
 			p := Thearch.Gins(obj.ACALL, nil, f)
