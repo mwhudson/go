@@ -38,8 +38,78 @@ import (
 	"log"
 )
 
+func appendtext(s *ld.LSym) {
+	if ld.Ctxt.Etextp != nil {
+		ld.Ctxt.Etextp.Next = s
+	} else {
+		ld.Ctxt.Textp = s
+	}
+	ld.Ctxt.Etextp = s
+}
+
+func genaddmoduledata() {
+	addmoduledata := ld.Linkrlookup(ld.Ctxt, "runtime.addmoduledata", 0)
+	if addmoduledata.Type == obj.STEXT {
+		return
+	}
+	addmoduledata.Reachable = true
+	initfunc := ld.Linklookup(ld.Ctxt, "go.link.addmoduledata", 0)
+	initfunc.Type = obj.STEXT
+	initfunc.Local = true
+	initfunc.Reachable = true
+	o := func(op uint32) {
+		ld.Adduint32(ld.Ctxt, initfunc, op)
+	}
+	// addis r2, r12, .TOC.-func@ha
+	rel := ld.Addrel(initfunc)
+	rel.Off = int32(initfunc.Size)
+	rel.Siz = 8
+	rel.Sym = ld.Linklookup(ld.Ctxt, ".TOC.", 0)
+	rel.Type = obj.R_ADDRPOWER_PCREL
+	o(0x3c4c0000)
+	// addi r2, r2, .TOC.-func@l
+	o(0x38420000)
+	rel = ld.Addrel(initfunc)
+	rel.Off = int32(initfunc.Size)
+	rel.Siz = 8
+	rel.Sym = ld.Linklookup(ld.Ctxt, "local.moduledata", 0)
+	rel.Type = obj.R_ADDRPOWER_GOT
+	// mflr r31
+	o(0x7fe802a6)
+	// stdu r31, -32(r1)
+	o(0xfbe1ffe1)
+	// addis r3, r2, local.moduledata@got@ha
+	o(0x30620000)
+	// ld r3, local.moduledata@got@l(r3)
+	o(0xe8630000)
+	// bl runtime.addmoduledata
+	rel = ld.Addrel(initfunc)
+	rel.Off = int32(initfunc.Size)
+	rel.Siz = 4
+	rel.Sym = addmoduledata
+	rel.Type = obj.R_CALLPOWER
+	o(0x48000001)
+	// nop
+	o(0x60000000)
+	// ld r31, 0(r1)
+	o(0xebe10000)
+	// mtlr r31
+	o(0x7fe803a6)
+	// addi r1,r1,32
+	// blr
+	o(0x4e800020)
+
+	appendtext(initfunc)
+	initarray_entry := ld.Linklookup(ld.Ctxt, "go.link.addmoduledatainit", 0)
+	initarray_entry.Reachable = true
+	initarray_entry.Local = true
+	initarray_entry.Type = obj.SINITARR
+	ld.Addaddr(ld.Ctxt, initarray_entry, initfunc)
+}
+
 func gentext() {
 	if ld.DynlinkingGo() {
+		genaddmoduledata()
 		for _, morestackfunc := range []string{"morestack", "morestack_noctxt", "morestackc"} {
 			runtime_func := ld.Linkrlookup(ld.Ctxt, "runtime."+morestackfunc, 0)
 			runtime_func.Reachable = true
@@ -71,12 +141,7 @@ func gentext() {
 			o(0x38210020)
 			// blr
 			o(0x4e800020)
-			if ld.Ctxt.Etextp != nil {
-				ld.Ctxt.Etextp.Next = local_func
-			} else {
-				ld.Ctxt.Textp = local_func
-			}
-			ld.Ctxt.Etextp = local_func
+			appendtext(local_func)
 		}
 	}
 

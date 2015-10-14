@@ -1243,3 +1243,13 @@ TEXT runtime·prefetchnta(SB),NOSPLIT,$0-8
 
 TEXT runtime·sigreturn(SB),NOSPLIT,$0-8
         RET
+
+TEXT runtime·addmoduledata(SB),NOSPLIT|NOFRAME,$0-0
+        ADD	$-8, R1
+        MOVD	R31, 0(R1)
+	MOVD	runtime·lastmoduledatap(SB), R4
+	MOVD	R3, moduledata_next(R4)
+	MOVD	R3, runtime·lastmoduledatap(SB)
+        ADD	$8, R1
+        MOVD	0(R1), R31
+        RET
