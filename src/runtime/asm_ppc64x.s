@@ -246,12 +246,16 @@ switch:
 	MOVD	R4, 0(R3)
 	MOVD	R3, R1
 
+#ifdef shared
+        MOVD    R2, R14
+#endif
 	// call target function
 	MOVD	0(R11), R12	// code pointer
 	MOVD	R12, CTR
 	BL	(CTR)
-	MAYBE_RELOAD_TOC
-
+#ifdef shared
+        MOVD    R14, R2
+#endif
 
 	// switch back to g
 	MOVD	g_m(g), R3
