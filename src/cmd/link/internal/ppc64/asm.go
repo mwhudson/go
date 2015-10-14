@@ -69,16 +69,16 @@ func genaddmoduledata() {
 	o(0x3c4c0000)
 	// addi r2, r2, .TOC.-func@l
 	o(0x38420000)
-	rel = ld.Addrel(initfunc)
-	rel.Off = int32(initfunc.Size)
-	rel.Siz = 8
-	rel.Sym = ld.Linklookup(ld.Ctxt, "local.moduledata", 0)
-	rel.Type = obj.R_ADDRPOWER_GOT
 	// mflr r31
 	o(0x7fe802a6)
 	// stdu r31, -32(r1)
 	o(0xfbe1ffe1)
 	// addis r3, r2, local.moduledata@got@ha
+	rel = ld.Addrel(initfunc)
+	rel.Off = int32(initfunc.Size)
+	rel.Siz = 8
+	rel.Sym = ld.Linklookup(ld.Ctxt, "local.moduledata", 0)
+	rel.Type = obj.R_ADDRPOWER_GOT
 	o(0x3c620000)
 	// ld r3, local.moduledata@got@l(r3)
 	o(0xe8630000)
