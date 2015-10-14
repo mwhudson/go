@@ -11,12 +11,15 @@
 
 #ifdef GOARCH_ppc64
 #define FIXED_FRAME 8
+#define MAYBE_RELOAD_TOC
 #endif
 
 #ifdef GOARCH_ppc64le
 #ifdef shared
 #define FIXED_FRAME 32
+#define MAYBE_RELOAD_TOC MOVD 24(R1), R2
 #else
 #define FIXED_FRAME 8
+#define MAYBE_RELOAD_TOC
 #endif
 #endif

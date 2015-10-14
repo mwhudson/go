@@ -209,6 +209,7 @@ TEXT runtime·sigfwd(SB),NOSPLIT,$0-32
 	MOVD	fn+0(FP), R12
 	MOVD	R12, CTR
 	BL	(CTR)
+	MAYBE_RELOAD_TOC
 	RET
 
 #ifdef GOARCH_ppc64le
@@ -228,7 +229,7 @@ TEXT runtime·_sigtramp(SB),NOSPLIT,$64
 	// this might be called in external code context,
 	// where g is not set.
 	MOVB	runtime·iscgo(SB), R6
-	CMP 	R6, $0
+	CMP	R6, $0
 	BEQ	2(PC)
 	BL	runtime·load_g(SB)
 
@@ -317,9 +318,9 @@ TEXT runtime·clone(SB),NOSPLIT|NOFRAME,$0
 	// Initialize m->procid to Linux tid
 	SYSCALL $SYS_gettid
 
-	MOVD	-24(R1), R12       // fn
-	MOVD	-16(R1), R8        // g
-	MOVD	-8(R1), R7         // m
+	MOVD	-24(R1), R12	   // fn
+	MOVD	-16(R1), R8	   // g
+	MOVD	-8(R1), R7	   // m
 
 	CMP	R7, $0
 	BEQ	nog
@@ -339,6 +340,7 @@ nog:
 	// Call fn
 	MOVD	R12, CTR
 	BL	(CTR)
+	MAYBE_RELOAD_TOC
 
 	// It shouldn't return.	 If it does, exit that thread.
 	MOVW	$111, R3

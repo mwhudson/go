@@ -36,7 +36,7 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	BEQ	nocgo
 	MOVD	R12, CTR		// r12 = "global function entry point"
 	MOVD	R13, R5			// arg 2: TLS base pointer
-	MOVD	$setg_gcc<>(SB), R4 	// arg 1: setg
+	MOVD	$setg_gcc<>(SB), R4	// arg 1: setg
 	MOVD	g, R3			// arg 0: G
 	// C functions expect 32 bytes of space on caller stack frame
 	// and a 16-byte aligned R1
@@ -45,6 +45,9 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	RLDCR	$0, R1, $~15, R1	// 16-byte align
 	BL	(CTR)			// may clobber R0, R3-R12
 	MOVD	R14, R1			// restore stack
+#ifdef shared
+	MOVD	72(R1), R2
+#endif
 	XOR	R0, R0			// fix R0
 
 nocgo:
@@ -185,6 +188,7 @@ TEXT runtime·mcall(SB), NOSPLIT|NOFRAME, $0-8
 	MOVDU	R0, -8(R1)
 #endif
 	BL	(CTR)
+	MAYBE_RELOAD_TOC
 	BR	runtime·badmcall2(SB)
 
 // systemstack_switch is a dummy routine that systemstack leaves at the bottom
@@ -222,7 +226,7 @@ TEXT runtime·systemstack(SB), NOSPLIT, $0-8
 	BL	(CTR)
 
 switch:
-	// save our state in g->sched.  Pretend to
+	// save our state in g->sched.	Pretend to
 	// be systemstack_switch if the G stack is scanned.
 	MOVD	$runtime·systemstack_switch(SB), R6
 #ifdef shared
@@ -249,6 +253,8 @@ switch:
 	MOVD	0(R11), R12	// code pointer
 	MOVD	R12, CTR
 	BL	(CTR)
+	MAYBE_RELOAD_TOC
+
 
 	// switch back to g
 	MOVD	g_m(g), R3
@@ -263,6 +269,7 @@ noswitch:
 	MOVD	0(R11), R12	// code pointer
 	MOVD	R12, CTR
 	BL	(CTR)
+	MAYBE_RELOAD_TOC
 	RET
 
 /*
@@ -408,14 +415,15 @@ TEXT NAME(SB), WRAPPER, $MAXSIZE-24;		\
 	MOVD	f+8(FP), R11;			\
 	MOVD	(R11), R12;			\
 	MOVD	R12, CTR;			\
-	PCDATA  $PCDATA_StackMapIndex, $0;	\
+	PCDATA	$PCDATA_StackMapIndex, $0;	\
 	BL	(CTR);				\
+	MAYBE_RELOAD_TOC			\
 	/* copy return values back */		\
 	MOVD	arg+16(FP), R3;			\
 	MOVWZ	n+24(FP), R4;			\
 	MOVWZ	retoffset+28(FP), R6;		\
 	MOVD	R1, R5;				\
-	ADD	R6, R5; 			\
+	ADD	R6, R5;				\
 	ADD	R6, R3;				\
 	SUB	R6, R4;				\
 	ADD	$(FIXED_FRAME-1), R5;			\
@@ -630,7 +638,7 @@ TEXT runtime·atomicor8(SB), NOSPLIT, $0-9
 	RLDCR	$0, R3, $~3, R5
 	// Compute val shift.
 #ifdef GOARCH_ppc64
-	// Big endian.  ptr = ptr ^ 3
+	// Big endian.	ptr = ptr ^ 3
 	XOR	$3, R3
 #endif
 	// R6 = ((ptr & 3) * 8) = (ptr << 3) & (3*8)
@@ -657,7 +665,7 @@ TEXT runtime·atomicand8(SB), NOSPLIT, $0-9
 	RLDCR	$0, R3, $~3, R5
 	// Compute val shift.
 #ifdef GOARCH_ppc64
-	// Big endian.  ptr = ptr ^ 3
+	// Big endian.	ptr = ptr ^ 3
 	XOR	$3, R3
 #endif
 	// R6 = ((ptr & 3) * 8) = (ptr << 3) & (3*8)
@@ -748,8 +756,9 @@ g0:
 	MOVD	R12, CTR
 	MOVD	R4, R3		// arg in r3
 	BL	(CTR)
+	MAYBE_RELOAD_TOC
 
-	// C code can clobber R0, so set it back to 0.  F27-F31 are
+	// C code can clobber R0, so set it back to 0.	F27-F31 are
 	// callee save, so we don't need to recover those.
 	XOR	R0, R0
 	// Restore g, stack pointer.  R3 is errno, so don't touch it
