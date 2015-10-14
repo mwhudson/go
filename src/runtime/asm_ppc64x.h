@@ -17,7 +17,7 @@
 #ifdef GOARCH_ppc64le
 #ifdef shared
 #define FIXED_FRAME 32
-#define MAYBE_RELOAD_TOC MOVD 24(R1), R2
+//#define MAYBE_RELOAD_TOC MOVD 24(R1), R2
 #define MAYBE_RELOAD_TOC
 #else
 #define FIXED_FRAME 8
