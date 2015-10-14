@@ -15,7 +15,7 @@ const (
 	stackDebug       = 4
 	stackFromSystem  = 0 // allocate stacks from system memory instead of the heap
 	stackFaultOnFree = 0 // old stacks are mapped noaccess to detect use after free
-	stackPoisonCopy  = 0 // fill stack that should not be accessed with garbage, to detect bad dereferences during copy
+	stackPoisonCopy  = 1 // fill stack that should not be accessed with garbage, to detect bad dereferences during copy
 
 	stackCache = 1
 )
@@ -601,7 +601,7 @@ func copystack(gp *g, newsize uintptr) {
 	// allocate new stack
 	new, newstkbar := stackalloc(uint32(newsize))
 	if stackPoisonCopy != 0 {
-		fillstack(new, 0xfd)
+		fillstack(new, 0x68)
 	}
 	if stackDebug >= 1 {
 		print("copystack gp=", gp, " [", hex(old.lo), " ", hex(old.hi-used), " ", hex(old.hi), "]/", gp.stackAlloc, " -> [", hex(new.lo), " ", hex(new.hi-used), " ", hex(new.hi), "]/", newsize, "\n")
