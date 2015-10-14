@@ -751,15 +751,18 @@ g0:
 	MOVD	R12, CTR
 	MOVD	R4, R3		// arg in r3
 	BL	(CTR)
-#ifdef shared
-        MOVD	72(R1), R2
-#endif
 
 	// C code can clobber R0, so set it back to 0.	F27-F31 are
 	// callee save, so we don't need to recover those.
 	XOR	R0, R0
 	// Restore g, stack pointer.  R3 is errno, so don't touch it
 	MOVD	40(R1), g
+#ifdef shared
+	MOVD	(g_stack+stack_hi)(g), R5
+	MOVD	32(R1), R6
+	SUB	R6, R5
+        MOVD    24(R5), R2
+#endif
 	BL	runtime·save_g(SB)
 	MOVD	(g_stack+stack_hi)(g), R5
 	MOVD	32(R1), R6
