@@ -70,9 +70,9 @@ func genaddmoduledata() {
 	// addi r2, r2, .TOC.-func@l
 	o(0x38420000)
 	// mflr r31
-	o(0x7fe802a6)
+	o(0x7c0802a6)
 	// stdu r31, -32(r1)
-	o(0xfbe1ffe1)
+	o(0xf801ffe1)
 	// addis r3, r2, local.moduledata@got@ha
 	rel = ld.Addrel(initfunc)
 	rel.Off = int32(initfunc.Size)
@@ -92,9 +92,9 @@ func genaddmoduledata() {
 	// nop
 	o(0x60000000)
 	// ld r31, 0(r1)
-	o(0xebe10000)
+	o(0xe8010000)
 	// mtlr r31
-	o(0x7fe803a6)
+	o(0x7c0803a6)
 	// addi r1,r1,32
 	o(0x38210020)
 	// blr
