@@ -694,7 +694,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			p.Link = q
 			p = q
 
-			if false {
+			if true {
 				// Debug bad returns
 				q = ctxt.NewProg()
 

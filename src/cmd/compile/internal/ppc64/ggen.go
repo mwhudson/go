@@ -440,7 +440,7 @@ func clearfat(nl *gc.Node) {
 
 		// The loop leaves R3 on the last zeroed dword
 		boff = 8
-	} else if q >= 4 && false {
+	} else if q >= 4 {
 		p := gins(ppc64.ASUB, nil, &dst)
 		p.From.Type = obj.TYPE_CONST
 		p.From.Offset = 8
