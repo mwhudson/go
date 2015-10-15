@@ -59,6 +59,8 @@ func mcall(fn func(*g))
 //go:noescape
 func systemstack(fn func())
 
+func getr2() uint64
+
 func badsystemstack() {
 	throw("systemstack called from unexpected goroutine")
 }

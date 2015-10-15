@@ -2263,6 +2263,9 @@ func newproc1(fn *funcval, argp *uint8, narg int32, nret int32, callerpc uintptr
 	if usesLR {
 		// caller's LR
 		*(*unsafe.Pointer)(unsafe.Pointer(sp)) = nil
+		if minFrameSize == 32 {
+			*(*uint64)(unsafe.Pointer(sp + 24)) = getr2()
+		}
 		spArg += minFrameSize
 	}
 	memmove(unsafe.Pointer(spArg), unsafe.Pointer(argp), uintptr(narg))

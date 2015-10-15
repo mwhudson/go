@@ -1243,10 +1243,15 @@ TEXT _cgo_topofstack(SB),NOSPLIT|NOFRAME,$0
 	MOVD	R6, LR
 	RET
 
+TEXT runtime·getr2(SB),NOSPLIT|NOFRAME,$0-8
+        MOVD    R2, ret+0(FP)
+        RET
+        
 // The top-most function running on a goroutine
 // returns to goexit+PCQuantum.
 TEXT runtime·goexit(SB),NOSPLIT|NOFRAME,$0-0
 	MOVD	R0, R0	// NOP
+        MOVD    24(R1), R2
 	BL	runtime·goexit1(SB)	// does not return
 	// traceback from goexit1 must hit code range of goexit
 	MOVD	R0, R0	// NOP
