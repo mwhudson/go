@@ -305,6 +305,9 @@ TEXT runtime·morestack(SB),NOSPLIT|NOFRAME,$0-0
 	// Called from f.
 	// Set g->sched to context in f.
 	MOVD	R11, (g_sched+gobuf_ctxt)(g)
+#ifdef shared
+        ADD     $32, R1
+#endif
 	MOVD	R1, (g_sched+gobuf_sp)(g)
 	MOVD	LR, R8
 	MOVD	R8, (g_sched+gobuf_pc)(g)

@@ -24,7 +24,6 @@ func gostartcall(buf *gobuf, fn, ctxt unsafe.Pointer) {
 // call to morestack. We just have to decode and apply that jump.
 func rewindmorestack(buf *gobuf) {
 	var inst uint32
-	buf.sp += 32
 	if buf.pc&3 == 0 && buf.pc != 0 {
 		inst = *(*uint32)(unsafe.Pointer(buf.pc + moreStackOffset))
 		if inst>>26 == 18 && inst&3 == 0 {
