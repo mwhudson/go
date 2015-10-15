@@ -742,11 +742,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			q.Link = q1
 		case AADD:
 			if p.To.Type == obj.TYPE_REG && p.To.Reg == REGSP && p.From.Type == obj.TYPE_CONST {
-				if p.Spadj != 123 {
-					p.Spadj = int32(-p.From.Offset)
-				} else {
-					p.Spadj = 0
-				}
+				p.Spadj = int32(-p.From.Offset)
 			}
 		}
 	}
@@ -920,13 +916,12 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	}
 
 	if ctxt.Flag_dynlink {
+		// Insert "addi r1,r1,-32", encoded as a AWORD to
+		// avoid being found by the Spadj-ing code...
 		p = obj.Appendp(ctxt, p)
-		p.As = AADD
+		p.As = AWORD
 		p.From.Type = obj.TYPE_CONST
-		p.From.Offset = -32
-		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REGSP
-		p.Spadj = 123
+		p.From.Offset = 0x3821ffe0
 	}
 
 	// BL	runtime.morestack(SB)
