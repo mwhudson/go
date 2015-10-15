@@ -915,6 +915,15 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 		q.Pcond = p
 	}
 
+	if ctxt.Flag_dynlink {
+		p = obj.Appendp(ctxt, p)
+		p.As = AADD
+		p.From.Type = obj.TYPE_CONST
+		p.From.Offset = int64(-32)
+		p.To.Type = obj.TYPE_REG
+		p.To.Reg = REGSP
+	}
+
 	// BL	runtime.morestack(SB)
 	p = obj.Appendp(ctxt, p)
 
@@ -926,14 +935,6 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	// 	prefix = "local."
 	// 	local = true
 	// }
-	if ctxt.Flag_dynlink {
-		p = obj.Appendp(ctxt, p)
-		p.As = AADD
-		p.From.Type = obj.TYPE_CONST
-		p.From.Offset = int64(-32)
-		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REGSP
-	}
 	if ctxt.Cursym.Cfunc != 0 {
 		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestackc", 0)
 	} else if ctxt.Cursym.Text.From3.Offset&obj.NEEDCTXT == 0 {
