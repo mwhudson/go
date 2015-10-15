@@ -922,9 +922,17 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 	p.To.Type = obj.TYPE_BRANCH
 	prefix := "runtime."
 	local := false
+	// if ctxt.Flag_dynlink {
+	// 	prefix = "local."
+	// 	local = true
+	// }
 	if ctxt.Flag_dynlink {
-		prefix = "local."
-		local = true
+		p = obj.Appendp(ctxt, p)
+		p.As = AADD
+		p.From.Type = obj.TYPE_CONST
+		p.From.Offset = int64(-32)
+		p.To.Type = obj.TYPE_REG
+		p.To.Reg = REGSP
 	}
 	if ctxt.Cursym.Cfunc != 0 {
 		p.To.Sym = obj.Linklookup(ctxt, prefix+"morestackc", 0)
