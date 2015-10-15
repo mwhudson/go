@@ -111,39 +111,6 @@ func genaddmoduledata() {
 func gentext() {
 	if ld.DynlinkingGo() {
 		genaddmoduledata()
-		for _, morestackfunc := range []string{"morestack", "morestack_noctxt", "morestackc"} {
-			runtime_func := ld.Linkrlookup(ld.Ctxt, "runtime."+morestackfunc, 0)
-			runtime_func.Reachable = true
-			local_func := ld.Linklookup(ld.Ctxt, "local."+morestackfunc, 0)
-			local_func.Type = obj.STEXT
-			local_func.Local = true
-			local_func.Reachable = true
-			o := func(op uint32) {
-				ld.Adduint32(ld.Ctxt, local_func, op)
-			}
-			// mflr r31
-			o(0x7fe802a6)
-			// stdu r31, -32(r1)
-			o(0xfbe1ffe1)
-			// bl $runtime_func + R_PPC64_REL24
-			rel := ld.Addrel(local_func)
-			rel.Off = int32(local_func.Size)
-			rel.Siz = 4
-			rel.Sym = runtime_func
-			rel.Type = obj.R_CALLPOWER
-			o(0x48000001)
-			// nop
-			o(0x60000000)
-			// ld r31, 0(r1)
-			o(0xebe10000)
-			// mtlr r31
-			o(0x7fe803a6)
-			// addi r1,r1,32
-			o(0x38210020)
-			// blr
-			o(0x4e800020)
-			appendtext(local_func)
-		}
 	}
 
 	if ld.Linkmode == ld.LinkInternal {
