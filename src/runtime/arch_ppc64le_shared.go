@@ -12,4 +12,4 @@ const (
 	moreStackOffset       = 4
 )
 
-func prepGoExitFrame()
+func prepGoExitFrame(sp uintptr)
