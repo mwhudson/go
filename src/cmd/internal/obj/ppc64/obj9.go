@@ -685,30 +685,6 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			q = ctxt.NewProg()
 			q.As = AMOVD
 			q.Lineno = p.Lineno
-			q.From.Type = obj.TYPE_MEM
-			q.From.Reg = REGTMP
-			q.To.Type = obj.TYPE_REG
-			q.To.Reg = REGTMP
-
-			q.Link = p.Link
-			p.Link = q
-			p = q
-
-			q = ctxt.NewProg()
-			q.As = AMOVD
-			q.Lineno = p.Lineno
-			q.From.Type = obj.TYPE_MEM
-			q.From.Reg = REGSP
-			q.To.Type = obj.TYPE_REG
-			q.To.Reg = REGTMP
-
-			q.Link = p.Link
-			p.Link = q
-			p = q
-
-			q = ctxt.NewProg()
-			q.As = AMOVD
-			q.Lineno = p.Lineno
 			q.From.Type = obj.TYPE_REG
 			q.From.Reg = REGTMP
 			q.To.Type = obj.TYPE_REG
