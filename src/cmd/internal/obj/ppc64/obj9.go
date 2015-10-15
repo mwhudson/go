@@ -742,7 +742,11 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			q.Link = q1
 		case AADD:
 			if p.To.Type == obj.TYPE_REG && p.To.Reg == REGSP && p.From.Type == obj.TYPE_CONST {
-				p.Spadj = int32(-p.From.Offset)
+				if p.Spadj != 123 {
+					p.Spadj = int32(-p.From.Offset)
+				} else {
+					p.Spadj = 0
+				}
 			}
 		}
 	}
@@ -919,9 +923,10 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 		p = obj.Appendp(ctxt, p)
 		p.As = AADD
 		p.From.Type = obj.TYPE_CONST
-		p.From.Offset = int64(-32)
+		p.From.Offset = -32
 		p.To.Type = obj.TYPE_REG
 		p.To.Reg = REGSP
+		p.Spadj = 123
 	}
 
 	// BL	runtime.morestack(SB)
