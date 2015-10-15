@@ -1251,7 +1251,9 @@ TEXT runtime·getr2(SB),NOSPLIT|NOFRAME,$0-8
 // returns to goexit+PCQuantum.
 TEXT runtime·goexit(SB),NOSPLIT|NOFRAME,$0-0
 	MOVD	R0, R0	// NOP
+#ifdef shared
         MOVD    24(R1), R2
+#endif
 	BL	runtime·goexit1(SB)	// does not return
 	// traceback from goexit1 must hit code range of goexit
 	MOVD	R0, R0	// NOP
