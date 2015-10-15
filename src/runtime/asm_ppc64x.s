@@ -1243,10 +1243,6 @@ TEXT _cgo_topofstack(SB),NOSPLIT|NOFRAME,$0
 	MOVD	R6, LR
 	RET
 
-TEXT runtime·getr2(SB),NOSPLIT|NOFRAME,$0-8
-        MOVD    R2, ret+0(FP)
-        RET
-        
 // The top-most function running on a goroutine
 // returns to goexit+PCQuantum.
 TEXT runtime·goexit(SB),NOSPLIT|NOFRAME,$0-0
@@ -1282,3 +1278,10 @@ TEXT runtime·addmoduledata(SB),NOSPLIT|NOFRAME,$0-0
         MOVD	0(R1), R31
         ADD	$8, R1
         RET
+
+#ifdef shared
+TEXT runtime·prepGoExitFrame(SB),NOSPLIT,$0-8
+        MOVD	sp+0(FP), R3
+        MOVD    R2, 24(R3)
+        RET
+#endif

@@ -11,3 +11,5 @@ const (
 	stackGuardMultiplier2 = 2
 	moreStackOffset       = 4
 )
+
+func prepGoExitFrame()
