@@ -7,6 +7,5 @@
 package runtime
 
 const (
-	minFrameSize    = 8
-	moreStackOffset = 0
+	minFrameSize = 8
 )

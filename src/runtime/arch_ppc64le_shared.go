@@ -9,7 +9,6 @@ package runtime
 const (
 	minFrameSize          = 32
 	stackGuardMultiplier2 = 2
-	moreStackOffset       = 4
 )
 
 func prepGoExitFrame(sp uintptr)
