@@ -925,19 +925,55 @@ func stacksplit(ctxt *obj.Link, p *obj.Prog, framesize int32) *obj.Prog {
 		q.Pcond = p
 	}
 
-	// BL	runtime.morestack(SB)
-	p = obj.Appendp(ctxt, p)
-
-	p.As = ABL
-	p.To.Type = obj.TYPE_BRANCH
+	var morestacksym *obj.LSym
 	if ctxt.Cursym.Cfunc != 0 {
-		p.To.Sym = obj.Linklookup(ctxt, "runtime.morestackc", 0)
+		morestacksym = obj.Linklookup(ctxt, "runtime.morestackc", 0)
 	} else if ctxt.Cursym.Text.From3.Offset&obj.NEEDCTXT == 0 {
-		p.To.Sym = obj.Linklookup(ctxt, "runtime.morestack_noctxt", 0)
+		morestacksym = obj.Linklookup(ctxt, "runtime.morestack_noctxt", 0)
 	} else {
-		p.To.Sym = obj.Linklookup(ctxt, "runtime.morestack", 0)
+		morestacksym = obj.Linklookup(ctxt, "runtime.morestack", 0)
 	}
 
+	if ctxt.Flag_dynlink {
+		// Avoid calling morestack via a PLT because...
+		// MOVD $runtime.morestack(SB), R12
+		// MOVD R12, CTR
+		// BL CTR
+		p = obj.Appendp(ctxt, p)
+		p.As = AMOVD
+		p.From.Type = obj.TYPE_MEM
+		p.From.Sym = morestacksym
+		p.From.Name = obj.NAME_GOTREF
+		p.To.Type = obj.TYPE_REG
+		p.To.Reg = REG_R12
+
+		p = obj.Appendp(ctxt, p)
+		p.As = AMOVD
+		p.From.Type = obj.TYPE_REG
+		p.From.Reg = REG_R12
+		p.To.Type = obj.TYPE_REG
+		p.To.Reg = REG_CTR
+
+		p = obj.Appendp(ctxt, p)
+		p.As = obj.ACALL
+		p.From.Type = obj.TYPE_REG
+		p.From.Reg = REG_R12
+		p.To.Type = obj.TYPE_REG
+		p.To.Reg = REG_CTR
+	} else {
+		// BL	runtime.morestack(SB)
+		p = obj.Appendp(ctxt, p)
+
+		p.As = ABL
+		p.To.Type = obj.TYPE_BRANCH
+		if ctxt.Cursym.Cfunc != 0 {
+			p.To.Sym = obj.Linklookup(ctxt, "runtime.morestackc", 0)
+		} else if ctxt.Cursym.Text.From3.Offset&obj.NEEDCTXT == 0 {
+			p.To.Sym = obj.Linklookup(ctxt, "runtime.morestack_noctxt", 0)
+		} else {
+			p.To.Sym = obj.Linklookup(ctxt, "runtime.morestack", 0)
+		}
+	}
 	// BR	start
 	p = obj.Appendp(ctxt, p)
 
