@@ -254,11 +254,11 @@ switch:
 	MOVD	R12, CTR
 	BL	(CTR)
 
-#ifdef shared2
+#ifdef shared
 	MOVD	g_m(g), R3
 	MOVD	m_curg(R3), g
 	MOVD	(g_sched+gobuf_sp)(g), R3
-        MOVD    24(R3), R1
+        MOVD    24(R3), R2
 #endif
 	// switch back to g
 	MOVD	g_m(g), R3
