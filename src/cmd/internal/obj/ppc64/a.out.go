@@ -221,6 +221,7 @@ const (
 	C_ANY
 	C_GOK
 	C_ADDR
+	C_GOTADDR
 	C_TLS_LE
 	C_TEXTSIZE
 

@@ -36,6 +36,7 @@ var cnames9 = []string{
 	"ANY",
 	"GOK",
 	"ADDR",
+	"GOTADDR",
 	"TLS_LE",
 	"TEXTSIZE",
 	"NCLASS",
