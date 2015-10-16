@@ -325,6 +325,13 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		ld.Thearch.Vput(uint64(sectoff + 4))
 		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO_DS | uint64(elfsym)<<32)
 
+	case obj.R_ADDRPOWER_PCREL:
+		ld.Thearch.Vput(ld.R_PPC64_REL16_HA | uint64(elfsym)<<32)
+		ld.Thearch.Vput(uint64(r.Xadd))
+		ld.Thearch.Vput(uint64(sectoff + 4))
+		ld.Thearch.Vput(ld.R_PPC64_REL16_LO | uint64(elfsym)<<32)
+		r.Xadd += 4
+
 	case obj.R_CALLPOWER:
 		if r.Siz != 4 {
 			return -1
@@ -387,8 +394,17 @@ func archrelocaddr(r *ld.Reloc, s *ld.LSym, val *int64) int {
 	// instruction (it is an error in this case if the low 2 bits of the address
 	// are non-zero).
 
-	t := ld.Symaddr(r.Sym) + r.Add
-	if t < 0 || t >= 1<<31 {
+	var t int64
+
+	switch r.Type {
+	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS:
+		t = ld.Symaddr(r.Sym) + r.Add
+	case obj.R_ADDRPOWER_PCREL:
+		t = ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
+	default:
+		return -1
+	}
+	if t < -1<<31 || t >= 1<<31 {
 		ld.Ctxt.Diag("relocation for %s is too big (>=2G): %d", s.Name, ld.Symaddr(r.Sym))
 	}
 	if t&0x8000 != 0 {
@@ -396,7 +412,7 @@ func archrelocaddr(r *ld.Reloc, s *ld.LSym, val *int64) int {
 	}
 
 	switch r.Type {
-	case obj.R_ADDRPOWER:
+	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_PCREL:
 		o1 |= (uint32(t) >> 16) & 0xffff
 		o2 |= uint32(t) & 0xffff
 
@@ -433,7 +449,8 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 			return 0
 
 		case obj.R_ADDRPOWER,
-			obj.R_ADDRPOWER_DS:
+			obj.R_ADDRPOWER_DS,
+			obj.R_ADDRPOWER_PCREL:
 			r.Done = 0
 
 			// set up addend for eventual relocation via outer symbol.
@@ -468,13 +485,16 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		*val = ld.Symaddr(r.Sym) + r.Add - ld.Symaddr(ld.Linklookup(ld.Ctxt, ".got", 0))
 		return 0
 
-	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS:
+	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS, obj.R_ADDRPOWER_PCREL:
 		return archrelocaddr(r, s, val)
 
 	case obj.R_CALLPOWER:
 		// Bits 6 through 29 = (S + A - P) >> 2
 
 		t := ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
+		if r.Sym.Name != "runtime.duffzero" && r.Sym.Name != "runtime.duffcopy" {
+			t += 8
+		}
 		if t&3 != 0 {
 			ld.Ctxt.Diag("relocation for %s+%d is not aligned: %d", r.Sym.Name, r.Off, t)
 		}
