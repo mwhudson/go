@@ -9,3 +9,6 @@ package runtime
 const (
 	stackGuardMultiplier2 = 1
 )
+
+func prepGoExitFrame(sp uintptr) {
+}

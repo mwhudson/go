@@ -19,17 +19,24 @@
 // FIXED_FRAME+8(R1) etc) and some other low-level places.
 //
 // The reason for using a constant is when code is compiled as PIC on ppc64le
-// the fixed part of the stack is 32 bytes large (although PIC is not actually
-// supported yet).
+// the fixed part of the stack is 32 bytes large.
+
+// MAYBE_RELOAD_TOC expands to nothing usually, but restores the TOC pointer
+// from 24(R1) when the code is compiled as PIC. Code needs to use this when
+// calling a function via a function pointer that (a) returns normally and (b)
+// may be implemented in a different module.
 
 #ifdef GOARCH_ppc64
 #define FIXED_FRAME 8
+#define MAYBE_RELOAD_TOC
 #endif
 
 #ifdef GOARCH_ppc64le
 #ifdef GOBUILDMODE_shared
 #define FIXED_FRAME 32
+#define MAYBE_RELOAD_TOC MOVD 24(R1), R2
 #else
 #define FIXED_FRAME 8
+#define MAYBE_RELOAD_TOC
 #endif
 #endif

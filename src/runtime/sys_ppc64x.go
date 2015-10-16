@@ -22,13 +22,15 @@ func gostartcall(buf *gobuf, fn, ctxt unsafe.Pointer) {
 // Called to rewind context saved during morestack back to beginning of function.
 // To help us, the linker emits a jmp back to the beginning right after the
 // call to morestack. We just have to decode and apply that jump.
+// When dynamically linking Go there is another instruction (a nop or
+// a MOVD 24(R1), R2) between the call to morestack and the branch.
 func rewindmorestack(buf *gobuf) {
 	var inst uint32
 	if buf.pc&3 == 0 && buf.pc != 0 {
-		inst = *(*uint32)(unsafe.Pointer(buf.pc))
+		inst = *(*uint32)(unsafe.Pointer(buf.pc + moreStackOffset))
 		if inst>>26 == 18 && inst&3 == 0 {
 			//print("runtime: rewind pc=", hex(buf.pc), " to pc=", hex(uintptr(buf.pc + int32(inst<<6)>>6)), "\n");
-			buf.pc += uintptr(int32(inst<<6) >> 6)
+			buf.pc += uintptr(int32(inst<<6)>>6) + moreStackOffset
 			return
 		}
 	}
