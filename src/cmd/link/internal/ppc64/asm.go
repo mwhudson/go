@@ -314,16 +314,16 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 		ld.Thearch.Vput(ld.R_PPC64_TPREL16 | uint64(elfsym)<<32)
 
 	case obj.R_ADDRPOWER:
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_HA | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_TOC16_HA | uint64(elfsym)<<32)
 		ld.Thearch.Vput(uint64(r.Xadd))
 		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_TOC16_LO | uint64(elfsym)<<32)
 
 	case obj.R_ADDRPOWER_DS:
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_HA | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_TOC16_HA | uint64(elfsym)<<32)
 		ld.Thearch.Vput(uint64(r.Xadd))
 		ld.Thearch.Vput(uint64(sectoff + 4))
-		ld.Thearch.Vput(ld.R_PPC64_ADDR16_LO_DS | uint64(elfsym)<<32)
+		ld.Thearch.Vput(ld.R_PPC64_TOC16_LO_DS | uint64(elfsym)<<32)
 
 	case obj.R_ADDRPOWER_PCREL:
 		ld.Thearch.Vput(ld.R_PPC64_REL16_HA | uint64(elfsym)<<32)
