@@ -166,7 +166,7 @@ func gencallstub(abicase int, stub *ld.LSym, targ *ld.LSym) {
 		r.Off += int32(r.Siz)
 	}
 	r.Type = obj.R_POWER_TOC
-	r.Variant = ld.RV_POWER_HA
+	r.Variant = obj.RV_POWER_HA
 	ld.Adduint32(ld.Ctxt, stub, 0x3d820000) // addis r12,r2,targ@plt@toc@ha
 	r = ld.Addrel(stub)
 	r.Off = int32(stub.Size)
@@ -177,7 +177,7 @@ func gencallstub(abicase int, stub *ld.LSym, targ *ld.LSym) {
 		r.Off += int32(r.Siz)
 	}
 	r.Type = obj.R_POWER_TOC
-	r.Variant = ld.RV_POWER_LO
+	r.Variant = obj.RV_POWER_LO
 	ld.Adduint32(ld.Ctxt, stub, 0xe98c0000) // ld r12,targ@plt@toc@l(r12)
 
 	// Jump to the loaded pointer
@@ -235,49 +235,49 @@ func adddynrel(s *ld.LSym, r *ld.Reloc) {
 
 	case 256 + ld.R_PPC64_TOC16:
 		r.Type = obj.R_POWER_TOC
-		r.Variant = ld.RV_POWER_LO | ld.RV_CHECK_OVERFLOW
+		r.Variant = obj.RV_POWER_LO | obj.RV_CHECK_OVERFLOW
 		return
 
 	case 256 + ld.R_PPC64_TOC16_LO:
 		r.Type = obj.R_POWER_TOC
-		r.Variant = ld.RV_POWER_LO
+		r.Variant = obj.RV_POWER_LO
 		return
 
 	case 256 + ld.R_PPC64_TOC16_HA:
 		r.Type = obj.R_POWER_TOC
-		r.Variant = ld.RV_POWER_HA | ld.RV_CHECK_OVERFLOW
+		r.Variant = obj.RV_POWER_HA | obj.RV_CHECK_OVERFLOW
 		return
 
 	case 256 + ld.R_PPC64_TOC16_HI:
 		r.Type = obj.R_POWER_TOC
-		r.Variant = ld.RV_POWER_HI | ld.RV_CHECK_OVERFLOW
+		r.Variant = obj.RV_POWER_HI | obj.RV_CHECK_OVERFLOW
 		return
 
 	case 256 + ld.R_PPC64_TOC16_DS:
 		r.Type = obj.R_POWER_TOC
-		r.Variant = ld.RV_POWER_DS | ld.RV_CHECK_OVERFLOW
+		r.Variant = obj.RV_POWER_DS | obj.RV_CHECK_OVERFLOW
 		return
 
 	case 256 + ld.R_PPC64_TOC16_LO_DS:
 		r.Type = obj.R_POWER_TOC
-		r.Variant = ld.RV_POWER_DS
+		r.Variant = obj.RV_POWER_DS
 		return
 
 	case 256 + ld.R_PPC64_REL16_LO:
 		r.Type = obj.R_PCREL
-		r.Variant = ld.RV_POWER_LO
+		r.Variant = obj.RV_POWER_LO
 		r.Add += 2 // Compensate for relocation size of 2
 		return
 
 	case 256 + ld.R_PPC64_REL16_HI:
 		r.Type = obj.R_PCREL
-		r.Variant = ld.RV_POWER_HI | ld.RV_CHECK_OVERFLOW
+		r.Variant = obj.RV_POWER_HI | obj.RV_CHECK_OVERFLOW
 		r.Add += 2
 		return
 
 	case 256 + ld.R_PPC64_REL16_HA:
 		r.Type = obj.R_PCREL
-		r.Variant = ld.RV_POWER_HA | ld.RV_CHECK_OVERFLOW
+		r.Variant = obj.RV_POWER_HA | obj.RV_CHECK_OVERFLOW
 		r.Add += 2
 		return
 	}
@@ -426,16 +426,16 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 }
 
 func archrelocvariant(r *ld.Reloc, s *ld.LSym, t int64) int64 {
-	switch r.Variant & ld.RV_TYPE_MASK {
+	switch r.Variant & obj.RV_TYPE_MASK {
 	default:
 		ld.Diag("unexpected relocation variant %d", r.Variant)
 		fallthrough
 
-	case ld.RV_NONE:
+	case obj.RV_NONE:
 		return t
 
-	case ld.RV_POWER_LO:
-		if r.Variant&ld.RV_CHECK_OVERFLOW != 0 {
+	case obj.RV_POWER_LO:
+		if r.Variant&obj.RV_CHECK_OVERFLOW != 0 {
 			// Whether to check for signed or unsigned
 			// overflow depends on the instruction
 			var o1 uint32
@@ -461,15 +461,15 @@ func archrelocvariant(r *ld.Reloc, s *ld.LSym, t int64) int64 {
 
 		return int64(int16(t))
 
-	case ld.RV_POWER_HA:
+	case obj.RV_POWER_HA:
 		t += 0x8000
 		fallthrough
 
 		// Fallthrough
-	case ld.RV_POWER_HI:
+	case obj.RV_POWER_HI:
 		t >>= 16
 
-		if r.Variant&ld.RV_CHECK_OVERFLOW != 0 {
+		if r.Variant&obj.RV_CHECK_OVERFLOW != 0 {
 			// Whether to check for signed or unsigned
 			// overflow depends on the instruction
 			var o1 uint32
@@ -495,7 +495,7 @@ func archrelocvariant(r *ld.Reloc, s *ld.LSym, t int64) int64 {
 
 		return int64(int16(t))
 
-	case ld.RV_POWER_DS:
+	case obj.RV_POWER_DS:
 		var o1 uint32
 		if ld.Ctxt.Arch.ByteOrder == binary.BigEndian {
 			o1 = uint32(ld.Be16(s.P[r.Off:]))
@@ -505,7 +505,7 @@ func archrelocvariant(r *ld.Reloc, s *ld.LSym, t int64) int64 {
 		if t&3 != 0 {
 			ld.Diag("relocation for %s+%d is not aligned: %d", r.Sym.Name, r.Off, t)
 		}
-		if (r.Variant&ld.RV_CHECK_OVERFLOW != 0) && int64(int16(t)) != t {
+		if (r.Variant&obj.RV_CHECK_OVERFLOW != 0) && int64(int16(t)) != t {
 			goto overflow
 		}
 		return int64(o1)&0x3 | int64(int16(t))

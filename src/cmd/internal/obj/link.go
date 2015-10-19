@@ -394,11 +394,12 @@ const (
 )
 
 type Reloc struct {
-	Off  int32
-	Siz  uint8
-	Type int32
-	Add  int64
-	Sym  *LSym
+	Off     int32
+	Siz     uint8
+	Type    int32
+	Variant int32
+	Add     int64
+	Sym     *LSym
 }
 
 // Reloc.type
@@ -459,6 +460,17 @@ const (
 	// thread pointer (R13) and inserts this value into the low 16 bits of an
 	// instruction word.
 	R_POWER_TLS_LE
+)
+
+// Reloc.variant
+const (
+	RV_NONE = iota
+	RV_POWER_LO
+	RV_POWER_HI
+	RV_POWER_HA
+	RV_POWER_DS
+	RV_CHECK_OVERFLOW = 1 << 16 // 16 bit flags and 64K arch specific variant
+	RV_TYPE_MASK      = RV_CHECK_OVERFLOW - 1
 )
 
 type Auto struct {

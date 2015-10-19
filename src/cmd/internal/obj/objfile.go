@@ -63,6 +63,7 @@
 //	- off [int]
 //	- siz [int]
 //	- type [int]
+//	- variant [int]
 //	- add [int]
 //	- xadd [int]
 //	- sym [symbol reference]
@@ -389,9 +390,9 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 				name = r.Sym.Name
 			}
 			if ctxt.Arch.Thechar == '5' || ctxt.Arch.Thechar == '9' {
-				fmt.Fprintf(ctxt.Bso, "\trel %d+%d t=%d %s+%x\n", int(r.Off), r.Siz, r.Type, name, uint64(int64(r.Add)))
+				fmt.Fprintf(ctxt.Bso, "\trel %d+%d t=%d/%d %s+%x\n", int(r.Off), r.Siz, r.Type, r.Variant, name, uint64(int64(r.Add)))
 			} else {
-				fmt.Fprintf(ctxt.Bso, "\trel %d+%d t=%d %s+%d\n", int(r.Off), r.Siz, r.Type, name, int64(r.Add))
+				fmt.Fprintf(ctxt.Bso, "\trel %d+%d t=%d/%d %s+%d\n", int(r.Off), r.Siz, r.Type, r.Variant, name, int64(r.Add))
 			}
 		}
 	}
@@ -416,6 +417,7 @@ func writesym(ctxt *Link, b *Biobuf, s *LSym) {
 		wrint(b, int64(r.Off))
 		wrint(b, int64(r.Siz))
 		wrint(b, int64(r.Type))
+		wrint(b, int64(r.Variant))
 		wrint(b, r.Add)
 		wrint(b, 0) // Xadd, ignored
 		wrsym(b, r.Sym)

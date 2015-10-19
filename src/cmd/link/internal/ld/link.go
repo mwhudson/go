@@ -221,17 +221,6 @@ type Pciter struct {
 	done    int
 }
 
-// Reloc.variant
-const (
-	RV_NONE = iota
-	RV_POWER_LO
-	RV_POWER_HI
-	RV_POWER_HA
-	RV_POWER_DS
-	RV_CHECK_OVERFLOW = 1 << 8
-	RV_TYPE_MASK      = RV_CHECK_OVERFLOW - 1
-)
-
 // Pcdata iterator.
 //	for(pciterinit(ctxt, &it, &pcd); !it.done; pciternext(&it)) { it.value holds in [it.pc, it.nextpc) }
 

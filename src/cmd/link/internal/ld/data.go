@@ -555,7 +555,7 @@ func relocsym(s *LSym) {
 			o = r.Sym.Size + r.Add
 		}
 
-		if r.Variant != RV_NONE {
+		if r.Variant != obj.RV_NONE {
 			o = Thearch.Archrelocvariant(r, s, o)
 		}
 

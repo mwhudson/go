@@ -65,6 +65,7 @@ package ld
 //	- off [int]
 //	- siz [int]
 //	- type [int]
+//	- variant [int]
 //	- add [int]
 //	- xadd [int]
 //	- sym [symbol reference]
@@ -244,6 +245,7 @@ overwrite:
 			r.Off = rdint32(f)
 			r.Siz = rduint8(f)
 			r.Type = rdint32(f)
+			r.Variant = rdint32(f)
 			r.Add = rdint64(f)
 			rdint64(f) // Xadd, ignored
 			r.Sym = rdsym(ctxt, f, pkg)
