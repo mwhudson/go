@@ -682,12 +682,13 @@ TEXT ·asmcgocall(SB),NOSPLIT,$0-12
 	MOVL	m_g0(BP), SI
 	MOVL	g(CX), DI
 	CMPL	SI, DI
-	JEQ	4(PC)
+	JEQ	noswitch
 	CALL	gosave<>(SB)
 	get_tls(CX)
 	MOVL	SI, g(CX)
 	MOVL	(g_sched+gobuf_sp)(SI), SP
 
+noswitch:
 	// Now on a scheduling stack (a pthread-created stack).
 	SUBL	$32, SP
 	ANDL	$~15, SP	// alignment, perhaps unnecessary
