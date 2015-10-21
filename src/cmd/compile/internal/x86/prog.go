@@ -289,4 +289,22 @@ func proginfo(p *obj.Prog) {
 	if p.To.Index != x86.REG_NONE {
 		info.Regindex |= RtoB(int(p.To.Index))
 	}
+	if gc.Ctxt.Flag_dynlink {
+		// When -dynlink is passed, any access to static/global data
+		// uses CX as a scratch register.
+		if info.Flags == gc.Pseudo || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
+			return
+		}
+		isName := func(a *obj.Addr) bool {
+			if a.Sym == nil {
+				return false
+			}
+			return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_STATIC
+		}
+		if p.As == obj.ADUFFZERO || p.As == obj.ADUFFCOPY || isName(&p.From) || isName(&p.To) {
+			info.Reguse |= CX
+			info.Regset |= CX
+			return
+		}
+	}
 }

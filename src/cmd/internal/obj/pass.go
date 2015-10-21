@@ -105,6 +105,10 @@ func checkaddr(ctxt *Link, p *Prog, a *Addr) {
 	// TODO(rsc): After fixing SHRQ, check a->index != 0 too.
 	case TYPE_REG:
 		if a.Scale != 0 || a.Name != 0 || a.Sym != nil {
+			if ctxt.Flag_dynlink {
+				// For now.
+				return
+			}
 			break
 		}
 		return

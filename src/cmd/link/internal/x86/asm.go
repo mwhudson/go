@@ -38,6 +38,27 @@ import (
 )
 
 func gentext() {
+	if !ld.DynlinkingGo() {
+		return
+	}
+	thunkfunc := ld.Linklookup(ld.Ctxt, "__x86.get_pc_thunk.cx", 0)
+	thunkfunc.Type = obj.STEXT
+	thunkfunc.Local = true
+	thunkfunc.Reachable = true
+	o := func(op ...uint8) {
+		for _, op1 := range op {
+			ld.Adduint8(ld.Ctxt, thunkfunc, op1)
+		}
+	}
+	o(0x8b, 0x1c, 0x24)
+	o(0xc3)
+	if ld.Ctxt.Etextp != nil {
+		ld.Ctxt.Etextp.Next = thunkfunc
+	} else {
+		ld.Ctxt.Textp = thunkfunc
+	}
+	ld.Ctxt.Etextp = thunkfunc
+
 }
 
 func adddynrela(rela *ld.LSym, s *ld.LSym, r *ld.Reloc) {

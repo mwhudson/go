@@ -381,7 +381,7 @@ func buildModeInit() {
 			codegenArg = "-fPIC"
 		} else {
 			switch platform {
-			case "linux/amd64":
+			case "linux/386", "linux/amd64":
 			default:
 				fatalf("-buildmode=shared not supported on %s\n", platform)
 			}
@@ -398,7 +398,7 @@ func buildModeInit() {
 		if gccgo {
 			codegenArg = "-fPIC"
 		} else {
-			if platform != "linux/amd64" {
+			if platform != "linux/386" && platform != "linux/amd64" {
 				fmt.Fprintf(os.Stderr, "go %s: -linkshared is only supported on linux/amd64\n", flag.Args()[0])
 				os.Exit(2)
 			}
