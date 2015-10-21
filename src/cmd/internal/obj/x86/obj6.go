@@ -449,7 +449,7 @@ nogot:
 		return
 	}
 	isName := func(a *obj.Addr) bool {
-		if a.Sym == nil || a.Type != obj.TYPE_MEM {
+		if a.Sym == nil || a.Type != obj.TYPE_MEM || a.Reg != 0 {
 			return false
 		}
 		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_GOTREF || a.Name == obj.NAME_STATIC
@@ -478,7 +478,7 @@ nogot:
 			t = &r.To
 		}
 		t.Reg = REG_CX
-		t.Type = obj.TYPE_REG
+		t.Type = obj.TYPE_MEM
 		obj.Nopout(p)
 	}
 }

@@ -264,6 +264,15 @@ func elfreloc1(r *ld.Reloc, sectoff int64) int {
 			return -1
 		}
 
+	case obj.R_GOTPCREL:
+		if r.Siz == 4 {
+			ld.Thearch.Lput(ld.R_386_GOTPC | uint32(elfsym)<<8)
+			ld.Thearch.Lput(uint32(sectoff))
+			ld.Thearch.Lput(ld.R_386_GOT32 | uint32(elfsym)<<8)
+		} else {
+			return -1
+		}
+
 	case obj.R_CALL,
 		obj.R_PCREL:
 		if r.Siz == 4 {

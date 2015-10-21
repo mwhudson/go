@@ -2036,8 +2036,10 @@ func oclass(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 
 	case obj.TYPE_ADDR:
 		switch a.Name {
+		case obj.NAME_GOTREF:
+			ctxt.Diag("unexpected NAME_GOTREF")
+
 		case obj.NAME_EXTERN,
-			obj.NAME_GOTREF,
 			obj.NAME_STATIC:
 			if a.Sym != nil && isextern(a.Sym) || p.Mode == 32 {
 				return Yi32
@@ -2455,6 +2457,22 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 			log.Fatalf("reloc")
 		}
 
+		aoffset := a.Offset
+
+		if a.Reg != 0 {
+			if p.Mode == 64 {
+				ctxt.Diag("confusion")
+			}
+			aoffset += 6
+			if a.Name == obj.NAME_GOTREF {
+				r.Siz = 4
+				r.Type = obj.R_GOTPCREL
+			} else {
+				r.Siz = 4
+				r.Type = obj.R_PCREL
+			}
+		}
+
 		if a.Name == obj.NAME_GOTREF {
 			r.Siz = 4
 			r.Type = obj.R_GOTPCREL
@@ -2468,7 +2486,7 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 
 		r.Off = -1 // caller must fill in
 		r.Sym = s
-		r.Add = a.Offset
+		r.Add = aoffset
 
 		return 0
 	}
@@ -2533,6 +2551,9 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 			if !isextern(a.Sym) && p.Mode == 64 {
 				goto bad
 			}
+			if base != 0 {
+				println("hellooo")
+			}
 			base = REG_NONE
 			v = int32(vaddr(ctxt, p, a, &rel))
 
@@ -2579,7 +2600,11 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		if a.Sym == nil {
 			ctxt.Diag("bad addr: %v", p)
 		}
-		base = REG_NONE
+		if base != 0 {
+			if p.Mode != 32 || !ctxt.Flag_dynlink {
+				ctxt.Diag("I lose: %v", p)
+			}
+		}
 		v = int32(vaddr(ctxt, p, a, &rel))
 
 	case obj.NAME_AUTO,
