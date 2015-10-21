@@ -45,9 +45,10 @@ notintel:
 
 	MOVL	$1, AX
 	CPUID
-	MOVL	CX, runtime·cpuid_ecx(SB)
+        MOVL	CX, AX
+	MOVL	AX, runtime·cpuid_ecx(SB)
 	MOVL	DX, runtime·cpuid_edx(SB)
-nocpuinfo:	
+nocpuinfo:
 
 	// if there is an _cgo_init, call it to let it
 	// initialize and to set up GS.  if not,
@@ -88,14 +89,14 @@ needtls:
 ok:
 	// set up m and g "registers"
 	get_tls(BX)
-	LEAL	runtime·g0(SB), CX
-	MOVL	CX, g(BX)
+	LEAL	runtime·g0(SB), DX
+	MOVL	DX, g(BX)
 	LEAL	runtime·m0(SB), AX
 
 	// save m->g0 = g0
-	MOVL	CX, m_g0(AX)
+	MOVL	DX, m_g0(AX)
 	// save g0->m = m0
-	MOVL	AX, g_m(CX)
+	MOVL	AX, g_m(DX)
 
 	CALL	runtime·emptyfunc(SB)	// fault if stack check is wrong
 
@@ -203,6 +204,7 @@ TEXT runtime·mcall(SB), NOSPLIT, $0-4
 	JNE	3(PC)
 	MOVL	$runtime·badmcall(SB), AX
 	JMP	AX
+	get_tls(CX)
 	MOVL	SI, g(CX)	// g = m->g0
 	MOVL	(g_sched+gobuf_sp)(SI), SP	// sp = m->g0->sched.sp
 	PUSHL	AX
@@ -254,6 +256,7 @@ switch:
 	MOVL	AX, (g_sched+gobuf_g)(AX)
 
 	// switch to g0
+	get_tls(CX)
 	MOVL	DX, g(CX)
 	MOVL	(g_sched+gobuf_sp)(DX), BX
 	// make it look like mstart called systemstack on g0, to stop traceback
@@ -681,6 +684,7 @@ TEXT ·asmcgocall(SB),NOSPLIT,$0-12
 	CMPL	SI, DI
 	JEQ	4(PC)
 	CALL	gosave<>(SB)
+	get_tls(CX)
 	MOVL	SI, g(CX)
 	MOVL	(g_sched+gobuf_sp)(SI), SP
 
@@ -881,8 +885,8 @@ nobar:
 TEXT runtime·setcallerpc(SB),NOSPLIT,$4-8
 	MOVL	argp+0(FP),AX		// addr of first arg
 	MOVL	pc+4(FP), BX
-	MOVL	-4(AX), CX
-	CMPL	CX, runtime·stackBarrierPC(SB)
+	MOVL	-4(AX), DX
+	CMPL	DX, runtime·stackBarrierPC(SB)
 	JEQ	setbar
 	MOVL	BX, -4(AX)		// set calling pc
 	RET
@@ -938,10 +942,10 @@ TEXT runtime·memhash_varlen(SB),NOSPLIT,$16-12
 	NO_LOCAL_POINTERS
 	MOVL	p+0(FP), AX
 	MOVL	h+4(FP), BX
-	MOVL	4(DX), CX
+	MOVL	4(DX), DX
 	MOVL	AX, 0(SP)
 	MOVL	BX, 4(SP)
-	MOVL	CX, 8(SP)
+	MOVL	DX, 8(SP)
 	CALL	runtime·memhash(SB)
 	MOVL	12(SP), AX
 	MOVL	AX, ret+8(FP)
@@ -969,7 +973,10 @@ TEXT runtime·aeshashbody(SB),NOSPLIT,$0-0
 	PINSRW	$4, CX, X0	            // 16 bits of length
 	PSHUFHW	$0, X0, X0	            // replace size with its low 2 bytes repeated 4 times
 	MOVO	X0, X1                      // save unscrambled seed
+        // XXX trashes CX
+        MOVL CX, DI
 	PXOR	runtime·aeskeysched(SB), X0 // xor in per-process seed
+        MOVL DI, CX
 	AESENC	X0, X0                      // scramble seed
 
 	CMPL	CX, $16

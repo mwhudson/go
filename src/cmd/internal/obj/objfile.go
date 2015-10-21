@@ -195,6 +195,9 @@ func Writeobjdirect(ctxt *Link, b *Biobuf) {
 				} else if flag&TLSBSS != 0 {
 					s.Type = STLSBSS
 				}
+				if flag&LOCAL != 0 {
+					s.Local = true
+				}
 				edata = s
 				continue
 			}

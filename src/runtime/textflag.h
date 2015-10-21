@@ -21,6 +21,8 @@
 #define WRAPPER 32
 // This function uses its incoming context register.
 #define NEEDCTXT 64
+// TODO(mwhudson): document
+#define LOCAL	128
 // Allocate a word of thread local storage and store the offset from the
 // thread local base to the thread local storage in this variable.
 #define TLSBSS	256
