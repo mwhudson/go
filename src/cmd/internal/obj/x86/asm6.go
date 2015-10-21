@@ -2054,7 +2054,7 @@ func oclass(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 
 		case obj.NAME_EXTERN,
 			obj.NAME_STATIC:
-			if a.Sym != nil && isextern(a.Sym) || p.Mode == 32 {
+			if a.Sym != nil && isextern(a.Sym) || (p.Mode == 32 && !ctxt.Flag_dynlink) {
 				return Yi32
 			}
 			return Yiauto // use pc-relative addressing
@@ -2484,23 +2484,25 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 				r.Siz = 4
 				r.Type = obj.R_PCREL
 			}
-		}
-
-		if a.Name == obj.NAME_GOTREF {
-			r.Siz = 4
-			r.Type = obj.R_GOTPCREL
-		} else if isextern(s) || p.Mode != 64 {
-			r.Siz = 4
-			r.Type = obj.R_ADDR
 		} else {
-			r.Siz = 4
-			r.Type = obj.R_PCREL
+			if a.Name == obj.NAME_GOTREF {
+				r.Siz = 4
+				r.Type = obj.R_GOTPCREL
+			} else if isextern(s) || p.Mode != 64 {
+				r.Siz = 4
+				if r.Sym != nil {
+					println(r.Sym.Name)
+				}
+				r.Type = obj.R_ADDR
+			} else {
+				r.Siz = 4
+				r.Type = obj.R_PCREL
+			}
 		}
 
 		r.Off = -1 // caller must fill in
 		r.Sym = s
 		r.Add = aoffset
-
 		return 0
 	}
 
