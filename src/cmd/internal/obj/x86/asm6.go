@@ -3890,8 +3890,8 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 								// Note that this is not generating the same insn as the other cases.
 								//     MOV TLS, R_to
 								// becomes
-								//     call __x86.get_pc_thunk.$R_to
-								//     movl (gotpc + g@gotntpoff)(%$R_To),$R_To
+								//     call __x86.get_pc_thunk.cx
+								//     movl (gotpc + g@gotntpoff)(%ecx),$R_To
 								// which is encoded as
 								//     call __x86.get_pc_thunk.cx
 								//     movq 0(%ecx), R_to
@@ -3906,22 +3906,12 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 								r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
 								r.Type = obj.R_CALL
 								r.Siz = 4
-								// TODO(mwhudson): not always CX!
-								thunksuffix := ""
-								switch p.To.Reg {
-								case REG_AX:
-									thunksuffix = "ax"
-								case REG_BX:
-									thunksuffix = "bx"
-								case REG_CX:
-									thunksuffix = "cx"
-								}
-								r.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk."+thunksuffix, 0)
+								r.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk.cx", 0)
 								put4(ctxt, 0)
 
 								ctxt.Andptr[0] = 0x8B
 								ctxt.Andptr = ctxt.Andptr[1:]
-								ctxt.Andptr[0] = byte(128 | reg[p.To.Reg] | (reg[p.To.Reg] << 3))
+								ctxt.Andptr[0] = byte(128 | reg[REG_CX] | (reg[p.To.Reg] << 3))
 								ctxt.Andptr = ctxt.Andptr[1:]
 								r = obj.Addrel(ctxt.Cursym)
 								r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))

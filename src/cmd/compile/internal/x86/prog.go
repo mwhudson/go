@@ -290,12 +290,15 @@ func proginfo(p *obj.Prog) {
 		info.Regindex |= RtoB(int(p.To.Index))
 	}
 	if gc.Ctxt.Flag_dynlink {
-		// When -dynlink is passed, any access to static/global data
+		// When -dynlink is passed, any access to static/global data or TLS
 		// uses CX as a scratch register.
 		if info.Flags == gc.Pseudo || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
 			return
 		}
 		isName := func(a *obj.Addr) bool {
+			if a.Reg == x86.REG_TLS {
+				return true
+			}
 			if a.Sym == nil {
 				return false
 			}

@@ -114,7 +114,8 @@ ok:
 	CALL	runtime·schedinit(SB)
 
 	// create a new goroutine to start program
-	PUSHL	$runtime·mainPC(SB)	// entry
+        MOVL $runtime·mainPC(SB), CX
+	PUSHL	CX	// entry
 	PUSHL	$0	// arg size
 	CALL	runtime·newproc(SB)
 	POPL	AX
