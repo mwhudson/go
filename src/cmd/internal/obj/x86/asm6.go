@@ -1979,6 +1979,19 @@ func prefixof(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 	}
 
 	if p.Mode == 32 {
+		if a.Index == REG_TLS && ctxt.Flag_shared != 0 {
+			if a.Offset != 0 {
+				// When building for inclusion into a shared library, an instruction of the form
+				//     MOVL 0(CX)(TLS*1), AX
+				// becomes
+				//     mov %fs:(%ecx), %eax
+				// which assumes that the correct TLS offset has been loaded into %rcx (today
+				// there is only one TLS variable -- g -- so this is OK). When not building for
+				// a shared library the instruction does not require a prefix.
+				log.Fatalf("cannot handle non-0 offsets to TLS")
+			}
+			return 0x65
+		}
 		return 0
 	}
 
@@ -1995,7 +2008,7 @@ func prefixof(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 	case REG_TLS:
 		if ctxt.Flag_shared != 0 {
 			// When building for inclusion into a shared library, an instruction of the form
-			//     MOV 0(CX)(TLS*1), AX
+			//     MOVD 0(CX)(TLS*1), AX
 			// becomes
 			//     mov %fs:(%rcx), %rax
 			// which assumes that the correct TLS offset has been loaded into %rcx (today
@@ -2496,11 +2509,12 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 			ctxt.Diag("need reloc for %v", obj.Dconv(p, a))
 			log.Fatalf("reloc")
 		}
-
-		r.Type = obj.R_TLS_LE
-		r.Siz = 4
-		r.Off = -1 // caller must fill in
-		r.Add = a.Offset
+		if ctxt.Flag_shared == 0 {
+			r.Type = obj.R_TLS_LE
+			r.Siz = 4
+			r.Off = -1 // caller must fill in
+			r.Add = a.Offset
+		}
 		return 0
 	}
 
@@ -3872,19 +3886,64 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 
 						case obj.Hlinux,
 							obj.Hnacl:
-							// ELF TLS base is 0(GS).
-							pp.From = p.From
+							if ctxt.Flag_shared != 0 {
+								// Note that this is not generating the same insn as the other cases.
+								//     MOV TLS, R_to
+								// becomes
+								//     call __x86.get_pc_thunk.$R_to
+								//     movl (gotpc + g@gotntpoff)(%$R_To),$R_To
+								// which is encoded as
+								//     call __x86.get_pc_thunk.cx
+								//     movq 0(%ecx), R_to
+								// and R_CALL & R_TLS_IE relocs. This all assumes the only tls variable we access
+								// is g, which we can't check here, but will when we assemble the second
+								// instruction.
+								ctxt.Rexflag = 0
 
-							pp.From.Type = obj.TYPE_MEM
-							pp.From.Reg = REG_GS
-							pp.From.Offset = 0
-							pp.From.Index = REG_NONE
-							pp.From.Scale = 0
-							ctxt.Andptr[0] = 0x65
-							ctxt.Andptr = ctxt.Andptr[1:] // GS
-							ctxt.Andptr[0] = 0x8B
-							ctxt.Andptr = ctxt.Andptr[1:]
-							asmand(ctxt, p, &pp.From, &p.To)
+								ctxt.Andptr[0] = 0xe8
+								ctxt.Andptr = ctxt.Andptr[1:]
+								r = obj.Addrel(ctxt.Cursym)
+								r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+								r.Type = obj.R_CALL
+								r.Siz = 4
+								// TODO(mwhudson): not always CX!
+								thunksuffix := ""
+								switch p.To.Reg {
+								case REG_AX:
+									thunksuffix = "ax"
+								case REG_BX:
+									thunksuffix = "bx"
+								case REG_CX:
+									thunksuffix = "cx"
+								}
+								r.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk."+thunksuffix, 0)
+								put4(ctxt, 0)
+
+								ctxt.Andptr[0] = 0x8B
+								ctxt.Andptr = ctxt.Andptr[1:]
+								ctxt.Andptr[0] = byte(128 | reg[p.To.Reg] | (reg[p.To.Reg] << 3))
+								ctxt.Andptr = ctxt.Andptr[1:]
+								r = obj.Addrel(ctxt.Cursym)
+								r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+								r.Type = obj.R_TLS_IE
+								r.Siz = 4
+								r.Add = -4 + 6
+								put4(ctxt, 0)
+							} else {
+								// ELF TLS base is 0(GS).
+								pp.From = p.From
+
+								pp.From.Type = obj.TYPE_MEM
+								pp.From.Reg = REG_GS
+								pp.From.Offset = 0
+								pp.From.Index = REG_NONE
+								pp.From.Scale = 0
+								ctxt.Andptr[0] = 0x65
+								ctxt.Andptr = ctxt.Andptr[1:] // GS
+								ctxt.Andptr[0] = 0x8B
+								ctxt.Andptr = ctxt.Andptr[1:]
+								asmand(ctxt, p, &pp.From, &p.To)
+							}
 
 						case obj.Hplan9:
 							if ctxt.Plan9privates == nil {
