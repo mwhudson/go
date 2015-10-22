@@ -1707,3 +1707,10 @@ TEXT runtime·prefetchnta(SB),NOSPLIT,$0-4
 	MOVL	addr+0(FP), AX
 	PREFETCHNTA	(AX)
 	RET
+
+// This is called from .init_array and follows the platform, not Go, ABI (ish)
+TEXT runtime·addmoduledata(SB),NOSPLIT,$0-0
+	MOVL	runtime·lastmoduledatap(SB), DX
+	MOVL	AX, moduledata_next(DX)
+	MOVL	AX, runtime·lastmoduledatap(SB)
+	RET

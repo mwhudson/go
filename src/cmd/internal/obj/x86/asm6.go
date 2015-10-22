@@ -3571,6 +3571,28 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					copy(ctxt.Andptr, bpduff1)
 					ctxt.Andptr = ctxt.Andptr[len(bpduff1):]
 				}
+				if ctxt.Flag_dynlink && !p.To.Sym.Local {
+					ctxt.Andptr[0] = 0xe8
+					ctxt.Andptr = ctxt.Andptr[1:]
+					r = obj.Addrel(ctxt.Cursym)
+					r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+					r.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk.cx", 0)
+					r.Add = 0
+					r.Type = obj.R_CALL
+					r.Siz = 4
+					put4(ctxt, 0)
+					// LEAQ $0x0(CX), BX
+					ctxt.Andptr[0] = 0x8d
+					ctxt.Andptr[1] = 0x99
+					ctxt.Andptr = ctxt.Andptr[2:]
+					r = obj.Addrel(ctxt.Cursym)
+					r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+					r.Add = 6
+					r.Sym = obj.Linklookup(ctxt, "_GLOBAL_OFFSET_TABLE_", 0)
+					r.Type = obj.R_GOTPCREL
+					r.Siz = 4
+					put4(ctxt, 0)
+				}
 				ctxt.Andptr[0] = byte(op)
 				ctxt.Andptr = ctxt.Andptr[1:]
 				r = obj.Addrel(ctxt.Cursym)

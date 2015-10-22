@@ -46,7 +46,7 @@ func run(t *testing.T, msg string, args ...string) {
 func goCmd(t *testing.T, args ...string) {
 	newargs := []string{args[0], "-installsuffix=" + suffix}
 	if testing.Verbose() {
-		newargs = append(newargs, "-v")
+		newargs = append(newargs, "-v", "-x")
 	}
 	newargs = append(newargs, args[1:]...)
 	c := exec.Command("go", newargs...)
