@@ -2490,9 +2490,6 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 				r.Type = obj.R_GOTPCREL
 			} else if isextern(s) || p.Mode != 64 {
 				r.Siz = 4
-				if r.Sym != nil {
-					println(r.Sym.Name)
-				}
 				r.Type = obj.R_ADDR
 			} else {
 				r.Siz = 4
@@ -2566,9 +2563,6 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 			obj.NAME_STATIC:
 			if !isextern(a.Sym) && p.Mode == 64 {
 				goto bad
-			}
-			if base != 0 {
-				println("hellooo")
 			}
 			base = REG_NONE
 			v = int32(vaddr(ctxt, p, a, &rel))

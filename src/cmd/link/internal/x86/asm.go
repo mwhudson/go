@@ -134,7 +134,7 @@ func gentext() {
 	r.Sym = ld.Linklookup(ld.Ctxt, "_GLOBAL_OFFSET_TABLE_", 0)
 	r.Off = int32(i)
 	r.Type = obj.R_PCREL
-	r.Add = 18
+	r.Add = 12
 	r.Siz = 4
 
 	o(0xe8)
