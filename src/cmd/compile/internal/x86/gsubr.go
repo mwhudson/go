@@ -914,12 +914,12 @@ func gmove(f *gc.Node, t *gc.Node) {
 			// and that code has DX live, so avoid DX and use CX instead.
 			var r1 gc.Node
 			gc.Nodreg(&r1, gc.Types[gc.TUINT32], x86.REG_AX)
-			var r2 gc.Node
-			gc.Nodreg(&r2, gc.Types[gc.TUINT32], x86.REG_CX)
+			//var r2 gc.Node
+			//gc.Nodreg(&r2, gc.Types[gc.TUINT32], x86.REG_CX)
 			gins(x86.AMOVL, &flo, &r1)
-			gins(x86.AMOVL, &fhi, &r2)
 			gins(x86.AMOVL, &r1, &tlo)
-			gins(x86.AMOVL, &r2, &thi)
+			gins(x86.AMOVL, &fhi, &r1)
+			gins(x86.AMOVL, &r1, &thi)
 		}
 
 		splitclean()
