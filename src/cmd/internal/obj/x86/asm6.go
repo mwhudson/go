@@ -3565,7 +3565,7 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					copy(ctxt.Andptr, bpduff1)
 					ctxt.Andptr = ctxt.Andptr[len(bpduff1):]
 				}
-				if ctxt.Flag_dynlink && !p.To.Sym.Local {
+				if ctxt.Flag_dynlink && !p.To.Sym.Local && p.Mode == 32 {
 					ctxt.Andptr[0] = 0xe8
 					ctxt.Andptr = ctxt.Andptr[1:]
 					r = obj.Addrel(ctxt.Cursym)
