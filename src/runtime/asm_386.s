@@ -998,9 +998,11 @@ aes0to15:
 	// a page boundary, so we can load it directly.
 	MOVOU	-16(AX), X1
 	ADDL	BX, BX
-	PAND	masks<>(SB)(BX*8), X1
+        LEAL    masks<>(SB), DI
+        LEAL    (DI)(BX*8), DI
+	PAND	(DI), X1
 
-final1:	
+final1:
 	AESENC	X0, X1  // scramble input, xor in seed
 	AESENC	X1, X1  // scramble combo 2 times
 	AESENC	X1, X1

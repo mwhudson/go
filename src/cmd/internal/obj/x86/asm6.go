@@ -2476,7 +2476,9 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 			if p.Mode == 64 {
 				ctxt.Diag("confusion")
 			}
-			aoffset += 6
+			xxx := int64(-cap(ctxt.Andptr) + cap(ctxt.And[:]))
+			fmt.Println(xxx, s.Name)
+			aoffset += xxx + 5
 			if a.Name == obj.NAME_GOTREF {
 				r.Siz = 4
 				r.Type = obj.R_GOTPCREL
