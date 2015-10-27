@@ -955,13 +955,13 @@ TEXT runtime·memhash_varlen(SB),NOSPLIT,$16-12
 // hash function using AES hardware instructions
 TEXT runtime·aeshash(SB),NOSPLIT,$0-16
 	MOVL	p+0(FP), AX	// ptr to data
-	MOVL	s+8(FP), CX	// size
+	MOVL	s+8(FP), BX	// size
 	LEAL	ret+12(FP), DX
 	JMP	runtime·aeshashbody(SB)
 
 TEXT runtime·aeshashstr(SB),NOSPLIT,$0-12
 	MOVL	p+0(FP), AX	// ptr to string object
-	MOVL	4(AX), CX	// length of string
+	MOVL	4(AX), BX	// length of string
 	MOVL	(AX), AX	// string data
 	LEAL	ret+8(FP), DX
 	JMP	runtime·aeshashbody(SB)
@@ -971,26 +971,23 @@ TEXT runtime·aeshashstr(SB),NOSPLIT,$0-12
 // DX: address to put return value
 TEXT runtime·aeshashbody(SB),NOSPLIT,$0-0
 	MOVL	h+4(FP), X0	            // 32 bits of per-table hash seed
-	PINSRW	$4, CX, X0	            // 16 bits of length
+	PINSRW	$4, BX, X0	            // 16 bits of length
 	PSHUFHW	$0, X0, X0	            // replace size with its low 2 bytes repeated 4 times
 	MOVO	X0, X1                      // save unscrambled seed
-        // XXX trashes CX
-        MOVL CX, DI
 	PXOR	runtime·aeskeysched(SB), X0 // xor in per-process seed
-        MOVL DI, CX
 	AESENC	X0, X0                      // scramble seed
 
-	CMPL	CX, $16
+	CMPL	BX, $16
 	JB	aes0to15
 	JE	aes16
-	CMPL	CX, $32
+	CMPL	BX, $32
 	JBE	aes17to32
-	CMPL	CX, $64
+	CMPL	BX, $64
 	JBE	aes33to64
 	JMP	aes65plus
 	
 aes0to15:
-	TESTL	CX, CX
+	TESTL	BX, BX
 	JE	aes0
 
 	ADDL	$16, AX
@@ -1000,8 +997,8 @@ aes0to15:
 	// 16 bytes loaded at this address won't cross
 	// a page boundary, so we can load it directly.
 	MOVOU	-16(AX), X1
-	ADDL	CX, CX
-	PAND	masks<>(SB)(CX*8), X1
+	ADDL	BX, BX
+	PAND	masks<>(SB)(BX*8), X1
 
 final1:	
 	AESENC	X0, X1  // scramble input, xor in seed
@@ -1014,9 +1011,9 @@ endofpage:
 	// address ends in 1111xxxx.  Might be up against
 	// a page boundary, so load ending at last byte.
 	// Then shift bytes down using pshufb.
-	MOVOU	-32(AX)(CX*1), X1
-	ADDL	CX, CX
-	PSHUFB	shifts<>(SB)(CX*8), X1
+	MOVOU	-32(AX)(BX*1), X1
+	ADDL	BX, BX
+	PSHUFB	shifts<>(SB)(BX*8), X1
 	JMP	final1
 
 aes0:
@@ -1036,7 +1033,7 @@ aes17to32:
 	
 	// load data to be hashed
 	MOVOU	(AX), X2
-	MOVOU	-16(AX)(CX*1), X3
+	MOVOU	-16(AX)(BX*1), X3
 
 	// scramble 3 times
 	AESENC	X0, X2
@@ -1064,8 +1061,8 @@ aes33to64:
 	
 	MOVOU	(AX), X4
 	MOVOU	16(AX), X5
-	MOVOU	-32(AX)(CX*1), X6
-	MOVOU	-16(AX)(CX*1), X7
+	MOVOU	-32(AX)(BX*1), X6
+	MOVOU	-16(AX)(BX*1), X7
 	
 	AESENC	X0, X4
 	AESENC	X1, X5
@@ -1100,10 +1097,10 @@ aes65plus:
 	AESENC	X3, X3
 	
 	// start with last (possibly overlapping) block
-	MOVOU	-64(AX)(CX*1), X4
-	MOVOU	-48(AX)(CX*1), X5
-	MOVOU	-32(AX)(CX*1), X6
-	MOVOU	-16(AX)(CX*1), X7
+	MOVOU	-64(AX)(BX*1), X4
+	MOVOU	-48(AX)(BX*1), X5
+	MOVOU	-32(AX)(BX*1), X6
+	MOVOU	-16(AX)(BX*1), X7
 
 	// scramble state once
 	AESENC	X0, X4
@@ -1112,8 +1109,8 @@ aes65plus:
 	AESENC	X3, X7
 
 	// compute number of remaining 64-byte blocks
-	DECL	CX
-	SHRL	$6, CX
+	DECL	BX
+	SHRL	$6, BX
 	
 aesloop:
 	// scramble state, xor in a block
@@ -1133,7 +1130,7 @@ aesloop:
 	AESENC	X7, X7
 
 	ADDL	$64, AX
-	DECL	CX
+	DECL	BX
 	JNE	aesloop
 
 	// 2 more scrambles to finish
