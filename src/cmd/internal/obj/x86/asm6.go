@@ -2507,10 +2507,12 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 			log.Fatalf("reloc")
 		}
 
-		r.Type = obj.R_TLS_LE
-		r.Siz = 4
-		r.Off = -1 // caller must fill in
-		r.Add = a.Offset
+		if ctxt.Flag_shared == 0 {
+			r.Type = obj.R_TLS_LE
+			r.Siz = 4
+			r.Off = -1 // caller must fill in
+			r.Add = a.Offset
+		}
 		return 0
 	}
 
