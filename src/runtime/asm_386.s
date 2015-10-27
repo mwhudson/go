@@ -1015,7 +1015,9 @@ endofpage:
 	// Then shift bytes down using pshufb.
 	MOVOU	-32(AX)(BX*1), X1
 	ADDL	BX, BX
-	PSHUFB	shifts<>(SB)(BX*8), X1
+        LEAL    shifts<>(SB), DI
+        LEAL    (DI)(BX*8), DI
+	PSHUFB	(DI), X1
 	JMP	final1
 
 aes0:
