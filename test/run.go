@@ -516,7 +516,6 @@ func (t *test) run() {
 			cmd.Dir = t.tempDir
 			cmd.Env = envForDir(cmd.Dir)
 		}
-		fmt.Println("running", args)
 		err := cmd.Run()
 		if err != nil {
 			err = fmt.Errorf("%s\n%s", err, buf.Bytes())
@@ -531,6 +530,7 @@ func (t *test) run() {
 
 	case "errorcheck":
 		cmdline := []string{"go", "tool", "compile", "-e", "-o", "a.o"}
+		// No need to add -dynlink even if linkshared if we're just checking for errors...
 		cmdline = append(cmdline, flags...)
 		cmdline = append(cmdline, long)
 		out, err := runcmd(cmdline...)
@@ -681,7 +681,12 @@ func (t *test) run() {
 			t.err = fmt.Errorf("write tempfile:%s", err)
 			return
 		}
-		out, err = runcmd("go", "run", tfile)
+		cmd = []string{"go", "run"}
+		if *linkshared {
+			cmd = append(cmd, "-linkshared")
+		}
+		cmd = append(cmd, tfile)
+		out, err = runcmd(cmd...)
 		if err != nil {
 			t.err = err
 			return
