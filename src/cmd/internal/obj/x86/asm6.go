@@ -2064,10 +2064,13 @@ func oclass(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 
 	case obj.TYPE_ADDR:
 		switch a.Name {
+		case obj.NAME_GOTREF:
+			ctxt.Diag("unexpected TYPE_ADDR with NAME_GOTREF")
+			return Yxxx
+
 		case obj.NAME_EXTERN,
-			obj.NAME_GOTREF,
 			obj.NAME_STATIC:
-			if a.Sym != nil && isextern(a.Sym) || p.Mode == 32 {
+			if a.Sym != nil && isextern(a.Sym) || (p.Mode == 32 && ctxt.Flag_shared == 0) {
 				return Yi32
 			}
 			return Yiauto // use pc-relative addressing
@@ -2483,20 +2486,36 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 			log.Fatalf("reloc")
 		}
 
-		if a.Name == obj.NAME_GOTREF {
-			r.Siz = 4
-			r.Type = obj.R_GOTPCREL
-		} else if isextern(s) || p.Mode != 64 {
-			r.Siz = 4
-			r.Type = obj.R_ADDR
+		aoffset := a.Offset
+
+		if a.Reg != REG_NONE {
+			if p.Mode == 64 || ctxt.Flag_shared == 0 {
+				ctxt.Diag("a.Reg not 0 in vaddr")
+			}
+			aoffset += int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])) + 5
+			if a.Name == obj.NAME_GOTREF {
+				r.Siz = 4
+				r.Type = obj.R_GOTPCREL
+			} else {
+				r.Siz = 4
+				r.Type = obj.R_PCREL
+			}
 		} else {
-			r.Siz = 4
-			r.Type = obj.R_PCREL
+			if a.Name == obj.NAME_GOTREF {
+				r.Siz = 4
+				r.Type = obj.R_GOTPCREL
+			} else if isextern(s) || p.Mode != 64 {
+				r.Siz = 4
+				r.Type = obj.R_ADDR
+			} else {
+				r.Siz = 4
+				r.Type = obj.R_PCREL
+			}
 		}
 
 		r.Off = -1 // caller must fill in
 		r.Sym = s
-		r.Add = a.Offset
+		r.Add = aoffset
 
 		return 0
 	}
@@ -2609,7 +2628,11 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		if a.Sym == nil {
 			ctxt.Diag("bad addr: %v", p)
 		}
-		base = REG_NONE
+		if base != REG_NONE {
+			if p.Mode != 32 || ctxt.Flag_shared == 0 {
+				ctxt.Diag("a.Reg != 0 in asmandsz", p)
+			}
+		}
 		v = int32(vaddr(ctxt, p, a, &rel))
 
 	case obj.NAME_AUTO,
@@ -3559,6 +3582,31 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					// LEAQ -16(SP), BP
 					copy(ctxt.Andptr, bpduff1)
 					ctxt.Andptr = ctxt.Andptr[len(bpduff1):]
+				}
+				if ctxt.Flag_dynlink && !p.To.Sym.Local && p.Mode == 32 {
+					// Any call might end up being a call to a PLT, so
+					// make sure the GOT pointer is loaded into BX.
+					// CALL __x86.get_pc_thunk.cx
+					ctxt.Andptr[0] = 0xe8
+					ctxt.Andptr = ctxt.Andptr[1:]
+					r = obj.Addrel(ctxt.Cursym)
+					r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+					r.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk.cx", 0)
+					r.Add = 0
+					r.Type = obj.R_CALL
+					r.Siz = 4
+					put4(ctxt, 0)
+					// LEAQ @gotpc+6(CX), BX
+					ctxt.Andptr[0] = 0x8d
+					ctxt.Andptr[1] = 0x99
+					ctxt.Andptr = ctxt.Andptr[2:]
+					r = obj.Addrel(ctxt.Cursym)
+					r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
+					r.Add = 6
+					r.Sym = obj.Linklookup(ctxt, "_GLOBAL_OFFSET_TABLE_", 0)
+					r.Type = obj.R_GOTPCREL
+					r.Siz = 4
+					put4(ctxt, 0)
 				}
 				ctxt.Andptr[0] = byte(op)
 				ctxt.Andptr = ctxt.Andptr[1:]
