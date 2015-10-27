@@ -319,12 +319,25 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 
 // Rewrite p, if necessary, to access global data via the global offset table.
 func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
+	var add, lea, mov, reg int16
+	if p.Mode == 64 {
+		add = AADDQ
+		lea = ALEAQ
+		mov = AMOVQ
+		reg = REG_R15
+	} else {
+		add = AADDL
+		lea = ALEAL
+		mov = AMOVL
+		reg = REG_CX
+	}
+
 	if p.As == obj.ADUFFCOPY || p.As == obj.ADUFFZERO {
 		//     ADUFFxxx $offset
 		// becomes
-		//     MOVQ runtime.duffxxx@GOT, R15
-		//     ADDQ $offset, R15
-		//     CALL R15
+		//     $MOV runtime.duffxxx@GOT, $reg
+		//     $ADD $offset, $reg
+		//     CALL $reg
 		var sym *obj.LSym
 		if p.As == obj.ADUFFZERO {
 			sym = obj.Linklookup(ctxt, "runtime.duffzero", 0)
@@ -332,48 +345,48 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 			sym = obj.Linklookup(ctxt, "runtime.duffcopy", 0)
 		}
 		offset := p.To.Offset
-		p.As = AMOVQ
+		p.As = mov
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_GOTREF
 		p.From.Sym = sym
 		p.To.Type = obj.TYPE_REG
-		p.To.Reg = REG_R15
+		p.To.Reg = reg
 		p.To.Offset = 0
 		p.To.Sym = nil
 		p1 := obj.Appendp(ctxt, p)
-		p1.As = AADDQ
+		p1.As = add
 		p1.From.Type = obj.TYPE_CONST
 		p1.From.Offset = offset
 		p1.To.Type = obj.TYPE_REG
-		p1.To.Reg = REG_R15
+		p1.To.Reg = reg
 		p2 := obj.Appendp(ctxt, p1)
 		p2.As = obj.ACALL
 		p2.To.Type = obj.TYPE_REG
-		p2.To.Reg = REG_R15
+		p2.To.Reg = reg
 	}
 
 	// We only care about global data: NAME_EXTERN means a global
 	// symbol in the Go sense, and p.Sym.Local is true for a few
 	// internally defined symbols.
-	if p.As == ALEAQ && p.From.Type == obj.TYPE_MEM && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
-		// LEAQ sym, Rx becomes MOVQ $sym, Rx which will be rewritten below
-		p.As = AMOVQ
+	if p.As == lea && p.From.Type == obj.TYPE_MEM && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
+		// $LEA sym, Rx becomes $MOV $sym, Rx which will be rewritten below
+		p.As = mov
 		p.From.Type = obj.TYPE_ADDR
 	}
 	if p.From.Type == obj.TYPE_ADDR && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
-		// MOVQ $sym, Rx becomes MOVQ sym@GOT, Rx
-		// MOVQ $sym+<off>, Rx becomes MOVQ sym@GOT, Rx; ADDQ <off>, Rx
-		if p.As != AMOVQ {
+		// $MOV $sym, Rx becomes $MOV sym@GOT, Rx
+		// $MOV $sym+<off>, Rx becomes $MOV sym@GOT, Rx; $ADD <off>, Rx
+		if p.As != mov {
 			ctxt.Diag("do not know how to handle TYPE_ADDR in %v with -dynlink", p)
 		}
 		if p.To.Type != obj.TYPE_REG {
-			ctxt.Diag("do not know how to handle LEAQ-type insn to non-register in %v with -dynlink", p)
+			ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
 		}
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_GOTREF
 		if p.From.Offset != 0 {
 			q := obj.Appendp(ctxt, p)
-			q.As = AADDQ
+			q.As = add
 			q.From.Type = obj.TYPE_CONST
 			q.From.Offset = p.From.Offset
 			q.To = p.To
@@ -384,8 +397,8 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		ctxt.Diag("don't know how to handle %v with -dynlink", p)
 	}
 	var source *obj.Addr
-	// MOVx sym, Ry becomes MOVW sym@GOT, R15; MOVx (R15), Ry
-	// MOVx Ry, sym becomes MOVW sym@GOT, R15; MOVx Ry, (R15)
+	// MOVx sym, Ry becomes $MOV sym@GOT, R15; MOVx (R15), Ry
+	// MOVx Ry, sym becomes $MOV sym@GOT, R15; MOVx Ry, (R15)
 	// An addition may be inserted between the two MOVs if there is an offset.
 	if p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
 		if p.To.Name == obj.NAME_EXTERN && !p.To.Sym.Local {
@@ -406,22 +419,22 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 	p1 := obj.Appendp(ctxt, p)
 	p2 := obj.Appendp(ctxt, p1)
 
-	p1.As = AMOVQ
+	p1.As = mov
 	p1.From.Type = obj.TYPE_MEM
 	p1.From.Sym = source.Sym
 	p1.From.Name = obj.NAME_GOTREF
 	p1.To.Type = obj.TYPE_REG
-	p1.To.Reg = REG_R15
+	p1.To.Reg = reg
 
 	p2.As = p.As
 	p2.From = p.From
 	p2.To = p.To
 	if p.From.Name == obj.NAME_EXTERN {
-		p2.From.Reg = REG_R15
+		p2.From.Reg = reg
 		p2.From.Name = obj.NAME_NONE
 		p2.From.Sym = nil
 	} else if p.To.Name == obj.NAME_EXTERN {
-		p2.To.Reg = REG_R15
+		p2.To.Reg = reg
 		p2.To.Name = obj.NAME_NONE
 		p2.To.Sym = nil
 	} else {
