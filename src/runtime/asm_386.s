@@ -1546,3 +1546,11 @@ TEXT runtime·prefetcht2(SB),NOSPLIT,$0-4
 
 TEXT runtime·prefetchnta(SB),NOSPLIT,$0-4
 	RET
+
+// This is called from .init_array and follows a very ad-hoc ABI: this uses AX
+// and CX (which are caller save in the C ABI) but the argument is passed in DX.
+TEXT runtime·addmoduledata(SB),NOSPLIT,$0-0
+       MOVL    runtime·lastmoduledatap(SB), DX
+       MOVL    AX, moduledata_next(DX)
+       MOVL    AX, runtime·lastmoduledatap(SB)
+       RET
