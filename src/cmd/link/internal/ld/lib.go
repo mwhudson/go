@@ -1553,21 +1553,29 @@ func callsize() int {
 	return Thearch.Regsize
 }
 
+func stackLimit() int {
+	limit := obj.StackGuard - obj.StackSystem - obj.StackSmall
+	if Thearch.Thechar == '9' {
+		limit += obj.StackGuard
+	}
+	return limit
+}
+
 func dostkcheck() {
 	var ch Chain
 
 	morestack = Linklookup(Ctxt, "runtime.morestack", 0)
 
-	// Every splitting function ensures that there are at least StackLimit
+	// Every splitting function ensures that there are at least stackLimit()
 	// bytes available below SP when the splitting prologue finishes.
 	// If the splitting function calls F, then F begins execution with
-	// at least StackLimit - callsize() bytes available.
+	// at least stackLimit() - callsize() bytes available.
 	// Check that every function behaves correctly with this amount
 	// of stack, following direct calls in order to piece together chains
 	// of non-splitting functions.
 	ch.up = nil
 
-	ch.limit = obj.StackLimit - callsize()
+	ch.limit = stackLimit() - callsize()
 
 	// Check every function, but do the nosplit functions in a first pass,
 	// to make the printed failure chains as short as possible.
@@ -1601,7 +1609,7 @@ func stkcheck(up *Chain, depth int) int {
 
 	// Don't duplicate work: only need to consider each
 	// function at top of safe zone once.
-	top := limit == obj.StackLimit-callsize()
+	top := limit == stackLimit()-callsize()
 	if top {
 		if s.Stkcheck != 0 {
 			return 0
@@ -1651,7 +1659,7 @@ func stkcheck(up *Chain, depth int) int {
 			return 0
 		}
 		// Raise limit to allow frame.
-		limit = int(obj.StackLimit+s.Locals) + int(Ctxt.FixedFrameSize())
+		limit = stackLimit() + int(s.Locals) + int(Ctxt.FixedFrameSize())
 	}
 
 	// Walk through sp adjustments in function, consuming relocs.
