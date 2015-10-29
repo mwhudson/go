@@ -43,7 +43,6 @@ const (
 	StackBig    = 4096
 	StackGuard  = 640*stackGuardMultiplier + StackSystem
 	StackSmall  = 128
-	StackLimit  = StackGuard - StackSystem - StackSmall
 )
 
 const (
