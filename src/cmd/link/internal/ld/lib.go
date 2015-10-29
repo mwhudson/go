@@ -1614,8 +1614,8 @@ func stkcheck(up *Chain, depth int) int {
 		// should never be called directly.
 		// only diagnose the direct caller.
 		// TODO(mwhudson): actually think about this.
-		if depth == 1 && s.Type != obj.SXREF && !DynlinkingGo() {
-			Diag("call to external function %s", s.Name)
+		if depth == 1 && s.Type != obj.SXREF && !DynlinkingGo() && Buildmode != BuildmodePIE {
+			Diag("call to external function %s %d", s.Name)
 		}
 		return -1
 	}

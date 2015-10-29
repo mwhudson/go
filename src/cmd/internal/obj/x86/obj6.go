@@ -321,138 +321,140 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 		reg = REG_CX
 	}
 
-	if !ctxt.Flag_dynlink {
-		return
-	}
 	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
 		return
 	}
-
-	if p.As == obj.ADUFFCOPY || p.As == obj.ADUFFZERO {
-		var sym *obj.LSym
-		if p.As == obj.ADUFFZERO {
-			sym = obj.Linklookup(ctxt, "runtime.duffzero", 0)
-		} else {
-			sym = obj.Linklookup(ctxt, "runtime.duffcopy", 0)
-		}
-		offset := p.To.Offset
-		p.As = mov
-		p.From.Type = obj.TYPE_MEM
-		p.From.Name = obj.NAME_GOTREF
-		p.From.Sym = sym
-		p.To.Type = obj.TYPE_REG
-		p.To.Reg = reg
-		p.To.Offset = 0
-		p.To.Sym = nil
-		p1 := obj.Appendp(ctxt, p)
-		p1.As = add
-		p1.From.Type = obj.TYPE_CONST
-		p1.From.Offset = offset
-		p1.To.Type = obj.TYPE_REG
-		p1.To.Reg = reg
-		p2 := obj.Appendp(ctxt, p1)
-		p2.As = obj.ACALL
-		p2.To.Type = obj.TYPE_REG
-		p2.To.Reg = reg
+	if ctxt.Flag_shared == 0 {
+		return
 	}
+	if ctxt.Flag_dynlink {
 
-	viaGot := func(a *obj.Addr) bool {
-		return a.Type == obj.TYPE_MEM && a.Name == obj.NAME_EXTERN && !a.Sym.Local && a.Reg == 0
-	}
-
-	if p.As == lea && viaGot(&p.From) {
-		p.As = mov
-		p.From.Type = obj.TYPE_ADDR
-	}
-	if p.From.Type == obj.TYPE_ADDR && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
-		if p.From.Reg != 0 {
-			ctxt.Diag("what")
-		}
-		if p.As != mov {
-			ctxt.Diag("do not know how to handle TYPE_ADDR in %v with -dynlink", p)
-		}
-		cmplxdest := false
-		var dest obj.Addr
-		if p.To.Type != obj.TYPE_REG {
-			if p.Mode == 64 {
-				ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
+		if p.As == obj.ADUFFCOPY || p.As == obj.ADUFFZERO {
+			var sym *obj.LSym
+			if p.As == obj.ADUFFZERO {
+				sym = obj.Linklookup(ctxt, "runtime.duffzero", 0)
+			} else {
+				sym = obj.Linklookup(ctxt, "runtime.duffcopy", 0)
 			}
-			cmplxdest = true
-			dest = p.To
+			offset := p.To.Offset
+			p.As = mov
+			p.From.Type = obj.TYPE_MEM
+			p.From.Name = obj.NAME_GOTREF
+			p.From.Sym = sym
 			p.To.Type = obj.TYPE_REG
-			p.To.Reg = REG_CX
+			p.To.Reg = reg
+			p.To.Offset = 0
 			p.To.Sym = nil
-			p.To.Name = obj.NAME_NONE
-		}
-		p.From.Type = obj.TYPE_MEM
-		p.From.Name = obj.NAME_GOTREF
-		q := p
-		if p.From.Offset != 0 {
-			q = obj.Appendp(ctxt, p)
-			q.As = add
-			q.From.Type = obj.TYPE_CONST
-			q.From.Offset = p.From.Offset
-			q.To = p.To
-			p.From.Offset = 0
-		}
-		if cmplxdest {
-			q = obj.Appendp(ctxt, q)
-			q.As = mov
-			q.To = dest
-			q.From.Type = obj.TYPE_REG
-			q.From.Reg = REG_CX
-		}
-
-	}
-
-	if p.From3 != nil && viaGot(p.From3) {
-		ctxt.Diag("don't know how to handle %v with -dynlink", p)
-	}
-	var source *obj.Addr
-	if viaGot(&p.From) {
-		if viaGot(&p.To) {
-			ctxt.Diag("cannot handle going via GOT on both sides in %v with -dynlink", p)
-		}
-		source = &p.From
-	} else if p.To.Name == obj.NAME_EXTERN && !p.To.Sym.Local {
-		source = &p.To
-	} else {
-		goto nogot
-	}
-	if source.Type != obj.TYPE_MEM {
-		ctxt.Diag("don't know how to handle %v with -dynlink", p)
-	}
-	{
-		p1 := obj.Appendp(ctxt, p)
-		p2 := obj.Appendp(ctxt, p1)
-
-		p1.As = mov
-		p1.From.Type = obj.TYPE_MEM
-		p1.From.Sym = source.Sym
-		p1.From.Name = obj.NAME_GOTREF
-		p1.To.Type = obj.TYPE_REG
-		p1.To.Reg = reg
-
-		p2.As = p.As
-		p2.From = p.From
-		p2.To = p.To
-		if p.From.Name == obj.NAME_EXTERN {
-			p2.From.Reg = reg
-			p2.From.Name = obj.NAME_NONE
-			p2.From.Sym = nil
-		} else if p.To.Name == obj.NAME_EXTERN {
+			p1 := obj.Appendp(ctxt, p)
+			p1.As = add
+			p1.From.Type = obj.TYPE_CONST
+			p1.From.Offset = offset
+			p1.To.Type = obj.TYPE_REG
+			p1.To.Reg = reg
+			p2 := obj.Appendp(ctxt, p1)
+			p2.As = obj.ACALL
+			p2.To.Type = obj.TYPE_REG
 			p2.To.Reg = reg
-			p2.To.Name = obj.NAME_NONE
-			p2.To.Sym = nil
+		}
+
+		viaGot := func(a *obj.Addr) bool {
+			return a.Type == obj.TYPE_MEM && a.Name == obj.NAME_EXTERN && !a.Sym.Local && a.Reg == 0
+		}
+
+		if p.As == lea && viaGot(&p.From) {
+			p.As = mov
+			p.From.Type = obj.TYPE_ADDR
+		}
+		if p.From.Type == obj.TYPE_ADDR && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
+			if p.From.Reg != 0 {
+				ctxt.Diag("what")
+			}
+			if p.As != mov {
+				ctxt.Diag("do not know how to handle TYPE_ADDR in %v with -dynlink", p)
+			}
+			cmplxdest := false
+			var dest obj.Addr
+			if p.To.Type != obj.TYPE_REG {
+				if p.Mode == 64 {
+					ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
+				}
+				cmplxdest = true
+				dest = p.To
+				p.To.Type = obj.TYPE_REG
+				p.To.Reg = REG_CX
+				p.To.Sym = nil
+				p.To.Name = obj.NAME_NONE
+			}
+			p.From.Type = obj.TYPE_MEM
+			p.From.Name = obj.NAME_GOTREF
+			q := p
+			if p.From.Offset != 0 {
+				q = obj.Appendp(ctxt, p)
+				q.As = add
+				q.From.Type = obj.TYPE_CONST
+				q.From.Offset = p.From.Offset
+				q.To = p.To
+				p.From.Offset = 0
+			}
+			if cmplxdest {
+				q = obj.Appendp(ctxt, q)
+				q.As = mov
+				q.To = dest
+				q.From.Type = obj.TYPE_REG
+				q.From.Reg = REG_CX
+			}
+
+		}
+
+		if p.From3 != nil && viaGot(p.From3) {
+			ctxt.Diag("don't know how to handle %v with -dynlink", p)
+		}
+		var source *obj.Addr
+		if viaGot(&p.From) {
+			if viaGot(&p.To) {
+				ctxt.Diag("cannot handle going via GOT on both sides in %v with -dynlink", p)
+			}
+			source = &p.From
+		} else if p.To.Name == obj.NAME_EXTERN && !p.To.Sym.Local {
+			source = &p.To
 		} else {
 			goto nogot
 		}
-		l := p.Link
-		l2 := p2.Link
-		*p = *p1
-		*p1 = *p2
-		p.Link = l
-		p1.Link = l2
+		if source.Type != obj.TYPE_MEM {
+			ctxt.Diag("don't know how to handle %v with -dynlink", p)
+		}
+		{
+			p1 := obj.Appendp(ctxt, p)
+			p2 := obj.Appendp(ctxt, p1)
+
+			p1.As = mov
+			p1.From.Type = obj.TYPE_MEM
+			p1.From.Sym = source.Sym
+			p1.From.Name = obj.NAME_GOTREF
+			p1.To.Type = obj.TYPE_REG
+			p1.To.Reg = reg
+
+			p2.As = p.As
+			p2.From = p.From
+			p2.To = p.To
+			if p.From.Name == obj.NAME_EXTERN {
+				p2.From.Reg = reg
+				p2.From.Name = obj.NAME_NONE
+				p2.From.Sym = nil
+			} else if p.To.Name == obj.NAME_EXTERN {
+				p2.To.Reg = reg
+				p2.To.Name = obj.NAME_NONE
+				p2.To.Sym = nil
+			} else {
+				goto nogot
+			}
+			l := p.Link
+			l2 := p2.Link
+			*p = *p1
+			*p1 = *p2
+			p.Link = l
+			p1.Link = l2
+		}
 	}
 nogot:
 	if p.Mode != 32 {
@@ -463,6 +465,20 @@ nogot:
 			return false
 		}
 		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_GOTREF || a.Name == obj.NAME_STATIC
+	}
+	if p.As == AMOVL && p.From.Type == obj.TYPE_ADDR && p.To.Type == obj.TYPE_MEM {
+		q := obj.Appendp(ctxt, p)
+		q.To = p.To
+
+		p.To.Type = obj.TYPE_REG
+		p.To.Reg = REG_CX
+		p.To.Sym = nil
+		p.To.Name = obj.NAME_NONE
+		p.To.Offset = 0
+
+		q.As = AMOVL
+		q.From.Type = obj.TYPE_REG
+		q.From.Reg = REG_CX
 	}
 	if isName(&p.From) || isName(&p.To) {
 		if isName(&p.From) && isName(&p.To) {

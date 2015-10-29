@@ -51,7 +51,7 @@ func Addcall(ctxt *ld.Link, s *ld.LSym, t *ld.LSym) int64 {
 }
 
 func gentext() {
-	if !ld.DynlinkingGo() {
+	if !ld.DynlinkingGo() && ld.Buildmode != ld.BuildmodePIE {
 		return
 	}
 
@@ -75,6 +75,10 @@ func gentext() {
 		ld.Ctxt.Textp = thunkfunc
 	}
 	ld.Ctxt.Etextp = thunkfunc
+
+	if ld.Buildmode == ld.BuildmodePIE {
+		return
+	}
 
 	addmoduledata := ld.Linklookup(ld.Ctxt, "runtime.addmoduledata", 0)
 	if addmoduledata.Type == obj.STEXT {
