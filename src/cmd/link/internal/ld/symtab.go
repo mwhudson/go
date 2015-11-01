@@ -162,7 +162,7 @@ func putelfsym(x *LSym, s string, t int, addr int64, size int64, ver int, go_ *L
 	if x.Type&obj.SHIDDEN != 0 {
 		other = STV_HIDDEN
 	}
-	if Thearch.Thechar == '9' && type_ == STT_FUNC && DynlinkingGo() && !x.Local && x.Name != "runtime.duffzero" && x.Name != "runtime.duffcopy" {
+	if Thearch.Thechar == '9' && type_ == STT_FUNC && (DynlinkingGo() || Buildmode == BuildmodePIE) && !x.Local && x.Name != "runtime.duffzero" && x.Name != "runtime.duffcopy" {
 		// When dynamically linking Go on ppc64le the local entry point is
 		// two instructions past the global entry point.
 		other |= 3 << 5
