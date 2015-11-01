@@ -458,7 +458,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			q = p
 
-			if ctxt.Flag_shared && cursym.Name != "runtime.duffzero" && cursym.Name != "runtime.duffcopy" {
+			if ctxt.Flag_shared != 0 && cursym.Name != "runtime.duffzero" && cursym.Name != "runtime.duffcopy" {
 				// In dynlink mode, all functions must start with
 				// instructions to load the TOC pointer into r2:
 				//
@@ -544,7 +544,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.Spadj = int32(-aoffset)
 			}
 
-			if ctxt.Flag_shared {
+			if ctxt.Flag_shared != 0 {
 				q = obj.Appendp(ctxt, q)
 				q.As = AMOVD
 				q.Lineno = p.Lineno
