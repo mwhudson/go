@@ -102,8 +102,11 @@ func archinit() {
 		ld.Linkmode = ld.LinkExternal
 	}
 
-	if ld.DynlinkingGo() || ld.Buildmode == ld.BuildmodePIE {
-		ld.Linklookup(ld.Ctxt, ".TOC.", 0).Type = obj.SDYNIMPORT
+	toc := ld.Linklookup(ld.Ctxt, ".TOC.", 0)
+	if ld.LinkExternal == ld.LinkExternal {
+		toc.Type = obj.SDYNIMPORT
+	} else {
+		toc.Special = 1
 	}
 
 	switch ld.HEADTYPE {

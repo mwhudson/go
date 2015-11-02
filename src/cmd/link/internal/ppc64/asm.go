@@ -475,7 +475,7 @@ func symtoc(s *ld.LSym) int64 {
 	}
 
 	if toc == nil {
-		ld.Diag("TOC-relative relocation in object without .TOC.")
+		ld.Diag("TOC-relative relocation in object without .TOC. %d", s.Version)
 		return 0
 	}
 
@@ -506,21 +506,26 @@ func archrelocaddr(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		t = ld.Symaddr(r.Sym) + r.Add
 	case obj.R_ADDRPOWER_PCREL:
 		t = ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
+	case obj.R_ADDRPOWER_TOCREL, obj.R_ADDRPOWER_TOCREL_DS:
+		t = ld.Symaddr(r.Sym) + r.Add - symtoc(s)
+	default:
+		ld.Ctxt.Diag("do not know how to compute address for %d", r.Type)
+		return -1
 	}
 
-	if t < 0 || t >= 1<<31 {
-		ld.Ctxt.Diag("relocation for %s is too big (>=2G): %d", s.Name, ld.Symaddr(r.Sym))
+	if t < -1<<31 || t >= 1<<31 {
+		ld.Ctxt.Diag("relocation for %s is too big (>=2G): %d", s.Name, t)
 	}
 	if t&0x8000 != 0 {
 		t += 0x10000
 	}
 
 	switch r.Type {
-	case obj.R_ADDRPOWER:
+	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_TOCREL, obj.R_ADDRPOWER_PCREL:
 		o1 |= (uint32(t) >> 16) & 0xffff
 		o2 |= uint32(t) & 0xffff
 
-	case obj.R_ADDRPOWER_DS:
+	case obj.R_ADDRPOWER_DS, obj.R_ADDRPOWER_TOCREL_DS:
 		o1 |= (uint32(t) >> 16) & 0xffff
 		if t&3 != 0 {
 			ld.Ctxt.Diag("bad DS reloc for %s: %d", s.Name, ld.Symaddr(r.Sym))
@@ -528,6 +533,7 @@ func archrelocaddr(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		o2 |= uint32(t) & 0xfffc
 
 	default:
+		ld.Ctxt.Diag("do not know how to insert value for %d", r.Type)
 		return -1
 	}
 
@@ -592,7 +598,7 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		*val = ld.Symaddr(r.Sym) + r.Add - ld.Symaddr(ld.Linklookup(ld.Ctxt, ".got", 0))
 		return 0
 
-	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS:
+	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS, obj.R_ADDRPOWER_PCREL, obj.R_ADDRPOWER_TOCREL, obj.R_ADDRPOWER_TOCREL_DS:
 		return archrelocaddr(r, s, val)
 
 	case obj.R_CALLPOWER:

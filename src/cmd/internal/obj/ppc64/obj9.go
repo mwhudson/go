@@ -488,7 +488,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.From.Offset = 0x38420000
 				rel := obj.Addrel(ctxt.Cursym)
 				rel.Off = 0
-				rel.Siz = 4
+				rel.Siz = 8
 				rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
 				rel.Type = obj.R_ADDRPOWER_PCREL
 			}
