@@ -1541,7 +1541,7 @@ func callsize() int {
 
 func stackLimit() int {
 	limit := obj.StackGuard - obj.StackSystem - obj.StackSmall
-	if Thearch.Thechar == '9' && DynlinkingGo() {
+	if Thearch.Thechar == '9' && Ctxt.Arch.Name == "ppc64le" {
 		limit += obj.StackGuard
 	}
 	return limit
