@@ -1434,7 +1434,7 @@ func addaddrreloc(ctxt *obj.Link, s *obj.LSym, d int64, form int) {
 	rel.Siz = 8
 	rel.Sym = s
 	rel.Add = d
-	if ctxt.Flag_shared != 0 {
+	if ctxt.Arch.Name == "ppc64le" {
 		switch form {
 		case D_FORM:
 			rel.Type = obj.R_ADDRPOWER_TOCREL
@@ -1889,7 +1889,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 			o1 = loadu32(int(p.To.Reg), d)
 			o2 = LOP_IRR(OP_ORI, uint32(p.To.Reg), uint32(p.To.Reg), uint32(int32(d)))
 		} else {
-			if ctxt.Flag_shared != 0 {
+			if ctxt.Arch.Name == "ppc64le" {
 				o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
 			} else {
 				o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
@@ -2461,7 +2461,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 	case 74:
 		v := vregoff(ctxt, &p.To)
 
-		if ctxt.Flag_shared != 0 {
+		if ctxt.Arch.Name == "ppc64le" {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
 		} else {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
@@ -2473,7 +2473,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 
 	case 75:
 		v := vregoff(ctxt, &p.From)
-		if ctxt.Flag_shared != 0 {
+		if ctxt.Arch.Name == "ppc64le" {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
 		} else {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)
@@ -2485,7 +2485,7 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 
 	case 76:
 		v := vregoff(ctxt, &p.From)
-		if ctxt.Flag_shared != 0 {
+		if ctxt.Arch.Name == "ppc64le" {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REG_R2, 0)
 		} else {
 			o1 = AOP_IRR(OP_ADDIS, REGTMP, REGZERO, 0)

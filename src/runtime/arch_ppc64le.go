@@ -16,3 +16,10 @@ const (
 
 type uintreg uint64
 type intptr int64 // TODO(rsc): remove
+
+const (
+	minFrameSize          = 32
+	stackGuardMultiplier2 = 2
+)
+
+func prepGoExitFrame(sp uintptr)

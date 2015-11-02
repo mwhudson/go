@@ -499,7 +499,15 @@ func archrelocaddr(r *ld.Reloc, s *ld.LSym, val *int64) int {
 	// instruction (it is an error in this case if the low 2 bits of the address
 	// are non-zero).
 
-	t := ld.Symaddr(r.Sym) + r.Add
+	var t int64
+
+	switch r.Type {
+	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS:
+		t = ld.Symaddr(r.Sym) + r.Add
+	case obj.R_ADDRPOWER_PCREL:
+		t = ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
+	}
+
 	if t < 0 || t >= 1<<31 {
 		ld.Ctxt.Diag("relocation for %s is too big (>=2G): %d", s.Name, ld.Symaddr(r.Sym))
 	}
@@ -591,6 +599,9 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		// Bits 6 through 29 = (S + A - P) >> 2
 
 		t := ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
+		if ld.Ctxt.Arch.Name == "ppc64le" && r.Sym.Name != "runtime.duffzero" && r.Sym.Name != "runtime.duffcopy" {
+			t += 8
+		}
 		if t&3 != 0 {
 			ld.Ctxt.Diag("relocation for %s+%d is not aligned: %d", r.Sym.Name, r.Off, t)
 		}

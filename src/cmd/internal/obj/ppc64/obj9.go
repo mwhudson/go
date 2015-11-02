@@ -458,8 +458,8 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			q = p
 
-			if ctxt.Flag_shared != 0 && cursym.Name != "runtime.duffzero" && cursym.Name != "runtime.duffcopy" {
-				// In dynlink mode, all functions must start with
+			if ctxt.Arch.Name == "ppc64le" && cursym.Name != "runtime.duffzero" && cursym.Name != "runtime.duffcopy" {
+				// In PIC mode, all functions must start with
 				// instructions to load the TOC pointer into r2:
 				//
 				//	addis r2, r12, .TOC.-func@ha
@@ -544,7 +544,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 				q.Spadj = int32(-aoffset)
 			}
 
-			if ctxt.Flag_shared != 0 {
+			if ctxt.Arch.Name == "ppc64le" {
 				q = obj.Appendp(ctxt, q)
 				q.As = AMOVD
 				q.Lineno = p.Lineno

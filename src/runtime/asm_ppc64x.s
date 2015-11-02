@@ -17,7 +17,7 @@ TEXT runtime·rt0_go(SB),NOSPLIT,$0
 	BL	runtime·reginit(SB)
 
 	SUB	$(FIXED_FRAME+16), R1
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	MOVD    R2, 24(R1)		// stash the TOC pointer away again now we've created a new frame
 #endif
 	MOVW	R3, FIXED_FRAME+0(R1) // argc
@@ -78,7 +78,7 @@ nocgo:
 	MOVDU	R3, -8(R1)
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
@@ -183,7 +183,7 @@ TEXT runtime·mcall(SB), NOSPLIT|NOFRAME, $0-8
 	MOVD	(g_sched+gobuf_sp)(g), R1	// sp = m->g0->sched.sp
 	MOVDU	R3, -8(R1)
 	MOVDU	R0, -8(R1)
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
@@ -230,7 +230,7 @@ switch:
 	// save our state in g->sched.  Pretend to
 	// be systemstack_switch if the G stack is scanned.
 	MOVD	$runtime·systemstack_switch(SB), R6
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	ADD     $16, R6 // get past prologue (which has r2-setting instructions in this case)
 #else
 	ADD     $8, R6  // get past prologue
@@ -255,7 +255,7 @@ switch:
 	MOVD	R12, CTR
 	BL	(CTR)
 
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
         // restore TOC pointer. It seems unlikely that we will use systemstack
         // to call a function defined in another module, but the results of
         // doing so would be so confusing that it's worth doing this.
@@ -705,7 +705,7 @@ again:
 // the BL deferreturn and jmpdefer rewinds to that.
 TEXT runtime·jmpdefer(SB), NOSPLIT|NOFRAME, $0-16
 	MOVD	0(R1), R31
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	SUB     $8, R31
 #else
 	SUB     $4, R31
@@ -775,7 +775,7 @@ g0:
 	// Restore g, stack pointer (and toc pointer when dynamically linking).
 	// R3 is errno, so don't touch it
 	MOVD	40(R1), g
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	MOVD    (g_stack+stack_hi)(g), R5
 	MOVD    32(R1), R6
 	SUB     R6, R5
@@ -1263,7 +1263,7 @@ TEXT _cgo_topofstack(SB),NOSPLIT|NOFRAME,$0
 // goexit+_PCQuantum is halfway through the usual global entry point prologue
 // that derives r2 from r12 which is a bit silly, but not harmful.
 TEXT runtime·goexit(SB),NOSPLIT|NOFRAME,$0-0
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 	MOVD	24(R1), R2
 #else
 	MOVD	R0, R0	// NOP
@@ -1287,7 +1287,7 @@ TEXT runtime·prefetchnta(SB),NOSPLIT,$0-8
 TEXT runtime·sigreturn(SB),NOSPLIT,$0-8
         RET
 
-#ifdef GOBUILDMODE_shared
+#ifdef GOARCH_ppc64le
 // prepGoExitFrame saves the current TOC pointer (i.e. the TOC pointer for the
 // module containing runtime) to the frame that goexit will execute in when
 // the goroutine exits. It's implemented in assembly mainly because that's the
