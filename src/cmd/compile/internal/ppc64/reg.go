@@ -113,9 +113,9 @@ func excludedregs() uint64 {
 	// Exclude registers with fixed functions
 	regbits := uint64(1<<0 | RtoB(ppc64.REGSP) | RtoB(ppc64.REGG) | RtoB(ppc64.REGTLS) | RtoB(ppc64.REGTMP))
 
-	if gc.Ctxt.Flag_dynlink {
-		// When dynamically linking Go, R2 is reserved to be the TOC pointer
-		// and R12 so that calls via function pointer can stomp on it.
+	if gc.Ctxt.Arch.Name == "ppc64le" {
+		// When PIC Go, R2 is reserved to be the TOC pointer and R12 so that
+		// calls via function pointer can stomp on it.
 		regbits |= RtoB(ppc64.REG_R2)
 		regbits |= RtoB(ppc64.REG_R12)
 	}

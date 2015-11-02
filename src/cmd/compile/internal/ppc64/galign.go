@@ -44,7 +44,7 @@ func betypeinit() {
 	gc.Widthint = 8
 	gc.Widthreg = 8
 
-	if gc.Ctxt.Flag_shared != 0 {
+	if gc.Ctxt.Arch.Name == "ppc64le" {
 		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, ppc64.REG_R2)
 		gc.Thearch.ReservedRegs = append(gc.Thearch.ReservedRegs, ppc64.REG_R12)
 	}
