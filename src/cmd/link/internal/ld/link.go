@@ -168,7 +168,7 @@ func (ctxt *Link) FixedFrameSize() int64 {
 	case '6', '8':
 		return 0
 	case '9':
-		if DynlinkingGo() {
+		if ctxt.Arch.Name == "ppc64le" {
 			return int64(4 * ctxt.Arch.Ptrsize)
 		}
 		fallthrough
