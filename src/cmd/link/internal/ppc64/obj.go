@@ -107,6 +107,7 @@ func archinit() {
 		toc.Type = obj.SDYNIMPORT
 	} else {
 		toc.Special = 1
+		toc.Value = 0
 	}
 
 	switch ld.HEADTYPE {

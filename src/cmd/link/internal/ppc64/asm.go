@@ -475,8 +475,11 @@ func symtoc(s *ld.LSym) int64 {
 	}
 
 	if toc == nil {
-		ld.Diag("TOC-relative relocation in object without .TOC. %d", s.Version)
-		return 0
+		got := ld.Linkrlookup(ld.Ctxt, ".got", 0)
+		if got == nil {
+			return 0
+		}
+		return got.Value + 0x8000
 	}
 
 	return toc.Value

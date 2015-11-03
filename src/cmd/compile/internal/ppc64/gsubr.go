@@ -580,7 +580,7 @@ func rawgins(as int, f *gc.Node, t *gc.Node) *obj.Prog {
 	case obj.ACALL:
 		if p.To.Type == obj.TYPE_REG && p.To.Reg != ppc64.REG_CTR {
 			// Allow front end to emit CALL REG, and rewrite into MOV REG, CTR; CALL CTR.
-			if gc.Ctxt.Flag_dynlink {
+			if gc.Ctxt.Arch.Name == "ppc64le" {
 				// Make sure function pointer is in R12 as well when
 				// dynamically linking Go.
 				// TODO(mwhudson): it would obviously be better to
