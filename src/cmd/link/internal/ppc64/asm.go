@@ -491,7 +491,7 @@ func archrelocaddr(r *ld.Reloc, s *ld.LSym, val *int64) int {
 
 	switch r.Type {
 	case obj.R_ADDRPOWER, obj.R_ADDRPOWER_DS:
-		t = ld.Symaddr(r.Sym) + r.Add
+		t = ld.Symaddr(r.Sym) + r.Add - ld.Linklookup(ld.Ctxt, ".TOC.", 0).Value
 	case obj.R_ADDRPOWER_PCREL:
 		t = ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
 	default:

@@ -1818,7 +1818,7 @@ func genasmsym(put func(*LSym, string, int, int64, int64, int, *LSym)) {
 		if s.Hide != 0 || (s.Name[0] == '.' && s.Version == 0 && s.Name != ".rathole" && s.Name != ".TOC.") {
 			continue
 		}
-		if s.Name == ".TOC." && Linkmode == LinkInternal {
+		if s.Name == ".TOC." && s.Type != obj.SDYNIMPORT && s.Sect == nil {
 			continue
 		}
 		switch s.Type & obj.SMASK {

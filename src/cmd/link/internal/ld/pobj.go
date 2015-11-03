@@ -218,6 +218,16 @@ func Ldmain() {
 		}
 		mark(Linklookup(Ctxt, "runtime.read_tls_fallback", 0))
 	}
+	if Thearch.Thechar == '9' {
+		toc := Linklookup(Ctxt, ".TOC.", 0)
+		if Linkmode == LinkExternal {
+			toc.Type = obj.SDYNIMPORT
+		} else {
+			toc.Type = obj.SNOPTRDATA // ??
+			toc.Value = 0
+			toc.Special = 1
+		}
+	}
 
 	checkgo()
 	checkstrdata()

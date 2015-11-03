@@ -110,15 +110,6 @@ func archinit() {
 		ld.Linkmode = ld.LinkExternal
 	}
 
-	toc := ld.Linklookup(ld.Ctxt, ".TOC.", 0)
-	if ld.Linkmode == ld.LinkExternal {
-		toc.Type = obj.SDYNIMPORT
-	} else {
-		toc.Type = obj.SNOPTRDATA // ??
-		toc.Value = 0
-		toc.Special = 1
-	}
-
 	switch ld.HEADTYPE {
 	default:
 		if ld.Linkmode == ld.LinkAuto {
