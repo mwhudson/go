@@ -765,6 +765,7 @@ func ensureglinkresolver() *ld.LSym {
 	if glink.Size != 0 {
 		return glink
 	}
+	glink.Local = true
 
 	// This is essentially the resolver from the ppc64 ELF ABI.
 	// At entry, r12 holds the address of the symbol resolver stub
