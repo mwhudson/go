@@ -534,6 +534,8 @@ const (
 	/* more 64-bit operations */
 	AHRFID
 
+	AMAAAGGIC
+
 	ALAST
 
 	// aliases

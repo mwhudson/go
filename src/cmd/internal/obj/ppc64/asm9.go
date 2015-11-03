@@ -399,7 +399,7 @@ var optab = []Optab{
 	{obj.ANOP, C_NONE, C_NONE, C_NONE, C_NONE, 0, 0, 0},
 	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
 	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
-
+	{AMAAAGGIC, C_NONE, C_NONE, C_NONE, C_NONE, 100, 8, 0},
 	{obj.AXXX, C_NONE, C_NONE, C_NONE, C_NONE, 0, 4, 0},
 }
 
@@ -1298,7 +1298,8 @@ func buildop(ctxt *obj.Link) {
 			obj.AFUNCDATA,
 			obj.APCDATA,
 			obj.ADUFFZERO,
-			obj.ADUFFCOPY:
+			obj.ADUFFCOPY,
+			AMAAAGGIC:
 			break
 		}
 	}
@@ -2504,6 +2505,16 @@ func asmout(ctxt *obj.Link, p *obj.Prog, o *Optab, out []uint32) {
 		rel.Siz = 8
 		rel.Sym = p.From.Sym
 		rel.Type = obj.R_ADDRPOWER_GOT
+
+	case 100:
+		o1 = 0x3fff0000
+		o2 = 0x3bff0000
+		rel := obj.Addrel(ctxt.Cursym)
+		rel.Off = int32(ctxt.Pc)
+		rel.Siz = 8
+		rel.Sym = obj.Linklookup(ctxt, ".TOC.", 0)
+		rel.Type = obj.R_ADDRPOWER_PCREL
+		rel.Add = 4
 	}
 
 	out[0] = o1

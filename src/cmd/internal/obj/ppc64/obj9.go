@@ -552,6 +552,23 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 			q.To.Reg = REGSP
 			q.To.Offset = 24
 
+			w := func(w uint32) {
+				q = obj.Appendp(ctxt, q)
+				q.As = AWORD
+				q.Lineno = p.Lineno
+				q.From.Type = obj.TYPE_CONST
+				q.From.Offset = int64(w)
+			}
+
+			w(0x429f0005) // bcl 20,31,1f
+			w(0x7fe802a6) // 1: mflr r31
+			q = obj.Appendp(ctxt, q)
+			q.As = AMAAAGGIC
+			q.Lineno = p.Lineno
+			w(0x7c3f1040) // cmpld r31,r2
+			w(0x41820008) // beq 2f
+			w(0xf8000000) // std r0, 0(r0)
+
 			if cursym.Text.From3.Offset&obj.WRAPPER != 0 {
 				// if(g->panic != nil && g->panic->argp == FP) g->panic->argp = bottom-of-frame
 				//
