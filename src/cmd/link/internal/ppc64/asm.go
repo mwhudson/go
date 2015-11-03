@@ -113,6 +113,7 @@ func genplt() {
 
 			stub = ld.Linklookup(ld.Ctxt, n, 0)
 			stub.Reachable = stub.Reachable || s.Reachable
+			stub.Local = true
 			if stub.Size == 0 {
 				// Need outer to resolve .TOC.
 				stub.Outer = s
@@ -586,7 +587,7 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		// Bits 6 through 29 = (S + A - P) >> 2
 
 		t := ld.Symaddr(r.Sym) + r.Add - (s.Value + int64(r.Off))
-		if r.Sym.Name != "runtime.duffzero" && r.Sym.Name != "runtime.duffcopy" {
+		if !r.Sym.Local && r.Sym.Name != "runtime.duffzero" && r.Sym.Name != "runtime.duffcopy" {
 			t += 8
 		}
 		if t&3 != 0 {
