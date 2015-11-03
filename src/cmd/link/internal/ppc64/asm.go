@@ -777,7 +777,7 @@ func ensureglinkresolver() *ld.LSym {
 	ld.Adduint32(ld.Ctxt, glink, 0x7c0802a6) // mflr r0
 	ld.Adduint32(ld.Ctxt, glink, 0x429f0005) // bcl 20,31,1f
 	ld.Adduint32(ld.Ctxt, glink, 0x7d6802a6) // 1: mflr r11
-	ld.Adduint32(ld.Ctxt, glink, 0x7c0803a6) // mtlf r0
+	ld.Adduint32(ld.Ctxt, glink, 0x7c0803a6) // mtlr r0
 
 	// Compute the .plt array index from the entry point address.
 	// Because this is PIC, everything is relative to label 1b (in
@@ -796,7 +796,7 @@ func ensureglinkresolver() *ld.LSym {
 	r.Siz = 8
 	r.Type = obj.R_ADDRPOWER
 
-	ld.Adduint32(ld.Ctxt, glink, 0x3d600000) // addis r11,0,.plt@ha
+	ld.Adduint32(ld.Ctxt, glink, 0x3d620000) // addis r11,0,.plt@ha
 	ld.Adduint32(ld.Ctxt, glink, 0x396b0000) // addi r11,r11,.plt@l
 
 	// Load r12 = dynamic resolver address and r11 = DSO
