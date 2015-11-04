@@ -75,8 +75,8 @@ nocgo:
 	MOVD	$runtime·mainPC(SB), R3		// entry
 	MOVDU	R3, -8(R1)
 	MOVDU	R0, -8(R1)
-	MOVDU	R0, -8(R1)
 	MOVDU	R2, -8(R1)
+	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
 	MOVDU	R0, -8(R1)
 	BL	runtime·newproc(SB)
