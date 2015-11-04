@@ -1220,6 +1220,7 @@ TEXT runtime·return0(SB), NOSPLIT, $0
 // Must obey the gcc calling convention.
 TEXT _cgo_topofstack(SB),NOSPLIT|NOFRAME,$0
 	// g (R30) and R31 are callee-save in the C ABI, so save them
+        MOVD	R2, 24(R1)
 	MOVD	g, R4
 	MOVD	R31, R5
 	MOVD	LR, R6
