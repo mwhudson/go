@@ -27,10 +27,10 @@ func gostartcall(buf *gobuf, fn, ctxt unsafe.Pointer) {
 func rewindmorestack(buf *gobuf) {
 	var inst uint32
 	if buf.pc&3 == 0 && buf.pc != 0 {
-		inst = *(*uint32)(unsafe.Pointer(buf.pc))
+		inst = *(*uint32)(unsafe.Pointer(buf.pc + 4))
 		if inst>>26 == 18 && inst&3 == 0 {
 			//print("runtime: rewind pc=", hex(buf.pc), " to pc=", hex(uintptr(buf.pc + int32(inst<<6)>>6)), "\n");
-			buf.pc += uintptr(int32(inst<<6) >> 6)
+			buf.pc += uintptr(int32(inst<<6)>>6) + 4
 			return
 		}
 	}

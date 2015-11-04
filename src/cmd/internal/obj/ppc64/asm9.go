@@ -397,8 +397,10 @@ var optab = []Optab{
 	{obj.APCDATA, C_LCON, C_NONE, C_NONE, C_LCON, 0, 0, 0},
 	{obj.AFUNCDATA, C_SCON, C_NONE, C_NONE, C_ADDR, 0, 0, 0},
 	{obj.ANOP, C_NONE, C_NONE, C_NONE, C_NONE, 0, 0, 0},
-	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
-	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0}, // same as ABR/ABL
+	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},    // same as ABR/ABL
+	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRA, 11, 4, 0},    // same as ABR/ABL
+	{obj.ADUFFZERO, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 11, 8, 0}, // same as ABR/ABL
+	{obj.ADUFFCOPY, C_NONE, C_NONE, C_NONE, C_LBRAPIC, 11, 8, 0}, // same as ABR/ABL
 	{AMAAAGGIC, C_NONE, C_NONE, C_NONE, C_NONE, 100, 8, 0},
 	{obj.AXXX, C_NONE, C_NONE, C_NONE, C_NONE, 0, 4, 0},
 }
@@ -715,7 +717,7 @@ func aclass(ctxt *obj.Link, a *obj.Addr) int {
 		return C_DCON
 
 	case obj.TYPE_BRANCH:
-		if ctxt.Flag_dynlink {
+		if a.Sym != nil {
 			return C_LBRAPIC
 		}
 		return C_SBRA

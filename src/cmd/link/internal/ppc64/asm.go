@@ -600,6 +600,13 @@ func archreloc(r *ld.Reloc, s *ld.LSym, val *int64) int {
 		}
 
 		*val |= int64(uint32(t) &^ 0xfc000003)
+		if len(s.P) > int(r.Off+4) {
+			o1 := ld.Le32(s.P[r.Off+4:])
+			if o1 == 0x60000000 {
+				ld.Ctxt.Arch.ByteOrder.PutUint32(s.P[r.Off+4:], 0xe8410018)
+			}
+		}
+
 		return 0
 
 	case obj.R_POWER_TOC: // S + A - .TOC.
