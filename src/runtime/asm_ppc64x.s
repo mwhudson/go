@@ -742,6 +742,7 @@ g0:
 	// save area that lives on the caller stack.
 	SUB	$48, R1
 	RLDCR	$0, R1, $~15, R1	// 16-byte alignment for gcc ABI
+        MOVD    R2, 24(R1)
 	MOVD	R5, 40(R1)	// save old g on stack
 	MOVD	(g_stack+stack_hi)(R5), R5
 	SUB	R7, R5
