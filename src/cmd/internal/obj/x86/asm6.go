@@ -3941,7 +3941,7 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 						case obj.Hlinux,
 							obj.Hnacl:
 							if ctxt.Flag_shared != 0 {
-								// Note that this is not generating the same insn as the other cases.
+								// Note that this is not generating the same insns as the other cases.
 								//     MOV TLS, R_to
 								// becomes
 								//     call __x86.get_pc_thunk.cx

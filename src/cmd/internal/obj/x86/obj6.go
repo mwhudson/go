@@ -311,6 +311,10 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 	if ctxt.Flag_dynlink {
 		rewriteToUseGot(ctxt, p)
 	}
+
+	if ctxt.Flag_shared != 0 && p.Mode == 32 {
+		//rewriteToPcrel(ctxt, p)
+	}
 }
 
 // Rewrite p, if necessary, to access global data via the global offset table.
@@ -422,6 +426,51 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		p2.To.Sym = nil
 	} else {
 		return
+	}
+	obj.Nopout(p)
+}
+
+func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
+	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
+		return
+	}
+	// Any Prog (aside from the above special cases) with an Addr with Name ==
+	// NAME_EXTERN or NAME_STATIC has a CALL __x86.get_pc_thunk.cx inserted
+	// before it, and any such Addrs get Reg set to REG_CX
+	isName := func(a *obj.Addr) bool {
+		if a.Sym == nil || (a.Type != obj.TYPE_MEM && a.Type != obj.TYPE_ADDR) || a.Reg != 0 {
+			return false
+		}
+		if a.Sym.Type == obj.STLSBSS {
+			return false
+		}
+		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_STATIC
+	}
+
+	if !isName(&p.From) && !isName(&p.To) && (p.From3 == nil || !isName(p.From3)) {
+		return
+	}
+	q := obj.Appendp(ctxt, p)
+	r := obj.Appendp(ctxt, q)
+	q.As = obj.ACALL
+	q.To.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk.cx", 0)
+	q.To.Type = obj.TYPE_MEM
+	q.To.Name = obj.NAME_EXTERN
+	q.To.Sym.Local = true
+	r.As = p.As
+	r.Scond = p.Scond
+	r.From = p.From
+	r.From3 = p.From3
+	r.Reg = p.Reg
+	r.To = p.To
+	if isName(&p.From) {
+		r.From.Reg = REG_CX
+	}
+	if isName(&p.To) {
+		r.To.Reg = REG_CX
+	}
+	if p.From3 != nil && isName(p.From3) {
+		r.From3.Reg = REG_CX
 	}
 	obj.Nopout(p)
 }

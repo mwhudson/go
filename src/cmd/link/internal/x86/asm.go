@@ -38,7 +38,7 @@ import (
 )
 
 func gentext() {
-	if !ld.DynlinkingGo() {
+	if !ld.DynlinkingGo() && ld.Buildmode != ld.BuildmodePIE {
 		return
 	}
 
