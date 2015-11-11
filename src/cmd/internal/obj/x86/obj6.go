@@ -379,9 +379,6 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		if p.As != mov {
 			ctxt.Diag("do not know how to handle TYPE_ADDR in %v with -dynlink", p)
 		}
-		if p.To.Type != obj.TYPE_REG {
-			ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
-		}
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_GOTREF
 		if p.From.Offset != 0 {
@@ -460,8 +457,7 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_STATIC || a.Name == obj.NAME_GOTREF
 	}
 
-	if isName(&p.From) && p.From.Type == obj.TYPE_ADDR {
-		// Rewrite
+	if isName(&p.From) && (p.From.Type == obj.TYPE_ADDR || p.From.Name == obj.NAME_GOTREF) {
 		if p.To.Type != obj.TYPE_REG {
 			q := obj.Appendp(ctxt, p)
 			q.As = AMOVL
