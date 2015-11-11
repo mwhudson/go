@@ -457,7 +457,23 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 		if a.Sym.Type == obj.STLSBSS {
 			return false
 		}
-		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_STATIC
+		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_STATIC || a.Name == obj.NAME_GOTREF
+	}
+
+	if isName(&p.From) && p.From.Type == obj.TYPE_ADDR {
+		// Rewrite
+		if p.To.Type != obj.TYPE_REG {
+			q := obj.Appendp(ctxt, p)
+			q.As = AMOVL
+			q.From.Type = obj.TYPE_REG
+			q.From.Reg = REG_CX
+			q.To = p.To
+			p.To.Type = obj.TYPE_REG
+			p.To.Reg = REG_CX
+			p.To.Sym = nil
+			p.To.Name = obj.NAME_NONE
+		}
+
 	}
 
 	if !isName(&p.From) && !isName(&p.To) && (p.From3 == nil || !isName(p.From3)) {

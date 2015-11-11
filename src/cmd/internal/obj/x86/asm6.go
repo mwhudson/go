@@ -4592,7 +4592,7 @@ func asmins(ctxt *obj.Link, p *obj.Prog) {
 		if ctxt.Rexflag != 0 {
 			r.Off++
 		}
-		if r.Type == obj.R_PCREL {
+		if r.Type == obj.R_PCREL && (p.Mode == 64 || p.As == obj.AJMP || p.As == obj.ACALL) {
 			// PC-relative addressing is relative to the end of the instruction,
 			// but the relocations applied by the linker are relative to the end
 			// of the relocation. Because immediate instruction
