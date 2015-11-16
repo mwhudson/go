@@ -175,6 +175,8 @@ const (
 	// A reference to name@GOT(SB) is a reference to the entry in the global offset
 	// table for 'name'.
 	NAME_GOTREF
+	//
+	NAME_PCREL
 )
 
 const (

@@ -2094,10 +2094,13 @@ func oclass(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 
 		case obj.NAME_EXTERN,
 			obj.NAME_STATIC:
-			if a.Sym != nil && isextern(a.Sym) || (p.Mode == 32 && ctxt.Flag_shared == 0) {
+			if a.Sym != nil && isextern(a.Sym) || p.Mode == 32 {
 				return Yi32
 			}
 			return Yiauto // use pc-relative addressing
+
+		case obj.NAME_PCREL:
+			return Yiauto
 
 		case obj.NAME_AUTO,
 			obj.NAME_PARAM:
@@ -2503,7 +2506,8 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 	switch a.Name {
 	case obj.NAME_STATIC,
 		obj.NAME_GOTREF,
-		obj.NAME_EXTERN:
+		obj.NAME_EXTERN,
+		obj.NAME_PCREL:
 		s := a.Sym
 		if r == nil {
 			ctxt.Diag("need reloc for %v", obj.Dconv(p, a))
@@ -2512,29 +2516,15 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 
 		aoffset := a.Offset
 
-		if a.Reg != REG_NONE {
-			if p.Mode == 64 || ctxt.Flag_shared == 0 {
-				ctxt.Diag("a.Reg not 0 in vaddr")
-			}
-			aoffset += int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])) + 5
-			if a.Name == obj.NAME_GOTREF {
-				r.Siz = 4
-				r.Type = obj.R_GOTPCREL
-			} else {
-				r.Siz = 4
-				r.Type = obj.R_PCREL
-			}
+		if a.Name == obj.NAME_GOTREF {
+			r.Siz = 4
+			r.Type = obj.R_GOTPCREL
+		} else if isextern(s) || (p.Mode != 64 && a.Name != obj.NAME_PCREL) {
+			r.Siz = 4
+			r.Type = obj.R_ADDR
 		} else {
-			if a.Name == obj.NAME_GOTREF {
-				r.Siz = 4
-				r.Type = obj.R_GOTPCREL
-			} else if isextern(s) || p.Mode != 64 {
-				r.Siz = 4
-				r.Type = obj.R_ADDR
-			} else {
-				r.Siz = 4
-				r.Type = obj.R_PCREL
-			}
+			r.Siz = 4
+			r.Type = obj.R_PCREL
 		}
 
 		r.Off = -1 // caller must fill in
@@ -4592,15 +4582,20 @@ func asmins(ctxt *obj.Link, p *obj.Prog) {
 		if ctxt.Rexflag != 0 {
 			r.Off++
 		}
-		if r.Type == obj.R_PCREL && (p.Mode == 64 || p.As == obj.AJMP || p.As == obj.ACALL) {
-			// PC-relative addressing is relative to the end of the instruction,
-			// but the relocations applied by the linker are relative to the end
-			// of the relocation. Because immediate instruction
-			// arguments can follow the PC-relative memory reference in the
-			// instruction encoding, the two may not coincide. In this case,
-			// adjust addend so that linker can keep relocating relative to the
-			// end of the relocation.
-			r.Add -= p.Pc + int64(n) - (int64(r.Off) + int64(r.Siz))
+		if r.Type == obj.R_PCREL {
+			if p.Mode == 64 || p.As == obj.AJMP || p.As == obj.ACALL {
+				// PC-relative addressing is relative to the end of the instruction,
+				// but the relocations applied by the linker are relative to the end
+				// of the relocation. Because immediate instruction
+				// arguments can follow the PC-relative memory reference in the
+				// instruction encoding, the two may not coincide. In this case,
+				// adjust addend so that linker can keep relocating relative to the
+				// end of the relocation.
+				r.Add -= p.Pc + int64(n) - (int64(r.Off) + int64(r.Siz))
+			} else if p.Mode == 32 {
+				// On 386 PC-relative addressing is relative to the XXX
+				r.Add += int64(r.Off) - p.Pc + int64(r.Siz)
+			}
 		}
 	}
 

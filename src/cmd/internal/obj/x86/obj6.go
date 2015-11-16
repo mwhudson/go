@@ -489,13 +489,14 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 	r.Reg = p.Reg
 	r.To = p.To
 	if isName(&p.From) {
-		r.From.Reg = REG_CX
+		r.From.Name = obj.NAME_PCREL
 	}
 	if isName(&p.To) {
-		r.To.Reg = REG_CX
+		r.To.Name = obj.NAME_PCREL
 	}
 	if p.From3 != nil && isName(p.From3) {
-		r.From3.Reg = REG_CX
+		println(r.From3.Sym.Name)
+		r.From3.Name = obj.NAME_PCREL
 	}
 	obj.Nopout(p)
 }
