@@ -564,6 +564,7 @@ fp:
 	switch fp {
 	case 0: // output arg
 		n.Op = OINDREG
+		n.Name = nil
 
 		n.Reg = int16(Thearch.REGSP)
 		n.Xoffset += Ctxt.FixedFrameSize()
