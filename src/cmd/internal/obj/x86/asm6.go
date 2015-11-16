@@ -2514,8 +2514,6 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 			log.Fatalf("reloc")
 		}
 
-		aoffset := a.Offset
-
 		if a.Name == obj.NAME_GOTREF {
 			r.Siz = 4
 			r.Type = obj.R_GOTPCREL
@@ -2529,7 +2527,7 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 
 		r.Off = -1 // caller must fill in
 		r.Sym = s
-		r.Add = aoffset
+		r.Add = a.Offset
 
 		return 0
 	}
@@ -2642,11 +2640,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		if a.Sym == nil {
 			ctxt.Diag("bad addr: %v", p)
 		}
-		if base != REG_NONE {
-			if p.Mode != 32 || ctxt.Flag_shared == 0 {
-				ctxt.Diag("a.Reg != 0 in asmandsz", p)
-			}
-		}
+		base = REG_NONE
 		v = int32(vaddr(ctxt, p, a, &rel))
 
 	case obj.NAME_AUTO,
