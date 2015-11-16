@@ -313,7 +313,7 @@ func progedit(ctxt *obj.Link, p *obj.Prog) {
 	}
 
 	if ctxt.Flag_shared != 0 && p.Mode == 32 {
-		//rewriteToPcrel(ctxt, p)
+		rewriteToPcrel(ctxt, p)
 	}
 }
 
@@ -379,15 +379,36 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		if p.As != mov {
 			ctxt.Diag("do not know how to handle TYPE_ADDR in %v with -dynlink", p)
 		}
+		cmplxdest := false
+		var dest obj.Addr
+		if p.To.Type != obj.TYPE_REG {
+			if p.Mode == 64 {
+				ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
+			}
+			cmplxdest = true
+			dest = p.To
+			p.To.Type = obj.TYPE_REG
+			p.To.Reg = REG_CX
+			p.To.Sym = nil
+			p.To.Name = obj.NAME_NONE
+		}
 		p.From.Type = obj.TYPE_MEM
 		p.From.Name = obj.NAME_GOTREF
+		q := p
 		if p.From.Offset != 0 {
-			q := obj.Appendp(ctxt, p)
+			q = obj.Appendp(ctxt, p)
 			q.As = add
 			q.From.Type = obj.TYPE_CONST
 			q.From.Offset = p.From.Offset
 			q.To = p.To
 			p.From.Offset = 0
+		}
+		if cmplxdest {
+			q = obj.Appendp(ctxt, q)
+			q.As = mov
+			q.To = dest
+			q.From.Type = obj.TYPE_REG
+			q.From.Reg = REG_CX
 		}
 	}
 	if p.From3 != nil && p.From3.Name == obj.NAME_EXTERN {

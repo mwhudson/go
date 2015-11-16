@@ -2597,6 +2597,10 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 			base = REG_NONE
 			v = int32(vaddr(ctxt, p, a, &rel))
 
+		case obj.NAME_PCREL:
+			base = REG_CX
+			v = int32(vaddr(ctxt, p, a, &rel))
+
 		case obj.NAME_AUTO,
 			obj.NAME_PARAM:
 			base = REG_SP
@@ -2643,6 +2647,10 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		base = REG_NONE
 		v = int32(vaddr(ctxt, p, a, &rel))
 
+	case obj.NAME_PCREL:
+		base = REG_CX
+		v = int32(vaddr(ctxt, p, a, &rel))
+
 	case obj.NAME_AUTO,
 		obj.NAME_PARAM:
 		base = REG_SP
@@ -2654,7 +2662,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 
 	ctxt.Rexflag |= regrex[base]&Rxb | rex
 	if base == REG_NONE || (REG_CS <= base && base <= REG_GS) || base == REG_TLS {
-		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_GOTREF) || p.Mode != 64 {
+		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_PCREL || a.Name == obj.NAME_GOTREF) || p.Mode != 64 {
 			if a.Name == obj.NAME_GOTREF && (a.Offset != 0 || a.Index != 0 || a.Scale != 0) {
 				ctxt.Diag("%v has offset against gotref", p)
 			}
@@ -3646,7 +3654,6 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					ctxt.Andptr = ctxt.Andptr[2:]
 					r = obj.Addrel(ctxt.Cursym)
 					r.Off = int32(p.Pc + int64(-cap(ctxt.Andptr)+cap(ctxt.And[:])))
-					r.Add = 6
 					r.Sym = obj.Linklookup(ctxt, "_GLOBAL_OFFSET_TABLE_", 0)
 					r.Type = obj.R_GOTPCREL
 					r.Siz = 4

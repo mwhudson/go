@@ -474,6 +474,13 @@ func Mconv(a *Addr) string {
 			str = fmt.Sprintf("%s@GOT(SB)", offConv(a.Offset))
 		}
 
+	case NAME_PCREL:
+		if a.Sym != nil {
+			str = fmt.Sprintf("%s%s@PCREL(SB)", a.Sym.Name, offConv(a.Offset))
+		} else {
+			str = fmt.Sprintf("%s@PCREL(SB)", offConv(a.Offset))
+		}
+
 	case NAME_STATIC:
 		if a.Sym != nil {
 			str = fmt.Sprintf("%s<>%s(SB)", a.Sym.Name, offConv(a.Offset))
