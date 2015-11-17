@@ -462,6 +462,9 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 }
 
 func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
+	if p.RegTo2 != 0 {
+		return
+	}
 	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
 		return
 	}
@@ -497,7 +500,9 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 		return
 	}
 	q := obj.Appendp(ctxt, p)
+	q.RegTo2 = 1
 	r := obj.Appendp(ctxt, q)
+	r.RegTo2 = 1
 	q.As = obj.ACALL
 	q.To.Sym = obj.Linklookup(ctxt, "__x86.get_pc_thunk.cx", 0)
 	q.To.Type = obj.TYPE_MEM
@@ -509,13 +514,13 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 	r.From3 = p.From3
 	r.Reg = p.Reg
 	r.To = p.To
-	if isName(&p.From) {
+	if isName(&p.From) && r.From.Name != obj.NAME_GOTREF {
 		r.From.Name = obj.NAME_PCREL
 	}
-	if isName(&p.To) {
+	if isName(&p.To) && r.From.Name != obj.NAME_GOTREF {
 		r.To.Name = obj.NAME_PCREL
 	}
-	if p.From3 != nil && isName(p.From3) {
+	if p.From3 != nil && isName(p.From3) && r.From.Name != obj.NAME_GOTREF {
 		println(r.From3.Sym.Name)
 		r.From3.Name = obj.NAME_PCREL
 	}

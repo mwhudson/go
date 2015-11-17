@@ -2594,7 +2594,11 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 			if !isextern(a.Sym) && p.Mode == 64 {
 				goto bad
 			}
-			base = REG_NONE
+			if p.Mode == 32 && a.Name == obj.NAME_GOTREF {
+				base = REG_CX
+			} else {
+				base = REG_NONE
+			}
 			v = int32(vaddr(ctxt, p, a, &rel))
 
 		case obj.NAME_PCREL:
@@ -2644,7 +2648,11 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		if a.Sym == nil {
 			ctxt.Diag("bad addr: %v", p)
 		}
-		base = REG_NONE
+		if p.Mode == 32 && a.Name == obj.NAME_GOTREF {
+			base = REG_CX
+		} else {
+			base = REG_NONE
+		}
 		v = int32(vaddr(ctxt, p, a, &rel))
 
 	case obj.NAME_PCREL:
@@ -3657,6 +3665,7 @@ func doasm(ctxt *obj.Link, p *obj.Prog) {
 					r.Sym = obj.Linklookup(ctxt, "_GLOBAL_OFFSET_TABLE_", 0)
 					r.Type = obj.R_GOTPCREL
 					r.Siz = 4
+					r.Add = -5
 					put4(ctxt, 0)
 				}
 				ctxt.Andptr[0] = byte(op)
@@ -4598,6 +4607,10 @@ func asmins(ctxt *obj.Link, p *obj.Prog) {
 				r.Add += int64(r.Off) - p.Pc + int64(r.Siz)
 			}
 		}
+		if r.Type == obj.R_GOTPCREL && p.Mode == 32 {
+			r.Add += int64(r.Off) - p.Pc + int64(r.Siz)
+		}
+
 	}
 
 	if p.Mode == 64 && ctxt.Headtype == obj.Hnacl && p.As != ACMPL && p.As != ACMPQ && p.To.Type == obj.TYPE_REG {
