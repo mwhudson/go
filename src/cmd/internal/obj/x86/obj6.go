@@ -376,17 +376,17 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 	if p.From.Type == obj.TYPE_ADDR && p.From.Name == obj.NAME_EXTERN && !p.From.Sym.Local {
 		// $MOV $sym, Rx becomes $MOV sym@GOT, Rx
 		// $MOV $sym+<off>, Rx becomes $MOV sym@GOT, Rx; $ADD <off>, Rx
-		if p.As != mov {
-			ctxt.Diag("do not know how to handle TYPE_ADDR in %v with -dynlink", p)
-		}
+		// On 386 only, more complicated things like PUSHL $sym become $MOV sym@GOT, CX; PUSHL CX
 		cmplxdest := false
+		pAs := p.As
 		var dest obj.Addr
-		if p.To.Type != obj.TYPE_REG {
+		if p.To.Type != obj.TYPE_REG || pAs != mov {
 			if p.Mode == 64 {
 				ctxt.Diag("do not know how to handle LEA-type insn to non-register in %v with -dynlink", p)
 			}
 			cmplxdest = true
 			dest = p.To
+			p.As = mov
 			p.To.Type = obj.TYPE_REG
 			p.To.Reg = REG_CX
 			p.To.Sym = nil
@@ -405,7 +405,7 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		}
 		if cmplxdest {
 			q = obj.Appendp(ctxt, q)
-			q.As = mov
+			q.As = pAs
 			q.To = dest
 			q.From.Type = obj.TYPE_REG
 			q.From.Reg = REG_CX
@@ -429,11 +429,10 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		return
 	}
 	if p.As == obj.ACALL {
-		// When dynlinking on 386, almost any call might end
-		// up being a call to a PLT, so make sure the GOT
-		// pointer is loaded into BX.
-		// RegTo2 is set on the replacement call insn to stop
-		// it being processed twice.
+		// When dynlinking on 386, almost any call might end up being a call
+		// to a PLT, so make sure the GOT pointer is loaded into BX.
+		// RegTo2 is set on the replacement call insn to stop it being
+		// processed when it is in turn passed to progedit.
 		if p.Mode == 64 || (p.To.Sym != nil && p.To.Sym.Local) || p.RegTo2 != 0 {
 			return
 		}
@@ -497,6 +496,8 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 }
 
 func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
+	// RegTo2 is set on the instructions we insert here so they don't get
+	// processed twice.
 	if p.RegTo2 != 0 {
 		return
 	}
@@ -504,8 +505,8 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 		return
 	}
 	// Any Prog (aside from the above special cases) with an Addr with Name ==
-	// NAME_EXTERN or NAME_STATIC has a CALL __x86.get_pc_thunk.cx inserted
-	// before it, and any such Addrs get Reg set to REG_CX
+	// NAME_EXTERN, NAME_STATIC or NAME_GOTREF has a CALL __x86.get_pc_thunk.cx
+	// inserted before it.
 	isName := func(a *obj.Addr) bool {
 		if a.Sym == nil || (a.Type != obj.TYPE_MEM && a.Type != obj.TYPE_ADDR) || a.Reg != 0 {
 			return false
@@ -516,19 +517,22 @@ func rewriteToPcrel(ctxt *obj.Link, p *obj.Prog) {
 		return a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_STATIC || a.Name == obj.NAME_GOTREF
 	}
 
-	if isName(&p.From) && (p.From.Type == obj.TYPE_ADDR || p.From.Name == obj.NAME_GOTREF) {
+	if isName(&p.From) && p.From.Type == obj.TYPE_ADDR {
+		// Handle things like "MOVL $sym, (SP)" or "PUSHL $sym" by rewriting
+		// to "MOVL $sym, CX; MOVL CX, (SP)" or "MOVL $sym, CX; PUSHL CX"
+		// respectively.
 		if p.To.Type != obj.TYPE_REG {
 			q := obj.Appendp(ctxt, p)
-			q.As = AMOVL
+			q.As = p.As
 			q.From.Type = obj.TYPE_REG
 			q.From.Reg = REG_CX
 			q.To = p.To
+			p.As = AMOVL
 			p.To.Type = obj.TYPE_REG
 			p.To.Reg = REG_CX
 			p.To.Sym = nil
 			p.To.Name = obj.NAME_NONE
 		}
-
 	}
 
 	if !isName(&p.From) && !isName(&p.To) && (p.From3 == nil || !isName(p.From3)) {
