@@ -453,6 +453,10 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 		p2.From3 = p.From3
 		p2.Reg = p.Reg
 		p2.To = p.To
+		// p.To.Type was set to TYPE_BRANCH above, but that makes checkaddr
+		// in ../pass.go complain, so set it back to TYPE_MEM here, until p2
+		// itself gets passed to progedit.
+		p2.To.Type = obj.TYPE_MEM
 		p2.RegTo2 = 1
 
 		obj.Nopout(p)

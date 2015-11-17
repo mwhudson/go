@@ -67,7 +67,7 @@ func checkaddr(ctxt *Link, p *Prog, a *Addr) {
 		return
 
 	case TYPE_BRANCH:
-		if a.Reg != 0 || a.Index != 0 || a.Scale != 0 || (a.Name != 0 && a.Name != 1) {
+		if a.Reg != 0 || a.Index != 0 || a.Scale != 0 || a.Name != 0 {
 			break
 		}
 		return
