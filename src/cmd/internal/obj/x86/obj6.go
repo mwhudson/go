@@ -428,7 +428,38 @@ func rewriteToUseGot(ctxt *obj.Link, p *obj.Prog) {
 	} else {
 		return
 	}
-	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ACALL || p.As == obj.ARET || p.As == obj.AJMP {
+	if p.As == obj.ACALL {
+		// When dynlinking on 386, almost any call might end
+		// up being a call to a PLT, so make sure the GOT
+		// pointer is loaded into BX.
+		// RegTo2 is set on the replacement call insn to stop
+		// it being processed twice.
+		if p.Mode == 64 || (p.To.Sym != nil && p.To.Sym.Local) || p.RegTo2 != 0 {
+			return
+		}
+		p1 := obj.Appendp(ctxt, p)
+		p2 := obj.Appendp(ctxt, p1)
+
+		p1.As = ALEAL
+		p1.From.Type = obj.TYPE_MEM
+		p1.From.Name = obj.NAME_STATIC
+		p1.From.Sym = obj.Linklookup(ctxt, "_GLOBAL_OFFSET_TABLE_", 0)
+		p1.To.Type = obj.TYPE_REG
+		p1.To.Reg = REG_BX
+
+		p2.As = p.As
+		p2.Scond = p.Scond
+		p2.From = p.From
+		p2.From3 = p.From3
+		p2.Reg = p.Reg
+		p2.To = p.To
+		p2.RegTo2 = 1
+
+		obj.Nopout(p)
+		return
+
+	}
+	if p.As == obj.ATEXT || p.As == obj.AFUNCDATA || p.As == obj.ARET || p.As == obj.AJMP {
 		return
 	}
 	if source.Type != obj.TYPE_MEM {
