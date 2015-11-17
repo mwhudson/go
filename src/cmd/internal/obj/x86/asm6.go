@@ -2094,13 +2094,10 @@ func oclass(ctxt *obj.Link, p *obj.Prog, a *obj.Addr) int {
 
 		case obj.NAME_EXTERN,
 			obj.NAME_STATIC:
-			if a.Sym != nil && isextern(a.Sym) || p.Mode == 32 {
+			if a.Sym != nil && isextern(a.Sym) || (p.Mode == 32 && ctxt.Flag_shared == 0) {
 				return Yi32
 			}
 			return Yiauto // use pc-relative addressing
-
-		case obj.NAME_PCREL:
-			return Yiauto
 
 		case obj.NAME_AUTO,
 			obj.NAME_PARAM:
@@ -2506,8 +2503,7 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 	switch a.Name {
 	case obj.NAME_STATIC,
 		obj.NAME_GOTREF,
-		obj.NAME_EXTERN,
-		obj.NAME_PCREL:
+		obj.NAME_EXTERN:
 		s := a.Sym
 		if r == nil {
 			ctxt.Diag("need reloc for %v", obj.Dconv(p, a))
@@ -2517,7 +2513,7 @@ func vaddr(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r *obj.Reloc) int64 {
 		if a.Name == obj.NAME_GOTREF {
 			r.Siz = 4
 			r.Type = obj.R_GOTPCREL
-		} else if isextern(s) || (p.Mode != 64 && a.Name != obj.NAME_PCREL) {
+		} else if isextern(s) || (p.Mode != 64 && ctxt.Flag_shared == 0) {
 			r.Siz = 4
 			r.Type = obj.R_ADDR
 		} else {
@@ -2594,15 +2590,11 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 			if !isextern(a.Sym) && p.Mode == 64 {
 				goto bad
 			}
-			if p.Mode == 32 && a.Name == obj.NAME_GOTREF {
+			if p.Mode == 32 && ctxt.Flag_shared != 0 {
 				base = REG_CX
 			} else {
 				base = REG_NONE
 			}
-			v = int32(vaddr(ctxt, p, a, &rel))
-
-		case obj.NAME_PCREL:
-			base = REG_CX
 			v = int32(vaddr(ctxt, p, a, &rel))
 
 		case obj.NAME_AUTO,
@@ -2648,15 +2640,11 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 		if a.Sym == nil {
 			ctxt.Diag("bad addr: %v", p)
 		}
-		if p.Mode == 32 && a.Name == obj.NAME_GOTREF {
+		if p.Mode == 32 && ctxt.Flag_shared != 0 {
 			base = REG_CX
 		} else {
 			base = REG_NONE
 		}
-		v = int32(vaddr(ctxt, p, a, &rel))
-
-	case obj.NAME_PCREL:
-		base = REG_CX
 		v = int32(vaddr(ctxt, p, a, &rel))
 
 	case obj.NAME_AUTO,
@@ -2670,7 +2658,7 @@ func asmandsz(ctxt *obj.Link, p *obj.Prog, a *obj.Addr, r int, rex int, m64 int)
 
 	ctxt.Rexflag |= regrex[base]&Rxb | rex
 	if base == REG_NONE || (REG_CS <= base && base <= REG_GS) || base == REG_TLS {
-		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_PCREL || a.Name == obj.NAME_GOTREF) || p.Mode != 64 {
+		if (a.Sym == nil || !isextern(a.Sym)) && base == REG_NONE && (a.Name == obj.NAME_STATIC || a.Name == obj.NAME_EXTERN || a.Name == obj.NAME_GOTREF) || p.Mode != 64 {
 			if a.Name == obj.NAME_GOTREF && (a.Offset != 0 || a.Index != 0 || a.Scale != 0) {
 				ctxt.Diag("%v has offset against gotref", p)
 			}
