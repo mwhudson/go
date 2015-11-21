@@ -867,12 +867,7 @@ func Elfinit() {
 
 	switch Thearch.Thechar {
 	// 64-bit architectures
-	case 'z':
-		// big endian system.
-		ehdr.flags = 1 
-
-		fallthrough
-	case '9':
+	case '9', 'z':
 		if Ctxt.Arch.ByteOrder == binary.BigEndian {
 			ehdr.flags = 1 /* Version 1 ABI */
 		} else {

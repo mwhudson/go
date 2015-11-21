@@ -73,6 +73,6 @@ const (
 
 /* Used by ../internal/ld/dwarf.go */
 const (
-	DWARFREGSP = 1
-	DWARFREGLR = 65
+	DWARFREGSP = 15
+	DWARFREGLR = 14
 )
