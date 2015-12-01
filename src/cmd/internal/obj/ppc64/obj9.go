@@ -471,7 +471,7 @@ func preprocess(ctxt *obj.Link, cursym *obj.LSym) {
 
 			q = p
 
-			if ctxt.Flag_shared != 0 && cursym.Name != "runtime.duffzero" && cursym.Name != "runtime.duffcopy" {
+			if ctxt.Flag_shared != 0 && cursym.Name != "runtime.duffzero" && cursym.Name != "runtime.duffcopy" && cursym.Name != "runtime.stackBarrier" {
 				// When compiling Go into PIC, all functions must start
 				// with instructions to load the TOC pointer into r2:
 				//
