@@ -544,8 +544,21 @@ func libname(args []string, pkgs []*Package) (string, error) {
 		}
 	}
 	if len(libname) == 0 { // non-meta packages only. use import paths
-		for _, pkg := range pkgs {
-			appendName(strings.Replace(pkg.ImportPath, "/", "-", -1))
+		if len(args) == 1 && strings.HasSuffix(args[0], "/...") {
+			// Special case: "foo/..." becomes "libfoo.so". A relative
+			// path like "./..."  expands the "." first.
+			arg := strings.TrimSuffix(args[0], "/...")
+			if build.IsLocalImport(arg) {
+				bp, _ := buildContext.ImportDir(filepath.Join(cwd, arg), build.FindOnly)
+				if bp.ImportPath != "" && bp.ImportPath != "." {
+					arg = bp.ImportPath
+				}
+			}
+			appendName(strings.Replace(arg, "/", "-", -1))
+		} else {
+			for _, pkg := range pkgs {
+				appendName(strings.Replace(pkg.ImportPath, "/", "-", -1))
+			}
 		}
 	} else if haveNonMeta { // have both meta package and a non-meta one
 		return "", errors.New("mixing of meta and non-meta packages is not allowed")

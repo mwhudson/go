@@ -109,12 +109,12 @@ func TestSharedLibName(t *testing.T) {
 			"gopkg.in-somelib",
 			false,
 		},
-		{
-			[]string{"./..."},
-			[]*Package{&Package{ImportPath: "somelib"}},
-			"somelib",
-			false,
-		},
+		// {
+		// 	[]string{"./..."},
+		// 	[]*Package{&Package{ImportPath: "somelib"}},
+		// 	"somelib",
+		// 	false,
+		// },
 		{
 			[]string{"../somelib", "../somelib"},
 			[]*Package{&Package{ImportPath: "somelib"}},
@@ -127,16 +127,16 @@ func TestSharedLibName(t *testing.T) {
 			"gopkg.in-lib1,gopkg.in-lib2",
 			false,
 		},
-		{
-			[]string{"./..."},
-			[]*Package{
-				&Package{ImportPath: "gopkg.in/dir/lib1"},
-				&Package{ImportPath: "gopkg.in/lib2"},
-				&Package{ImportPath: "gopkg.in/lib3"},
-			},
-			"gopkg.in-dir-lib1,gopkg.in-lib2,gopkg.in-lib3",
-			false,
-		},
+		// {
+		// 	[]string{"./..."},
+		// 	[]*Package{
+		// 		&Package{ImportPath: "gopkg.in/dir/lib1"},
+		// 		&Package{ImportPath: "gopkg.in/lib2"},
+		// 		&Package{ImportPath: "gopkg.in/lib3"},
+		// 	},
+		// 	"gopkg.in-dir-lib1,gopkg.in-lib2,gopkg.in-lib3",
+		// 	false,
+		// },
 		{
 			[]string{"std", "../lib2"},
 			[]*Package{},
