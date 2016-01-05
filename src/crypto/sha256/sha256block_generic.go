@@ -1,9 +1,9 @@
-// Copyright 2014 The Go Authors. All rights reserved.
+// Copyright 2016 The Go Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build !amd64,!amd64p32,!386,!arm,!s390x
+// +build !amd64,!386,!s390x
 
-package sha1
+package sha256
 
 var block = blockGeneric
