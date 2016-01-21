@@ -1437,6 +1437,7 @@ func (b *builder) build(a *action) (err error) {
 		if err != nil {
 			return err
 		}
+		cgoObjects = append(cgoObjects, filepath.Join(a.objdir, "_cgo_flags"))
 		cgoObjects = append(cgoObjects, outObj...)
 		gofiles = append(gofiles, outGo...)
 	}
@@ -2628,16 +2629,52 @@ func (tools gccgoToolchain) ld(b *builder, root *action, out string, allactions 
 			// doesn't work.
 			if !apackagesSeen[a.p] {
 				apackagesSeen[a.p] = true
+				target := a.target
+				if len(a.p.CgoFiles) > 0 {
+					newa, err := ioutil.TempFile(b.work, filepath.Base(target))
+					if err != nil {
+						return
+					}
+					olda, err := os.Open(target)
+					if err != nil {
+						return
+					}
+					_, err = io.Copy(newa, olda)
+					if err != nil {
+						return
+					}
+					err = olda.Close()
+					if err != nil {
+						return
+					}
+					err = newa.Close()
+					if err != nil {
+						return
+					}
+
+					target = newa.Name()
+					err = b.run(b.work, root.p.ImportPath, nil, "ar", "x", target, "_cgo_flags")
+					err = b.run(".", root.p.ImportPath, nil, "ar", "d", target, "_cgo_flags")
+					flags, err := ioutil.ReadFile(filepath.Join(b.work, "_cgo_flags"))
+					if err != nil {
+						return
+					}
+					for _, line := range strings.Split(string(flags), "\n") {
+						if strings.HasPrefix(line, "_CGO_LDFLAGS=") {
+							cgoldflags = append(cgoldflags, strings.Fields(line[13:])...)
+						}
+					}
+				}
 				if a.p.fake && a.p.external {
 					// external _tests, if present must come before
 					// internal _tests. Store these on a separate list
 					// and place them at the head after this loop.
-					xfiles = append(xfiles, a.target)
+					xfiles = append(xfiles, target)
 				} else if a.p.fake {
 					// move _test files to the top of the link order
-					afiles = append([]string{a.target}, afiles...)
+					afiles = append([]string{target}, afiles...)
 				} else {
-					afiles = append(afiles, a.target)
+					afiles = append(afiles, target)
 				}
 			}
 		}
@@ -2647,10 +2684,17 @@ func (tools gccgoToolchain) ld(b *builder, root *action, out string, allactions 
 		}
 		for _, a1 := range a.deps {
 			walk(a1, seenShlib)
+			if err != nil {
+				return
+			}
 		}
 	}
+	var err error
 	for _, a1 := range root.deps {
 		walk(a1, false)
+		if err != nil {
+			return err
+		}
 	}
 	afiles = append(xfiles, afiles...)
 
