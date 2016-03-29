@@ -42,7 +42,7 @@ import (
 // If any of these happen, all bets are off and all exported methods
 // of reachable types are marked reachable.
 //
-// Any unreached text symbols are removed from ctxt.Textp.
+// Any unreached text symbols are removed from ctxt.Text.
 func deadcode(ctxt *Link) {
 	if Debug['v'] != 0 {
 		fmt.Fprintf(ctxt.Bso, "%5.2f deadcode\n", obj.Cputime())
@@ -117,25 +117,13 @@ func deadcode(ctxt *Link) {
 	}
 
 	// Remove dead text but keep file information (z symbols).
-	var last *LSym
-	for s := ctxt.Textp; s != nil; s = s.Next {
-		if !s.Attr.Reachable() {
-			continue
+	var newtext []*LSym
+	for _, s := range ctxt.Text {
+		if s.Attr.Reachable() {
+			newtext = append(newtext, s)
 		}
-		if last == nil {
-			ctxt.Textp = s
-		} else {
-			last.Next = s
-		}
-		last = s
 	}
-	if last == nil {
-		ctxt.Textp = nil
-		ctxt.Etextp = nil
-	} else {
-		last.Next = nil
-		ctxt.Etextp = last
-	}
+	Ctxt.Text = newtext
 }
 
 var markextra = []string{

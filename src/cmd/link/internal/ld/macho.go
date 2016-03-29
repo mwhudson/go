@@ -821,7 +821,7 @@ func Domacholink() int64 {
 	return Rnd(int64(size), int64(INITRND))
 }
 
-func machorelocsect(sect *Section, first *LSym) {
+func machorelocsect(sect *Section, syms []*LSym) {
 	// If main section has no bits, nothing to relocate.
 	if sect.Vaddr >= sect.Seg.Vaddr+sect.Seg.Filelen {
 		return
@@ -829,7 +829,8 @@ func machorelocsect(sect *Section, first *LSym) {
 
 	sect.Reloff = uint64(Cpos())
 	var sym *LSym
-	for sym = first; sym != nil; sym = sym.Next {
+	var i int
+	for i, sym = range syms {
 		if !sym.Attr.Reachable() {
 			continue
 		}
@@ -841,7 +842,7 @@ func machorelocsect(sect *Section, first *LSym) {
 	eaddr := int32(sect.Vaddr + sect.Length)
 	var r *Reloc
 	var ri int
-	for ; sym != nil; sym = sym.Next {
+	for _, sym = range syms[i:] {
 		if !sym.Attr.Reachable() {
 			continue
 		}
@@ -869,12 +870,12 @@ func Machoemitreloc() {
 		Cput(0)
 	}
 
-	machorelocsect(Segtext.Sect, Ctxt.Textp)
+	machorelocsect(Segtext.Sect, Ctxt.Text)
 	for sect := Segtext.Sect.Next; sect != nil; sect = sect.Next {
-		machorelocsect(sect, datap)
+		machorelocsect(sect, datasyms)
 	}
 	for sect := Segdata.Sect; sect != nil; sect = sect.Next {
-		machorelocsect(sect, datap)
+		machorelocsect(sect, datasyms)
 	}
 	dwarfemitreloc()
 }

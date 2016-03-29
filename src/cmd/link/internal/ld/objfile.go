@@ -305,12 +305,7 @@ overwrite:
 				log.Fatalf("symbol %s listed multiple times", s.Name)
 			}
 			s.Attr |= AttrOnList
-			if ctxt.Etextp != nil {
-				ctxt.Etextp.Next = s
-			} else {
-				ctxt.Textp = s
-			}
-			ctxt.Etextp = s
+			ctxt.Text = append(ctxt.Text, s)
 		}
 	}
 }

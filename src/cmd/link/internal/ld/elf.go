@@ -1597,7 +1597,7 @@ func elfshreloc(sect *Section) *ElfShdr {
 	return sh
 }
 
-func elfrelocsect(sect *Section, first *LSym) {
+func elfrelocsect(sect *Section, syms []*LSym) {
 	// If main section is SHT_NOBITS, nothing to relocate.
 	// Also nothing to relocate in .shstrtab.
 	if sect.Vaddr >= sect.Seg.Vaddr+sect.Seg.Filelen {
@@ -1609,7 +1609,8 @@ func elfrelocsect(sect *Section, first *LSym) {
 
 	sect.Reloff = uint64(Cpos())
 	var sym *LSym
-	for sym = first; sym != nil; sym = sym.Next {
+	var i int
+	for i, sym = range syms {
 		if !sym.Attr.Reachable() {
 			continue
 		}
@@ -1621,7 +1622,7 @@ func elfrelocsect(sect *Section, first *LSym) {
 	eaddr := int32(sect.Vaddr + sect.Length)
 	var r *Reloc
 	var ri int
-	for ; sym != nil; sym = sym.Next {
+	for _, sym = range syms[i:] {
 		if !sym.Attr.Reachable() {
 			continue
 		}
@@ -1657,15 +1658,15 @@ func Elfemitreloc() {
 		Cput(0)
 	}
 
-	elfrelocsect(Segtext.Sect, Ctxt.Textp)
+	elfrelocsect(Segtext.Sect, Ctxt.Text)
 	for sect := Segtext.Sect.Next; sect != nil; sect = sect.Next {
-		elfrelocsect(sect, datap)
+		elfrelocsect(sect, datasyms)
 	}
 	for sect := Segrodata.Sect; sect != nil; sect = sect.Next {
-		elfrelocsect(sect, datap)
+		elfrelocsect(sect, datasyms)
 	}
 	for sect := Segdata.Sect; sect != nil; sect = sect.Next {
-		elfrelocsect(sect, datap)
+		elfrelocsect(sect, datasyms)
 	}
 }
 

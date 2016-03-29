@@ -762,7 +762,7 @@ func addexports() {
 
 // perelocsect relocates symbols from first in section sect, and returns
 // the total number of relocations emitted.
-func perelocsect(sect *Section, first *LSym) int {
+func perelocsect(sect *Section, syms []*LSym) int {
 	// If main section has no bits, nothing to relocate.
 	if sect.Vaddr >= sect.Seg.Vaddr+sect.Seg.Filelen {
 		return 0
@@ -772,7 +772,8 @@ func perelocsect(sect *Section, first *LSym) int {
 
 	sect.Reloff = uint64(Cpos())
 	var sym *LSym
-	for sym = first; sym != nil; sym = sym.Next {
+	var i int
+	for i, sym = range syms {
 		if !sym.Attr.Reachable() {
 			continue
 		}
@@ -784,7 +785,7 @@ func perelocsect(sect *Section, first *LSym) int {
 	eaddr := int32(sect.Vaddr + sect.Length)
 	var r *Reloc
 	var ri int
-	for ; sym != nil; sym = sym.Next {
+	for _, sym = range syms[i:] {
 		if !sym.Attr.Reachable() {
 			continue
 		}
@@ -831,9 +832,9 @@ func peemitreloc(text, data *IMAGE_SECTION_HEADER) {
 	Lputl(0)
 	Wputl(0)
 
-	n := perelocsect(Segtext.Sect, Ctxt.Textp) + 1
+	n := perelocsect(Segtext.Sect, Ctxt.Text) + 1
 	for sect := Segtext.Sect.Next; sect != nil; sect = sect.Next {
-		n += perelocsect(sect, datap)
+		n += perelocsect(sect, datasyms)
 	}
 
 	cpos := Cpos()
@@ -856,7 +857,7 @@ func peemitreloc(text, data *IMAGE_SECTION_HEADER) {
 
 	n = 1
 	for sect := Segdata.Sect; sect != nil; sect = sect.Next {
-		n += perelocsect(sect, datap)
+		n += perelocsect(sect, datasyms)
 	}
 
 	cpos = Cpos()

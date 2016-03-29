@@ -151,9 +151,8 @@ func renumberfiles(ctxt *Link, files []*LSym, d *Pcdata) {
 			ctxt.Nhistfile++
 			f.Value = int64(ctxt.Nhistfile)
 			f.Type = obj.SFILEPATH
-			f.Next = ctxt.Filesyms
 			f.Name = expandGoroot(f.Name)
-			ctxt.Filesyms = f
+			ctxt.Filesyms = append([]*LSym{f}, ctxt.Filesyms...)
 		}
 	}
 
@@ -229,13 +228,13 @@ func pclntab() {
 	nfunc := int32(0)
 
 	// Find container symbols, mark them with SCONTAINER
-	for Ctxt.Cursym = Ctxt.Textp; Ctxt.Cursym != nil; Ctxt.Cursym = Ctxt.Cursym.Next {
+	for _, Ctxt.Cursym = range Ctxt.Text {
 		if Ctxt.Cursym.Outer != nil {
 			Ctxt.Cursym.Outer.Type |= obj.SCONTAINER
 		}
 	}
 
-	for Ctxt.Cursym = Ctxt.Textp; Ctxt.Cursym != nil; Ctxt.Cursym = Ctxt.Cursym.Next {
+	for _, Ctxt.Cursym = range Ctxt.Text {
 		if container(Ctxt.Cursym) == 0 {
 			nfunc++
 		}
@@ -257,7 +256,7 @@ func pclntab() {
 	var it Pciter
 	var off int32
 	var pcln *Pcln
-	for Ctxt.Cursym = Ctxt.Textp; Ctxt.Cursym != nil; Ctxt.Cursym = Ctxt.Cursym.Next {
+	for _, Ctxt.Cursym = range Ctxt.Text {
 		last = Ctxt.Cursym
 		if container(Ctxt.Cursym) != 0 {
 			continue
@@ -368,7 +367,7 @@ func pclntab() {
 
 	Symgrow(Ctxt, ftab, int64(start)+(int64(Ctxt.Nhistfile)+1)*4)
 	setuint32(Ctxt, ftab, int64(start), uint32(Ctxt.Nhistfile))
-	for s := Ctxt.Filesyms; s != nil; s = s.Next {
+	for _, s := range Ctxt.Filesyms {
 		setuint32(Ctxt, ftab, int64(start)+s.Value*4, uint32(ftabaddstring(ftab, s.Name)))
 	}
 
@@ -407,10 +406,10 @@ func findfunctab() {
 	t.Attr |= AttrLocal
 
 	// find min and max address
-	min := Ctxt.Textp.Value
+	min := Ctxt.Text[0].Value
 
 	max := int64(0)
-	for s := Ctxt.Textp; s != nil; s = s.Next {
+	for _, s := range Ctxt.Text {
 		max = s.Value + s.Size
 	}
 
@@ -427,16 +426,19 @@ func findfunctab() {
 	var i int32
 	var p int64
 	var q int64
-	for s := Ctxt.Textp; s != nil; s = s.Next {
+	for index1, s := range Ctxt.Text {
 		if container(s) != 0 {
 			continue
 		}
 		p = s.Value
-		e = s.Next
-		for container(e) != 0 {
-			e = e.Next
+		f := false
+		for _, e := range Ctxt.Text[index1:] {
+			if container(e) == 0 {
+				f = true
+				break
+			}
 		}
-		if e != nil {
+		if f {
 			q = e.Value
 		} else {
 			q = max
